@@ -1,7 +1,10 @@
+FROM maven:3.8.4-openjdk-17-slim AS build
+WORKDIR /app
+COPY WkrepoSystem/ .
+RUN mvn clean package -DskipTests
+
 FROM eclipse-temurin:17-jdk-alpine
 WORKDIR /app
-# 复制子文件夹 WkrepoSystem 中的所有文件到容器
-COPY WkrepoSystem/ .
-RUN ./mvnw clean package -DskipTests
+COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
-CMD ["sh", "-c", "java -jar target/*.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
