@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>デフォルト勤怠設定 - 月次業務ポータルシステム</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+            background-color: #f5f5f5;
+            min-height: 100vh;
+        }
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(180deg, #2c3e50 0%, #1a252f 100%);
+            color: white;
+            padding: 0;
+            flex-shrink: 0;
+        }
+        .sidebar-header {
+            padding: 25px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .sidebar-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
+        }
+        .sidebar-header p {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            margin: 5px 0 0 0;
+        }
+        .sidebar-nav {
+            padding: 20px 0;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border-left: 3px solid #3498db;
+        }
+        .nav-item i {
+            margin-right: 12px;
+            font-size: 18px;
+        }
+        .nav-item span {
+            font-size: 14px;
+        }
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #f5f5f5;
+        }
+        .top-bar {
+            background: white;
+            padding: 15px 30px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .top-bar-left h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0;
+        }
+        .top-bar-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .user-avatar {
+            width: 35px;
+            height: 35px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .user-name {
+            font-size: 14px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+        .btn-logout {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .btn-logout:hover {
+            background: #c0392b;
+            color: white;
+        }
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 左侧导航栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>月次業務ポータル</h3>
+                <p>Wkrepo System</p>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/home" class="nav-item">
+                    <i class="bi bi-house-door"></i>
+                    <span>ホーム</span>
+                </a>
+                <a href="/attendance" class="nav-item">
+                    <i class="bi bi-calendar-check"></i>
+                    <span>勤怠入力</span>
+                </a>
+                <a href="/travel-expense" class="nav-item">
+                    <i class="bi bi-car-front"></i>
+                    <span>交通費入力</span>
+                </a>
+                <a href="/general-expense" class="nav-item">
+                    <i class="bi bi-cash-coin"></i>
+                    <span>諸経費入力</span>
+                </a>
+                <a href="/paid-leave" class="nav-item">
+                    <i class="bi bi-calendar-event"></i>
+                    <span>年休取得</span>
+                </a>
+                <a href="/monthly-summary" class="nav-item">
+                    <i class="bi bi-bar-chart"></i>
+                    <span>月報サマリー</span>
+                </a>
+            </nav>
+        </div>
+        
+        <!-- 右侧主内容区 -->
+        <div class="main-content">
+            <!-- 顶部栏 -->
+            <div class="top-bar">
+                <div class="top-bar-left">
+                    <h2>デフォルト勤怠設定</h2>
+                </div>
+                <div class="top-bar-right">
+                    <div class="user-info">
+                        <div class="user-avatar" th:text="${user?.name?.substring(0, 1) ?: 'A'}">A</div>
+                        <span class="user-name" th:text="${user?.name + ' ' + user?.role}">admin 一等兵</span>
+                    </div>
+                    <a href="/logout" class="btn-logout">
+                        <i class="bi bi-box-arrow-right"></i> ログアウト
+                    </a>
+                </div>
+            </div>
+            
+            <!-- 主内容区域 -->
+            <div class="content-area">
+                <div class="card">
+                    <h4 class="mb-4">デフォルト勤怠設定</h4>
+                    
+                    <div th:if="${param.success}" class="alert alert-success" role="alert">
+                        設定を保存しました。
+                    </div>
+                    
+                    <form action="/default-attendance-setting/save" method="post">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">出勤時刻</label>
+                                <input type="time" class="form-control" name="defaultStartTime" 
+                                       th:value="${setting.defaultStartTime != null ? setting.defaultStartTime : '08:30'}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">退勤時刻</label>
+                                <input type="time" class="form-control" name="defaultEndTime" 
+                                       th:value="${setting.defaultEndTime != null ? setting.defaultEndTime : '18:00'}">
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">休憩時間（分）</label>
+                                <input type="number" class="form-control" name="defaultBreakMinutes" 
+                                       th:value="${setting.defaultBreakMinutes != null ? setting.defaultBreakMinutes : 60}">
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">デフォルト区分</label>
+                                <select class="form-select" name="defaultAgreement36Status">
+                                    <option value="在宅" th:selected="${setting.defaultAgreement36Status == '在宅' || setting.defaultAgreement36Status == null}">在宅</option>
+                                    <option value="出社" th:selected="${setting.defaultAgreement36Status == '出社'}">出社</option>
+                                    <option value="有給" th:selected="${setting.defaultAgreement36Status == '有給'}">有給</option>
+                                    <option value="欠勤" th:selected="${setting.defaultAgreement36Status == '欠勤'}">欠勤</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">デフォルト承認依頼先</label>
+                            <input type="text" class="form-control" name="defaultApprover" 
+                                   th:value="${setting.defaultApprover != null ? setting.defaultApprover : ''}" 
+                                   placeholder="例：張 保勝">
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">保存</button>
+                            <a href="/attendance" class="btn btn-secondary">戻る</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

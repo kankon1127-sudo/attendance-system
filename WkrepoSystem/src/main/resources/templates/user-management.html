@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'user-management', '社員管理')}">
+<head th:fragment="head">
+    <title>社員管理 - 月次業務ポータル</title>
+    <style>
+        .page-title {
+            background: linear-gradient(135deg, #1e3a5f, #3b82f6);
+            color: white;
+            border-radius: 16px;
+            padding: 22px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .page-title h3 { color: white; margin: 0; font-weight: 700; font-size: 22px; }
+        .summary-count { font-size: 14px; color: rgba(255,255,255,0.85); }
+        .summary-count strong { color: white; font-size: 18px; margin: 0 2px; }
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px 26px;
+            border: 2px solid #e2e8f0;
+            box-shadow: none;
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        .card-header h5 {
+            margin: 0;
+            font-weight: 700;
+            color: #1e3a5f;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-header i { color: #3b82f6; font-size: 18px; }
+
+        .form-label {
+            font-weight: 600 !important;
+            color: #334155 !important;
+            font-size: 13px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+        }
+        .form-control, .form-select {
+            border-radius: 10px !important;
+            border: 2px solid #cbd5e1 !important;
+            font-weight: 600 !important;
+            color: #1e3a5f !important;
+            font-size: 14px !important;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15) !important;
+        }
+
+        .input-group-pwd {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .input-group-pwd .form-control {
+            padding-right: 78px;
+        }
+        .pwd-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            color: #64748b;
+            font-size: 15px;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 6px;
+        }
+        .pwd-toggle:hover { background: #f1f5f9; color: #1e3a5f; }
+
+        .btn-gen-pwd {
+            white-space: nowrap;
+            border-radius: 10px;
+            border: 2px solid #3b82f6;
+            background: white;
+            color: #3b82f6;
+            font-weight: 700;
+            font-size: 13px;
+            padding: 6px 12px;
+            cursor: pointer;
+        }
+        .btn-gen-pwd:hover { background: #eff6ff; }
+
+        .row-action-bottom { display: flex; align-items: end; gap: 10px; }
+
+        .type-badge-um {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 6px 14px; border-radius: 20px;
+            font-size: 12px; font-weight: 700;
+            min-width: 82px; white-space: nowrap;
+        }
+        .role-admin { background: #fee2e2; color: #b91c1c; }
+        .role-manager { background: #fef3c7; color: #92400e; }
+        .role-soumu { background: #ccfbf1; color: #0f766e; }
+        .role-general { background: #e2e8f0; color: #475569; }
+
+        .status-badge-um {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 6px 14px; border-radius: 20px;
+            font-size: 12px; font-weight: 700;
+            min-width: 74px; white-space: nowrap;
+        }
+        .status-active { background: #dcfce7; color: #15803d; }
+        .status-inactive { background: #f1f5f9; color: #64748b; text-decoration: line-through; }
+
+        .action-buttons-um {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .btn-table {
+            border-radius: 10px;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-edit-um  { background: #dbeafe; color: #1d4ed8; }
+        .btn-edit-um:hover  { background: #bfdbfe; }
+        .btn-disable-um { background: #fee2e2; color: #b91c1c; }
+        .btn-disable-um:hover { background: #fecaca; }
+        .btn-enable-um  { background: #dcfce7; color: #15803d; }
+        .btn-enable-um:hover  { background: #bbf7d0; }
+
+        .um-table thead th {
+            background: #1a252f;
+            color: white !important;
+            padding: 14px 12px !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            border: none !important;
+        }
+        .um-table thead th:first-child { border-top-left-radius: 12px; }
+        .um-table thead th:last-child  { border-top-right-radius: 12px; }
+        .um-table tbody tr { transition: background 0.15s; }
+        .um-table tbody tr:hover { background: #f8fafc; }
+        .um-table td { padding: 14px 12px !important; vertical-align: middle !important; }
+        .um-name-primary { font-weight: 700; color: #1e3a5f; }
+        .um-name-secondary { font-size: 12px; color: #64748b; margin-top: 2px; }
+        .um-no-data { padding: 60px 0 !important; color: #94a3b8; text-align: center; }
+        .um-no-data i { font-size: 48px; display: block; margin-bottom: 10px; color: #cbd5e1; }
+
+        .search-enter-hint {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 4px;
+            text-align: right;
+        }
+        .search-enter-hint kbd {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            padding: 1px 6px;
+            font-size: 10px;
+            color: #475569;
+            margin: 0 2px;
+        }
+
+        /* Modal */
+        .modal-content-um {
+            border: none;
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+        }
+        .modal-header-um {
+            background: linear-gradient(135deg, #1e3a5f, #3b82f6);
+            color: white;
+            padding: 18px 24px;
+            border: none;
+        }
+        .modal-header-um .modal-title { font-weight: 700; }
+        .modal-header-um .btn-close { filter: brightness(0) invert(1); }
+        .modal-body-um { padding: 24px 26px 8px; }
+        .modal-footer-um { padding: 14px 26px 22px; border: none; }
+
+        .form-note {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+<th:block th:fragment="main-content">
+    <div class="page-title">
+        <h3><i class="bi bi-people-fill me-2"></i> 社員管理</h3>
+        <div class="summary-count">
+            全 <strong th:text="${totalCount}">0</strong> 名
+            / 有効 <strong th:text="${activeCount}">0</strong> 名
+            / 無効 <strong th:text="${totalCount - activeCount}">0</strong> 名
+        </div>
+    </div>
+
+    <div class="alert alert-danger"  th:if="${errorMessage}"   style="border-radius:12px;" th:text="${errorMessage}"></div>
+    <div class="alert alert-success" th:if="${successMessage}" style="border-radius:12px;" th:text="${successMessage}"></div>
+
+    <!-- 社員追加 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="bi bi-person-plus-fill"></i> 社員追加</h5>
+        </div>
+        <form method="post" action="/user-management/create" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">ユーザー名</label>
+                <input type="text" name="username" class="form-control" required placeholder="ログインID">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">パスワード</label>
+                <div class="row-action-bottom">
+                    <div class="input-group-pwd flex-grow-1">
+                        <input type="password" name="password" id="createPassword" class="form-control" required placeholder="4文字以上" minlength="4">
+                        <button type="button" class="pwd-toggle"
+                                onclick="togglePwd('createPassword', this)" title="表示/非表示切替">
+                            <i class="bi bi-eye-slash"></i>
+                        </button>
+                    </div>
+                    <button type="button" class="btn-gen-pwd"
+                            onclick="generateRandomPwd('createPassword')" title="ランダム生成">
+                        <i class="bi bi-dice-3"></i> 生成
+                    </button>
+                </div>
+                <div class="form-note">4文字以上の半角英数字/記号</div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">氏名</label>
+                <input type="text" name="name" class="form-control" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">社員番号</label>
+                <input type="text" name="employeeId" class="form-control" required placeholder="EMP006">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">部署</label>
+                <select name="department" class="form-select" th:if="${canManageAll}">
+                    <option value="管理部">管理部</option>
+                    <option value="开发部">開発部</option>
+                    <option value="営業部">営業部</option>
+                    <option value="経理部">経理部</option>
+                    <option value="総務部">総務部</option>
+                </select>
+                <select name="department" class="form-select" th:if="${isManager}">
+                    <option th:value="${user.department}"
+                            th:text="${user.department == '管理部' ? '管理部' : user.department == '开发部' ? '開発部' : user.department}" selected></option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">役職</label>
+                <select name="role" class="form-select" th:if="${isAdmin}">
+                    <option value="GENERAL">一般</option>
+                    <option value="MANAGER">部長</option>
+                    <option value="SOUMU">総務</option>
+                    <option value="ADMIN">管理者</option>
+                </select>
+                <select name="role" class="form-select" th:if="${isSoumu}">
+                    <option value="GENERAL">一般</option>
+                    <option value="MANAGER">部長</option>
+                    <option value="SOUMU">総務</option>
+                </select>
+                <select name="role" class="form-select" th:if="${isManager}">
+                    <option value="GENERAL">一般</option>
+                    <option value="MANAGER">部長</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">上司 (任意)</label>
+                <select name="managerId" class="form-select">
+                    <option value="">なし</option>
+                    <option th:each="manager : ${managerCandidates}"
+                            th:value="${manager.id}"
+                            th:text="${manager.name}">上司名</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-success w-100" style="border-radius:10px; font-weight:700;">
+                    <i class="bi bi-plus-lg"></i> 追加
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 検索条件 -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="bi bi-search-heart"></i> 検索条件</h5>
+        </div>
+        <form method="get" action="/user-management" id="searchForm" class="row g-3">
+            <div class="col-md-5">
+                <label class="form-label">ユーザー名 / 氏名</label>
+                <input type="text" name="searchName" class="form-control" id="searchNameInput"
+                       th:value="${searchName}" placeholder="氏名 / ユーザー名 / 社員番号" onkeydown="onSearchKeyDown(event)">
+                <div class="search-enter-hint">
+                    <kbd>Enter</kbd> ですぐ検索
+                </div>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">部署</label>
+                <select name="searchDepartment" class="form-select" th:if="${canManageAll}" onkeydown="onSearchKeyDown(event)">
+                    <option value="">すべての部署</option>
+                    <option value="管理部" th:selected="${searchDepartment == '管理部'}">管理部</option>
+                    <option value="开发部" th:selected="${searchDepartment == '开发部'}">開発部</option>
+                    <option value="営業部" th:selected="${searchDepartment == '営業部'}">営業部</option>
+                    <option value="経理部" th:selected="${searchDepartment == '経理部'}">経理部</option>
+                    <option value="総務部" th:selected="${searchDepartment == '総務部'}">総務部</option>
+                </select>
+                <select name="searchDepartment" class="form-select" th:if="${isManager}" disabled>
+                    <option th:value="${user.department}"
+                            th:text="${user.department == '管理部' ? '管理部' : user.department == '开发部' ? '開発部' : user.department}" selected></option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1" style="border-radius:10px; font-weight:700;">
+                    <i class="bi bi-search"></i> 検索
+                </button>
+                <button type="button" class="btn btn-outline-secondary" style="border-radius:10px; font-weight:700;"
+                        onclick="window.location.href='/user-management'">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 一覧テーブル -->
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="bi bi-list-ul"></i> 社員一覧</h5>
+            <div class="small" style="color:#64748b; font-weight:600;">
+                該当：<span style="color:#1e3a5f;" th:text="${#lists.size(users)}">0</span> 件
+            </div>
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="table table-hover um-table mb-0" style="border-collapse: separate; border-spacing: 0;">
+                <colgroup>
+                    <col style="width: 10%;">
+                    <col style="width: 22%;">
+                    <col style="width: 13%;">
+                    <col style="width: 12%;">
+                    <col style="width: 15%;">
+                    <col style="width: 10%;">
+                    <col style="width: 18%;">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th style="text-align:center;">社員番号</th>
+                        <th style="text-align:left;">氏名 / ユーザー名</th>
+                        <th style="text-align:center;">部署</th>
+                        <th style="text-align:center;">役職</th>
+                        <th style="text-align:left;">直属上司</th>
+                        <th style="text-align:center;">ステータス</th>
+                        <th style="text-align:right;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:if="${users.isEmpty()}">
+                        <td colspan="7" class="um-no-data">
+                            <i class="bi bi-person-x"></i>
+                            <div>該当する社員はいません</div>
+                        </td>
+                    </tr>
+                    <tr th:each="u : ${users}"
+                        th:with="isSelf=${user.id == u.id},
+                                 st=${u.status == null or u.status == '' or u.status == 'ACTIVE' ? 'ACTIVE' : u.status},
+                                 canEditAll=${isAdmin or isSoumu or (isManager and user.department == u.department)}">
+                        <td style="text-align:center; font-family: Consolas, monospace; font-weight:700; color:#1e3a5f;"
+                            th:text="${u.employeeId}">EMP001</td>
+                        <td style="text-align:left;">
+                            <div class="um-name-primary"
+                                 th:classappend="${st == 'INACTIVE'} ? 'text-decoration-line-through opacity-50' : ''"
+                                 th:text="${u.name}">山田太郎</div>
+                            <div class="um-name-secondary">@<span th:text="${u.username}">yamada</span></div>
+                        </td>
+                        <td style="text-align:center; font-weight:600; color:#475569;"
+                            th:text="${u.department == '管理部' ? '管理部' : u.department == '开发部' ? '開発部' : u.department}">開発部</td>
+                        <td style="text-align:center;">
+                            <span class="type-badge-um"
+                                  th:classappend="${u.role == 'ADMIN' ? ' role-admin' : (u.role == 'MANAGER' ? ' role-manager' : (u.role == 'SOUMU' ? ' role-soumu' : ' role-general'))}"
+                                  th:text="${u.role == 'ADMIN' ? '管理者' : (u.role == 'MANAGER' ? '部長' : (u.role == 'SOUMU' ? '総務' : '一般'))}">
+                                一般
+                            </span>
+                        </td>
+                        <td style="text-align:left; font-size:14px;">
+                            <span th:if="${u.managerId == null}" style="color:#94a3b8;">（なし）</span>
+                            <span th:if="${u.managerId != null}"
+                                  style="display:inline-flex; align-items:center; gap:6px; font-weight:600; color:#334155;">
+                                <i class="bi bi-person-check" style="color:#3b82f6;"></i>
+                                <span th:text="${userNamesById[u.managerId] ?: '—'}">上司名</span>
+                            </span>
+                        </td>
+                        <td style="text-align:center;">
+                            <span class="status-badge-um"
+                                  th:classappend="${st == 'ACTIVE' ? ' status-active' : ' status-inactive'}"
+                                  th:text="${st == 'ACTIVE' ? '有効' : '無効'}">有効</span>
+                        </td>
+                        <td style="text-align:right;">
+                            <div class="action-buttons-um" th:if="${canEditAll}">
+                                <button type="button" class="btn-table btn-edit-um js-edit-user"
+                                        th:attr="data-id=${u.id},
+                                                 data-employee-id=${u.employeeId},
+                                                 data-name=${u.name},
+                                                 data-username=${u.username},
+                                                 data-department=${u.department},
+                                                 data-role=${u.role},
+                                                 data-manager-id=${u.managerId}">
+                                    <i class="bi bi-pencil"></i> 編集
+                                </button>
+                                <form method="POST" action="/user-management/toggle-status"
+                                      class="js-toggle-status"
+                                      style="display:inline;"
+                                      th:attr="data-name=${u.name}, data-action-label=${st == 'ACTIVE' ? '無効化' : '有効化'}">
+                                    <input type="hidden" name="userId" th:value="${u.id}">
+                                    <input type="hidden" name="searchName" th:value="${searchName}">
+                                    <input type="hidden" name="searchDepartment" th:value="${searchDepartment}">
+                                    <button type="submit" class="btn-table"
+                                            th:classappend="${st == 'ACTIVE' ? ' btn-disable-um' : ' btn-enable-um'}"
+                                            th:disabled="${isSelf}"
+                                            th:title="${isSelf} ? '自分自身は変更できません' : ''">
+                                        <i th:classappend="${st == 'ACTIVE' ? 'bi bi-person-x' : 'bi bi-person-check'}"></i>
+                                        <span th:text="${st == 'ACTIVE' ? '無効化' : '有効化'}">無効化</span>
+                                    </button>
+                                </form>
+                            </div>
+                            <span th:if="${!canEditAll}" class="small" style="color:#94a3b8;">権限なし</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 編集 Modal -->
+    <div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content modal-content-um">
+                <div class="modal-header modal-header-um">
+                    <h5 class="modal-title" id="editModalTitle">
+                        <i class="bi bi-pencil-square me-2"></i> 社員情報編集
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="/user-management/update" id="editUserForm">
+                    <input type="hidden" name="userId" id="editUserId">
+                    <input type="hidden" name="searchName"     th:value="${searchName}">
+                    <input type="hidden" name="searchDepartment" th:value="${searchDepartment}">
+                    <div class="modal-body modal-body-um">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">社員番号</label>
+                                <input type="text" name="employeeId" id="editEmployeeId" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">氏名</label>
+                                <input type="text" name="name" id="editName" class="form-control" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ユーザー名 (ログインID)</label>
+                                <input type="text" name="username" id="editUsername" class="form-control" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">部署</label>
+                                <select name="department" id="editDepartment" class="form-select" th:if="${canManageAll}" onchange="refreshEditManagerSelect()">
+                                    <option value="管理部">管理部</option>
+                                    <option value="开发部">開発部</option>
+                                    <option value="営業部">営業部</option>
+                                    <option value="経理部">経理部</option>
+                                    <option value="総務部">総務部</option>
+                                </select>
+                                <select name="department" id="editDepartment" class="form-select" th:if="${isManager}" disabled>
+                                    <option th:value="${user.department}" th:text="${user.department == '管理部' ? '管理部' : user.department == '开发部' ? '開発部' : user.department}" selected></option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">役職</label>
+                                <select name="role" id="editRole" class="form-select" th:if="${isAdmin}">
+                                    <option value="GENERAL">一般</option>
+                                    <option value="MANAGER">部長</option>
+                                    <option value="SOUMU">総務</option>
+                                    <option value="ADMIN">管理者</option>
+                                </select>
+                                <select name="role" id="editRole" class="form-select" th:if="${isSoumu}">
+                                    <option value="GENERAL">一般</option>
+                                    <option value="MANAGER">部長</option>
+                                    <option value="SOUMU">総務</option>
+                                </select>
+                                <select name="role" id="editRole" class="form-select" th:if="${isManager}">
+                                    <option value="GENERAL">一般</option>
+                                    <option value="MANAGER">部長</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">直属上司</label>
+                                <select name="managerId" id="editManagerId" class="form-select">
+                                    <option value="">なし</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label">新しいパスワード <span class="small" style="color:#94a3b8; font-weight:500;">（空欄のままなら更新しません）</span></label>
+                                <div class="row-action-bottom">
+                                    <div class="input-group-pwd flex-grow-1">
+                                        <input type="password" name="password" id="editPassword" class="form-control" placeholder="4文字以上 または 空欄">
+                                        <button type="button" class="pwd-toggle" onclick="togglePwd('editPassword', this)">
+                                            <i class="bi bi-eye-slash"></i>
+                                        </button>
+                                    </div>
+                                    <button type="button" class="btn-gen-pwd" onclick="generateRandomPwd('editPassword')">
+                                        <i class="bi bi-dice-3 me-1"></i> 自動生成
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <div class="small" style="color:#94a3b8;">
+                                    ※ パスワードは空欄のまま送信すると<br>元のパスワードを保持します。
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer modal-footer-um">
+                        <button type="button" class="btn btn-outline-secondary" style="border-radius:10px; font-weight:700;" data-bs-dismiss="modal">
+                            キャンセル
+                        </button>
+                        <button type="submit" class="btn btn-primary" style="border-radius:10px; font-weight:700; min-width: 120px;">
+                            <i class="bi bi-save2 me-1"></i> 変更を保存
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        const managerCandidates = /*[[${managerOptions}]]*/ [];
+
+        function onSearchKeyDown(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('searchForm').submit();
+            }
+        }
+
+        function togglePwd(targetId, btn) {
+            var el = document.getElementById(targetId);
+            if (!el) return;
+            var icon = btn.querySelector('i');
+            if (el.type === 'password') {
+                el.type = 'text';
+                icon.className = 'bi bi-eye';
+                btn.title = 'パスワードを隠す';
+            } else {
+                el.type = 'password';
+                icon.className = 'bi bi-eye-slash';
+                btn.title = 'パスワードを表示';
+            }
+        }
+
+        function generateRandomPwd(targetId) {
+            var upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+            var lower = 'abcdefghijkmnpqrstuvwxyz';
+            var num = '23456789';
+            var sym = '-_$';
+            var all = upper + lower + num + sym;
+            var pwd = '';
+            pwd += upper[Math.floor(Math.random() * upper.length)];
+            pwd += lower[Math.floor(Math.random() * lower.length)];
+            pwd += num[Math.floor(Math.random() * num.length)];
+            pwd += sym[Math.floor(Math.random() * sym.length)];
+            for (var i = pwd.length; i < 12; i++) {
+                pwd += all[Math.floor(Math.random() * all.length)];
+            }
+            pwd = pwd.split('').sort(function () { return Math.random() - 0.5; }).join('');
+            var el = document.getElementById(targetId);
+            if (!el) return;
+            el.value = pwd;
+            el.type = 'text';
+            var wrap = el.closest('.input-group-pwd');
+            var icon = wrap ? wrap.querySelector('.pwd-toggle i') : null;
+            if (icon) icon.className = 'bi bi-eye';
+            setTimeout(function () {
+                if (el) {
+                    el.type = 'password';
+                    if (icon) icon.className = 'bi bi-eye-slash';
+                }
+            }, 2500);
+        }
+
+        var editModalInstance = null;
+        var editModalElement = null;
+        var editModalInited = false;
+
+        function ensureEditModal() {
+            if (!editModalElement) {
+                editModalElement = document.getElementById('editUserModal');
+            }
+            if (!editModalInited && editModalElement) {
+                editModalInstance = bootstrap.Modal.getOrCreateInstance(editModalElement);
+                editModalElement.addEventListener('hidden.bs.modal', function () {
+                    document.querySelectorAll('.modal-backdrop').forEach(function (el) { el.remove(); });
+                    document.body.classList.remove('modal-open');
+                    document.body.style.overflow = '';
+                    document.body.style.paddingRight = '';
+                    resetEditForm();
+                });
+                editModalInited = true;
+            }
+            return editModalInstance;
+        }
+
+        function resetEditForm() {
+            try {
+                document.getElementById('editUserId').value = '';
+                document.getElementById('editPassword').value = '';
+                document.getElementById('editUserForm').reset();
+                document.getElementById('editModalTitle').innerHTML =
+                    '<i class="bi bi-pencil-square me-2"></i> 社員情報編集';
+            } catch (e) {}
+        }
+
+        function refreshEditManagerSelect(selectedId) {
+            var deptSel = document.getElementById('editDepartment');
+            if (!deptSel) return;
+            var dept = deptSel.value;
+            var current = selectedId != null ? String(selectedId) : document.getElementById('editManagerId').value;
+            var sel = document.getElementById('editManagerId');
+            sel.innerHTML = '<option value="">なし</option>';
+            (managerCandidates || []).forEach(function (m) {
+                if (!dept || m.department === dept) {
+                    var op = document.createElement('option');
+                    op.value = m.id;
+                    op.textContent = m.name + (m.employeeId ? ' (' + m.employeeId + ')' : '');
+                    if (String(m.id) === String(current)) op.selected = true;
+                    sel.appendChild(op);
+                }
+            });
+        }
+
+        function showEditModalFromButton(btn) {
+            var modal = ensureEditModal();
+            if (!modal) {
+                alert('Modal初期化失敗');
+                return;
+            }
+            var name = btn.getAttribute('data-name') || '';
+            var employeeId = btn.getAttribute('data-employee-id') || '';
+            document.getElementById('editUserId').value = btn.getAttribute('data-id') || '';
+            document.getElementById('editEmployeeId').value = employeeId;
+            document.getElementById('editName').value = name;
+            document.getElementById('editUsername').value = btn.getAttribute('data-username') || '';
+            document.getElementById('editPassword').value = '';
+            try { document.getElementById('editDepartment').value = btn.getAttribute('data-department') || ''; } catch (e) {}
+            try { document.getElementById('editRole').value = btn.getAttribute('data-role') || 'GENERAL'; } catch (e) {}
+            refreshEditManagerSelect(btn.getAttribute('data-manager-id'));
+            document.getElementById('editModalTitle').innerHTML =
+                '<i class="bi bi-pencil-square me-2"></i> 編集：' + escapeHtml(name) + ' さん（' + escapeHtml(employeeId) + '）';
+            modal.show();
+        }
+
+        function escapeHtml(s) {
+            if (s == null) return '';
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.js-edit-user').forEach(function (btn) {
+                btn.addEventListener('click', function () { showEditModalFromButton(btn); });
+            });
+            document.querySelectorAll('.js-toggle-status').forEach(function (form) {
+                form.addEventListener('submit', function (e) {
+                    var name = form.getAttribute('data-name') || '';
+                    var action = form.getAttribute('data-action-label') || '変更';
+                    if (!confirm('「' + name + '」さんを' + action + 'してもよろしいですか？')) {
+                        e.preventDefault();
+                    }
+                });
+            });
+        });
+    </script>
+</th:block>
+</body>
+</html>

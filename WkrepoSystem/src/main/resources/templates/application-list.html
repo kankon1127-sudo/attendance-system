@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'application-list', '申請一覧')}">
+<head th:fragment="head">
+    <title>申請一覧 - 月次業務ポータル</title>
+    <style>
+        .content-wrapper {
+            background: #f1f5f9;
+            padding: 30px;
+            border-radius: 16px;
+        }
+        
+        .header-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .form-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #1e3a5f;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .form-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 24px;
+            background: #3b82f6;
+            border-radius: 2px;
+        }
+        
+        .table-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .table th {
+            background: #f8fafc;
+            padding: 14px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #475569;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #1e3a5f;
+        }
+        
+        .table tr:hover {
+            background: #f8fafc;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            min-width: 108px;
+            text-align: center;
+            white-space: nowrap;
+        }
+        
+        .status-pending {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        
+        .status-approved {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        
+        .status-rejected {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .type-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            background: #e0f2fe;
+            color: #0284c7;
+            min-width: 88px;
+            white-space: nowrap;
+        }
+
+        .type-travel { background: #e0f2fe; color: #0284c7; }
+        .type-general { background: #ede9fe; color: #7c3aed; }
+        .type-paidleave { background: #dcfce7; color: #15803d; }
+        .type-monthly { background: #fef3c7; color: #b45309; }
+
+        .filter-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            border: 2px solid #e2e8f0;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: #475569;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .filter-select {
+            padding: 9px 36px 9px 14px;
+            border-radius: 10px;
+            border: 2px solid #cbd5e1;
+            background: white;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e3a5f;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 18px 18px;
+            cursor: pointer;
+            min-width: 160px;
+        }
+
+        .filter-select:hover {
+            border-color: #3b82f6;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+        }
+
+        .filter-btn {
+            background: #1e3a5f;
+            color: white;
+            border: none;
+            padding: 9px 22px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .filter-btn:hover {
+            background: #1a2f4d;
+        }
+
+        .filter-btn-reset {
+            background: white;
+            color: #64748b;
+            border: 2px solid #cbd5e1;
+            padding: 7px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .filter-btn-reset:hover {
+            background: #f8fafc;
+            color: #334155;
+            border-color: #94a3b8;
+        }
+
+        .filter-spacer {
+            flex: 1;
+        }
+
+        .filter-count {
+            color: #64748b;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .filter-count strong {
+            color: #1e3a5f;
+            font-size: 16px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn-approve {
+            background: #22c55e;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .btn-approve:hover {
+            background: #16a34a;
+        }
+        
+        .btn-reject {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .btn-reject:hover {
+            background: #dc2626;
+        }
+
+        .btn-detail {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-detail:hover {
+            background: #2563eb;
+        }
+
+        .status-draft {
+            background: #e0e7ff;
+            color: #4f46e5;
+        }
+
+        .status-submitted {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .status-finalized {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .detail-modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .detail-section {
+            display: none;
+        }
+
+        .detail-section.active {
+            display: block;
+        }
+
+        .detail-section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1e3a5f;
+            padding-bottom: 8px;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detail-section-title::before {
+            content: '';
+            display: inline-block;
+            width: 3px;
+            height: 18px;
+            background: #3b82f6;
+            border-radius: 2px;
+        }
+
+        .detail-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px 24px;
+        }
+
+        .detail-info-grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .detail-info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 10px 12px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .detail-info-item.full {
+            grid-column: 1 / -1;
+        }
+
+        .detail-info-label {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .detail-info-value {
+            font-size: 15px;
+            color: #1e3a5f;
+            font-weight: 600;
+            word-break: break-word;
+        }
+
+        .detail-info-value.empty {
+            color: #94a3b8;
+            font-style: italic;
+            font-weight: normal;
+        }
+
+        .work-content-box {
+            width: 100%;
+            min-height: 120px;
+            padding: 14px 16px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            white-space: pre-wrap;
+            color: #1e3a5f;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+
+        .loading-spinner i {
+            font-size: 32px;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .error-message-box {
+            background: #fef2f2;
+            border: 2px solid #fecaca;
+            color: #b91c1c;
+            padding: 14px 18px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .summary-mini-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .summary-mini-item {
+            padding: 8px 12px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .summary-mini-label {
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        .summary-mini-value {
+            font-size: 15px;
+            font-weight: bold;
+            color: #1e3a5f;
+        }
+
+        .summary-mini-value.total {
+            color: #2563eb;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #94a3b8;
+        }
+        
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: 16px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<th:block th:fragment="main-content">
+    <div class="content-wrapper">
+        <div class="header-card">
+            <div class="form-title">申請一覧</div>
+        </div>
+
+        <div class="filter-card">
+            <form method="GET" action="/application/list" id="filterForm" style="display: contents;">
+                <div class="filter-group">
+                    <label for="filterType" class="filter-label"><i class="bi bi-funnel"></i> 申請種別</label>
+                    <select name="filterType" id="filterType" class="filter-select">
+                        <option value="">すべて</option>
+                        <option value="TRAVEL" th:selected="${filterType == 'TRAVEL'}">交通費</option>
+                        <option value="GENERAL" th:selected="${filterType == 'GENERAL'}">諸経費</option>
+                        <option value="PAID_LEAVE" th:selected="${filterType == 'PAID_LEAVE'}">年休</option>
+                        <option value="MONTHLY_REPORT" th:selected="${filterType == 'MONTHLY_REPORT'}">月報</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filterStatus" class="filter-label"><i class="bi bi-flag"></i> ステータス</label>
+                    <select name="filterStatus" id="filterStatus" class="filter-select">
+                        <option value="">すべて</option>
+                        <th:block th:each="st : ${allStatuses}">
+                            <option th:value="${st.name()}" th:text="${st.displayName}" th:selected="${filterStatus == st.name()}"></option>
+                        </th:block>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <button type="submit" class="filter-btn"><i class="bi bi-search"></i> 絞り込み</button>
+                    <button type="button" class="filter-btn-reset" onclick="resetFilter()"><i class="bi bi-arrow-counterclockwise"></i> リセット</button>
+                </div>
+                <div class="filter-spacer"></div>
+                <div class="filter-count">
+                    該当件数：<strong th:text="${#lists.size(applications)}">0</strong> 件
+                </div>
+            </form>
+        </div>
+
+        <script>
+            function resetFilter() {
+                window.location.href = '/application/list';
+            }
+        </script>
+        
+        <div class="table-card">
+            <table class="table">
+                <colgroup>
+                    <col style="width: 8%;">
+                    <col style="width: 10%;">
+                    <col style="width: 10%;">
+                    <col style="width: 11%;">
+                    <col style="width: 14%;">
+                    <col style="width: 14%;">
+                    <col style="width: 13%;">
+                    <col style="width: 20%;">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th style="text-align: center;">申請番号</th>
+                        <th style="text-align: left;">申請者</th>
+                        <th style="text-align: left;">部署</th>
+                        <th style="text-align: center;">申請種別</th>
+                        <th style="text-align: center;">申請日時</th>
+                        <th style="text-align: right;">金額/日数/対象月</th>
+                        <th style="text-align: center;">ステータス</th>
+                        <th style="text-align: right;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:if="${applications.isEmpty()}">
+                        <td colspan="8">
+                            <div class="empty-state">
+                                <i class="bi bi-inbox"></i>
+                                <div>該当する申請はありません</div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:each="app, iterStat : ${applications}"
+                        th:with="stName=${app.status != null ? #strings.toLowerCase(app.status.name()) : 'pending'},
+                                 isPending=${stName == 'pending' or stName == 'submitted' or stName == 'draft' or stName == 'manager_approved'}">
+                        <td style="text-align: center;" th:text="'#' + ${iterStat.index + 1}">#1</td>
+                        <td style="text-align: left;" th:text="${app.applicantName}">山田太郎</td>
+                        <td style="text-align: left;" th:text="${app.applicantDepartment}">開発部</td>
+                        <td style="text-align: center;">
+                            <span class="type-badge" 
+                                  th:classappend="${app.applicationType == 'TRAVEL' ? ' type-travel' : (app.applicationType == 'GENERAL' ? ' type-general' : (app.applicationType == 'PAID_LEAVE' ? ' type-paidleave' : ' type-monthly'))}"
+                                  th:text="${app.applicationTypeLabel}">交通費</span>
+                        </td>
+                        <td style="text-align: center;" th:text="${#temporals.format(app.applicationDate, 'yyyy/MM/dd HH:mm')}">2024/01/15 10:30</td>
+                        <td style="text-align: right; font-weight: 700;"
+                            th:with="isYen=${app.applicationType == 'TRAVEL' or app.applicationType == 'GENERAL'}"
+                            th:styleappend="${isYen} ? 'color: #2563eb;' : 'color: #1e3a5f;'"
+                            th:text="${app.amountLabel}">¥45,678</td>
+                        <td style="text-align: center;">
+                            <span class="status-badge" 
+                                  th:classappend="${stName == 'draft' ? ' status-draft' : (stName == 'submitted' or stName == 'pending' ? ' status-submitted' : (stName == 'manager_approved' or stName == 'approved' ? ' status-approved' : (stName == 'finalized' ? ' status-finalized' : ' status-rejected')))}"
+                                  th:text="${app.status.displayName}">申請中</span>
+                        </td>
+                        <td style="text-align: right;">
+                            <div class="action-buttons">
+                                <button type="button" class="btn-detail"
+                                        th:data-id="${app.id}"
+                                        th:data-type="${app.applicationType}"
+                                        onclick="showDetail(this.getAttribute('data-id'), this.getAttribute('data-type'))"><i class="bi bi-eye"></i> 詳細</button>
+                                <th:block th:if="${isPending and app.canApprove}">
+                                    <form method="POST" action="/application/approve" style="display: inline;">
+                                        <input type="hidden" name="id" th:value="${app.id}">
+                                        <input type="hidden" name="type" th:value="${app.applicationType}">
+                                        <button type="submit" class="btn-approve"
+                                                th:text="${app.applicationType == 'MONTHLY_REPORT' and app.status != null and app.status.name() == 'MANAGER_APPROVED' ? '最終承認' : '承認'}"
+                                                onclick="return confirm('承認してもよろしいですか？')">承認</button>
+                                    </form>
+                                    <form method="POST" action="/application/reject" style="display: inline;">
+                                        <input type="hidden" name="id" th:value="${app.id}">
+                                        <input type="hidden" name="type" th:value="${app.applicationType}">
+                                        <button type="submit" class="btn-reject" onclick="return confirm('拒否してもよろしいですか？')">拒否</button>
+                                    </form>
+                                </th:block>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal fade" id="applicationDetailModal" tabindex="-1" aria-labelledby="applicationDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="type-badge" id="detailTypeLabel" style="margin: 0;">申請種別</span>
+                        <span class="status-badge status-pending" id="detailStatusBadge">ステータス</span>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body detail-modal-body" id="detailModalBody">
+                    <div class="loading-spinner" id="detailLoading">
+                        <i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite;"></i>
+                        <div>読み込み中...</div>
+                    </div>
+                </div>
+                <div class="modal-footer" id="detailModalFooter" style="border-top: 2px solid #e2e8f0; background: #f8fafc;">
+                    <button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+
+    <script>
+        var currentDetailId = null;
+        var currentDetailType = null;
+        var detailModal = null;
+        var detailModalElement = null;
+        var detailModalInitialized = false;
+
+        function ensureDetailModal() {
+            if (!detailModalElement) {
+                detailModalElement = document.getElementById('applicationDetailModal');
+            }
+            if (!detailModalInitialized && detailModalElement) {
+                detailModal = bootstrap.Modal.getOrCreateInstance(detailModalElement);
+                detailModalElement.addEventListener('hidden.bs.modal', function () {
+                    try {
+                        var backdrops = document.querySelectorAll('.modal-backdrop');
+                        for (var i = 0; i < backdrops.length; i++) {
+                            backdrops[i].parentNode.removeChild(backdrops[i]);
+                        }
+                    } catch (e) {}
+                    try {
+                        document.body.classList.remove('modal-open');
+                        document.body.style.overflow = '';
+                        document.body.style.paddingRight = '';
+                    } catch (e) {}
+                    try {
+                        var body = document.getElementById('detailModalBody');
+                        if (body) {
+                            body.innerHTML =
+                                '<div class="loading-spinner">' +
+                                    '<i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite;"></i>' +
+                                    '<div>読み込み中...</div>' +
+                                '</div>';
+                        }
+                        var headerLabel = document.getElementById('detailTypeLabel');
+                        if (headerLabel) headerLabel.textContent = '申請種別';
+                        var headerBadge = document.getElementById('detailStatusBadge');
+                        if (headerBadge) {
+                            headerBadge.textContent = 'ステータス';
+                            headerBadge.className = 'status-badge status-pending';
+                        }
+                        var footer = document.getElementById('detailModalFooter');
+                        if (footer) {
+                            footer.innerHTML =
+                                '<button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal">閉じる</button>';
+                        }
+                    } catch (e) {}
+                    currentDetailId = null;
+                    currentDetailType = null;
+                });
+                detailModalInitialized = true;
+            }
+            return detailModal;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            try {
+                var d = new Date(dateStr);
+                var y = d.getFullYear();
+                var m = String(d.getMonth() + 1).padStart(2, '0');
+                var day = String(d.getDate()).padStart(2, '0');
+                return y + '/' + m + '/' + day;
+            } catch (e) {
+                return dateStr;
+            }
+        }
+
+        function formatDateTime(dateStr) {
+            if (!dateStr) return '';
+            try {
+                var d = new Date(dateStr);
+                var y = d.getFullYear();
+                var m = String(d.getMonth() + 1).padStart(2, '0');
+                var day = String(d.getDate()).padStart(2, '0');
+                var hh = String(d.getHours()).padStart(2, '0');
+                var mm = String(d.getMinutes()).padStart(2, '0');
+                return y + '/' + m + '/' + day + ' ' + hh + ':' + mm;
+            } catch (e) {
+                return dateStr;
+            }
+        }
+
+        function val(v, emptyText) {
+            if (v === null || v === undefined || v === '') {
+                return '<span class="detail-info-value empty">' + (emptyText || '-') + '</span>';
+            }
+            return '<span class="detail-info-value">' + v + '</span>';
+        }
+
+        function buildBasicSection(d) {
+            return '<div class="detail-section-title">基本情報</div>' +
+                '<div class="detail-info-grid">' +
+                    '<div class="detail-info-item">' +
+                        '<div class="detail-info-label">申請者</div>' +
+                        val(d.applicantName) +
+                    '</div>' +
+                    '<div class="detail-info-item">' +
+                        '<div class="detail-info-label">部署</div>' +
+                        val(d.applicantDepartment) +
+                    '</div>' +
+                    '<div class="detail-info-item">' +
+                        '<div class="detail-info-label">申請日時</div>' +
+                        '<span class="detail-info-value">' + formatDateTime(d.applicationDate) + '</span>' +
+                    '</div>' +
+                    '<div class="detail-info-item">' +
+                        '<div class="detail-info-label">申請番号</div>' +
+                        '<span class="detail-info-value">#' + d.id + '</span>' +
+                    '</div>' +
+                '</div>';
+        }
+
+        function buildTravelSection(d) {
+            return '<div class="detail-section active" id="section-TRAVEL" style="margin-top: 24px;">' +
+                '<div class="detail-section-title">交通費明細</div>' +
+                '<div class="detail-info-grid">' +
+                    '<div class="detail-info-item">' +
+                        '<div class="detail-info-label">日付</div>' +
+                        '<span class="detail-info-value">' + formatDate(d.expenseDate) + '</span>' +
+                    '</div>' +
+                    '<div class="detail-info-item">' +
+                        '<div class="detail-info-label">区分</div>' +
+                        val(d.travelType) +
+                    '</div>' +
+                    '<div class="detail-info-item">' +
+                        '<div class="detail-info-label">交通手段</div>' +
+                        val(d.transportation) +
+                    '</div>' +
+                    '<div class="detail-info-item">' +
+                        '<div class="detail-info-label">金額</div>' +
+                        '<span class="detail-info-value" style="color: #2563eb;">' + (d.travelAmount || 0) + ' 円</span>' +
+                    '</div>' +
+                    '<div class="detail-info-item full">' +
+                        '<div class="detail-info-label">経路</div>' +
+                        val(d.route) +
+                    '</div>' +
+                    '<div class="detail-info-item full">' +
+                        '<div class="detail-info-label">摘要</div>' +
+                        val(d.travelSummary) +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }
+
+        function buildGeneralSection(d) {
+            return '<div class="detail-section active" id="section-GENERAL" style="margin-top: 24px;">' +
+                '<div class="detail-section-title">諸経費明細</div>' +
+                '<div class="detail-info-grid">' +
+                    '<div class="detail-info-item">' +
+                        '<div class="detail-info-label">日付</div>' +
+                        '<span class="detail-info-value">' + formatDate(d.generalDate) + '</span>' +
+                    '</div>' +
+                    '<div class="detail-info-item">' +
+                        '<div class="detail-info-label">費目</div>' +
+                        val(d.expenseType) +
+                    '</div>' +
+                    '<div class="detail-info-item">' +
+                        '<div class="detail-info-label">金額</div>' +
+                        '<span class="detail-info-value" style="color: #2563eb;">' + (d.generalAmount || 0) + ' 円</span>' +
+                    '</div>' +
+                    '<div class="detail-info-item full">' +
+                        '<div class="detail-info-label">摘要</div>' +
+                        val(d.generalSummary) +
+                    '</div>' +
+                    '<div class="detail-info-item full">' +
+                        '<div class="detail-info-label">備考</div>' +
+                        val(d.generalRemarks) +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }
+
+        function buildPaidLeaveSection(d) {
+            return '<div class="detail-section active" id="section-PAID_LEAVE" style="margin-top: 24px;">' +
+                '<div class="detail-section-title">年休明細</div>' +
+                '<div class="detail-info-grid">' +
+                    '<div class="detail-info-item">' +
+                        '<div class="detail-info-label">開始日</div>' +
+                        '<span class="detail-info-value">' + formatDate(d.startDate) + '</span>' +
+                    '</div>' +
+                    '<div class="detail-info-item">' +
+                        '<div class="detail-info-label">終了日</div>' +
+                        '<span class="detail-info-value">' + formatDate(d.endDate) + '</span>' +
+                    '</div>' +
+                    '<div class="detail-info-item">' +
+                        '<div class="detail-info-label">取得日数</div>' +
+                        '<span class="detail-info-value" style="color: #2563eb;">' + (d.leaveDays || 0) + ' 日</span>' +
+                    '</div>' +
+                    '<div class="detail-info-item">' +
+                        '<div class="detail-info-label">種別</div>' +
+                        val(d.leaveType) +
+                    '</div>' +
+                    '<div class="detail-info-item full">' +
+                        '<div class="detail-info-label">理由・備考</div>' +
+                        val(d.leaveRemarks) +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }
+
+        function buildMonthlySection(d) {
+            var s = d.monthlySummary || {};
+            var html = '<div class="detail-section active" id="section-MONTHLY_REPORT" style="margin-top: 24px;">';
+            html += '<div class="detail-section-title">' + (d.reportYear || '') + '年' + (d.reportMonth || '') + '月 月報明細</div>';
+
+            html += '<div class="detail-info-grid-3">';
+            html += '<div class="detail-info-item">' +
+                        '<div class="detail-info-label">社員情報</div>' +
+                        '<div class="summary-mini-grid">' +
+                            '<div class="summary-mini-item">' +
+                                '<div class="summary-mini-label">氏名</div>' +
+                                '<div class="summary-mini-value">' + (d.applicantName || '-') + '</div>' +
+                            '</div>' +
+                            '<div class="summary-mini-item">' +
+                                '<div class="summary-mini-label">部署</div>' +
+                                '<div class="summary-mini-value">' + (d.applicantDepartment || '-') + '</div>' +
+                            '</div>' +
+                            '<div class="summary-mini-item" style="grid-column: 1 / -1;">' +
+                                '<div class="summary-mini-label">承認依頼先</div>' +
+                                '<div class="summary-mini-value">' + (d.approverName || '(指定なし)') + '</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>';
+            html += '<div class="detail-info-item">' +
+                        '<div class="detail-info-label">勤務実績</div>' +
+                        '<div class="summary-mini-grid">' +
+                            '<div class="summary-mini-item">' +
+                                '<div class="summary-mini-label">稼働日数</div>' +
+                                '<div class="summary-mini-value">' + (s.workDays || 0) + ' 日</div>' +
+                            '</div>' +
+                            '<div class="summary-mini-item">' +
+                                '<div class="summary-mini-label">実働時間</div>' +
+                                '<div class="summary-mini-value">' + (s.totalWorkHours || 0) + ' 時間</div>' +
+                            '</div>' +
+                            '<div class="summary-mini-item" style="grid-column: 1 / -1;">' +
+                                '<div class="summary-mini-label">残業時間</div>' +
+                                '<div class="summary-mini-value">' + (s.totalOvertimeHours || 0) + ' 時間</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>';
+            html += '<div class="detail-info-item">' +
+                        '<div class="detail-info-label">経費</div>' +
+                        '<div class="summary-mini-grid">' +
+                            '<div class="summary-mini-item">' +
+                                '<div class="summary-mini-label">非課税交通費</div>' +
+                                '<div class="summary-mini-value">' + (s.nonTaxableTransportExpense || 0) + ' 円</div>' +
+                            '</div>' +
+                            '<div class="summary-mini-item">' +
+                                '<div class="summary-mini-label">旅費交通費</div>' +
+                                '<div class="summary-mini-value">' + (s.travelExpense || 0) + ' 円</div>' +
+                            '</div>' +
+                            '<div class="summary-mini-item">' +
+                                '<div class="summary-mini-label">諸経費</div>' +
+                                '<div class="summary-mini-value">' + (s.generalExpense || 0) + ' 円</div>' +
+                            '</div>' +
+                            '<div class="summary-mini-item">' +
+                                '<div class="summary-mini-label">合計</div>' +
+                                '<div class="summary-mini-value total">' + (s.totalExpense || 0) + ' 円</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>';
+            html += '</div>';
+
+            html += '<div class="detail-info-item full" style="margin-bottom: 24px;">' +
+                        '<div class="detail-info-label" style="margin-bottom: 8px;">作業内容</div>' +
+                        '<div class="work-content-box">' + (d.workContent || '(未入力)') + '</div>' +
+                    '</div>';
+
+            html += '<div class="detail-section-title" style="margin-top: 8px;">毎日勤怠明細</div>';
+            html += '<div style="overflow-x: auto; border-radius: 12px; border: 2px solid #e2e8f0;">';
+            html += '<table class="table table-hover align-middle mb-0 text-center" style="font-size: 0.85rem;">' +
+                        '<thead style="background-color: #1a252f; color: white;">' +
+                            '<tr>' +
+                                '<th style="width: 80px;">日付</th>' +
+                                '<th style="width: 55px;">曜日</th>' +
+                                '<th style="width: 90px;">出勤</th>' +
+                                '<th style="width: 90px;">退勤</th>' +
+                                '<th style="width: 90px;">休憩</th>' +
+                                '<th style="width: 75px;">実働</th>' +
+                                '<th style="width: 75px;">残業</th>' +
+                                '<th style="width: 95px;">区分</th>' +
+                                '<th style="width: 140px;">備考</th>' +
+                            '</tr>' +
+                        '</thead>' +
+                        '<tbody>';
+            var attList = d.attendanceList || [];
+            if (attList.length === 0) {
+                html += '<tr><td colspan="9" style="padding: 30px; color: #94a3b8;">勤怠データがありません</td></tr>';
+            } else {
+                for (var i = 0; i < attList.length; i++) {
+                    var a = attList[i];
+                    var dateCls = '';
+                    if (a.sunday || a.holiday) dateCls = 'color:#dc2626; font-weight:600;';
+                    else if (a.saturday) dateCls = 'color:#2563eb; font-weight:600;';
+                    else dateCls = 'color:#475569; font-weight:600;';
+                    var dowCls = '';
+                    if (a.sunday || a.holiday) dowCls = 'color:#dc2626;';
+                    else if (a.saturday) dowCls = 'color:#2563eb;';
+                    var wh = (a.workHours != null && a.workHours !== undefined) ? Number(a.workHours).toFixed(2) : '0.00';
+                    var oh = (a.overtimeHours != null && a.overtimeHours !== undefined) ? Number(a.overtimeHours).toFixed(2) : '0.00';
+                    var stCls = '';
+                    var statusVal = a.status || '-';
+                    if (['出社','在宅','正常'].indexOf(statusVal) >= 0) stCls = 'color:#16a34a; font-weight:600;';
+                    else if (['有給','有休'].indexOf(statusVal) >= 0) stCls = 'color:#2563eb; font-weight:600;';
+                    else if (['欠勤','未出勤'].indexOf(statusVal) >= 0) stCls = 'color:#dc2626; font-weight:600;';
+                    else if (statusVal.indexOf('休日') >= 0 || statusVal.indexOf('加班') >= 0 || statusVal.indexOf('深夜') >= 0) stCls = 'color:#d97706; font-weight:600;';
+                    html += '<tr>' +
+                        '<td style="' + dateCls + '">' + (a.dateLabel || '') + '</td>' +
+                        '<td style="' + dowCls + '">' + (a.dayOfWeek || '') + '</td>' +
+                        '<td>' + (a.startTime || '-') + '</td>' +
+                        '<td>' + (a.endTime || '-') + '</td>' +
+                        '<td>' + (a.breakTime || '-') + '</td>' +
+                        '<td>' + wh + '</td>' +
+                        '<td>' + oh + '</td>' +
+                        '<td style="' + stCls + '">' + statusVal + '</td>' +
+                        '<td style="text-align:left; font-size:0.8rem; color:#475569;">' + (a.remarks ? (a.remarks+'').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '-') + '</td>' +
+                    '</tr>';
+                }
+            }
+            html += '</tbody></table></div>';
+            html += '</div>';
+            return html;
+        }
+
+        function getStatusBadgeClass(statusName) {
+            var n = (statusName || '').toLowerCase();
+            if (n === 'draft') return 'status-draft';
+            if (n === 'submitted' || n === 'pending') return 'status-submitted';
+            if (n === 'manager_approved' || n === 'approved') return 'status-approved';
+            if (n === 'finalized') return 'status-finalized';
+            if (n === 'rejected') return 'status-rejected';
+            return 'status-pending';
+        }
+
+        function renderDetail(d) {
+            var body = document.getElementById('detailModalBody');
+            document.getElementById('detailTypeLabel').textContent = d.applicationTypeLabel || '';
+            var sb = document.getElementById('detailStatusBadge');
+            sb.textContent = d.statusDisplayName || '';
+            sb.className = 'status-badge ' + getStatusBadgeClass(d.status);
+
+            var html = buildBasicSection(d);
+            if (d.applicationType === 'TRAVEL') html += buildTravelSection(d);
+            else if (d.applicationType === 'GENERAL') html += buildGeneralSection(d);
+            else if (d.applicationType === 'PAID_LEAVE') html += buildPaidLeaveSection(d);
+            else if (d.applicationType === 'MONTHLY_REPORT') html += buildMonthlySection(d);
+
+            body.innerHTML = html;
+
+            var footer = document.getElementById('detailModalFooter');
+            var approveBtnLabel = d.approveButtonLabel || '承認';
+            if (d.canApprove) {
+                footer.innerHTML =
+                    '<button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal">閉じる</button>' +
+                    '<button type="button" class="btn-reject" onclick="rejectInModal()">拒否</button>' +
+                    '<button type="button" class="btn-approve" onclick="approveInModal()">' + approveBtnLabel + '</button>';
+            } else {
+                footer.innerHTML =
+                    '<button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal">閉じる</button>';
+            }
+        }
+
+        function renderDetailError(msg) {
+            var body = document.getElementById('detailModalBody');
+            body.innerHTML = '<div class="error-message-box"><i class="bi bi-exclamation-triangle"></i> ' + (msg || 'エラーが発生しました') + '</div>';
+            document.getElementById('detailModalFooter').innerHTML =
+                '<button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal">閉じる</button>';
+        }
+
+        function showDetail(id, type) {
+            currentDetailId = id;
+            currentDetailType = type;
+
+            var modal = ensureDetailModal();
+            if (!modal) {
+                alert('Modal初期化に失敗しました');
+                return;
+            }
+
+            var body = document.getElementById('detailModalBody');
+            if (body) {
+                body.innerHTML =
+                    '<div class="loading-spinner">' +
+                        '<i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite;"></i>' +
+                        '<div>読み込み中...</div>' +
+                    '</div>';
+            }
+            var headerLabel = document.getElementById('detailTypeLabel');
+            if (headerLabel) headerLabel.textContent = '読込中...';
+            var headerBadge = document.getElementById('detailStatusBadge');
+            if (headerBadge) {
+                headerBadge.textContent = '-';
+                headerBadge.className = 'status-badge status-pending';
+            }
+            var footer = document.getElementById('detailModalFooter');
+            if (footer) {
+                footer.innerHTML =
+                    '<button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal">閉じる</button>';
+            }
+
+            modal.show();
+
+            fetch('/application/api/detail?id=' + encodeURIComponent(id) + '&type=' + encodeURIComponent(type))
+                .then(function (res) {
+                    return res.json().then(function (data) {
+                        if (!res.ok || (data.success === false)) {
+                            throw new Error(data.message || ('HTTP ' + res.status));
+                        }
+                        if (String(currentDetailId) !== String(id) || currentDetailType !== type) {
+                            return;
+                        }
+                        renderDetail(data);
+                    });
+                })
+                .catch(function (err) {
+                    console.error('Detail fetch error:', err);
+                    if (String(currentDetailId) === String(id) && currentDetailType === type) {
+                        renderDetailError(err.message || 'データ取得に失敗しました');
+                    }
+                });
+        }
+
+        function approveInModal() {
+            if (!currentDetailId || !currentDetailType) return;
+            if (!confirm('承認してもよろしいですか？')) return;
+
+            var fd = new FormData();
+            fd.append('id', currentDetailId);
+            fd.append('type', currentDetailType);
+
+            fetch('/application/api/approve', {
+                method: 'POST',
+                body: fd
+            }).then(function (res) {
+                return res.json();
+            }).then(function (data) {
+                if (data && data.success) {
+                    try {
+                        var backdrops = document.querySelectorAll('.modal-backdrop');
+                        for (var i = 0; i < backdrops.length; i++) {
+                            backdrops[i].parentNode.removeChild(backdrops[i]);
+                        }
+                        document.body.classList.remove('modal-open');
+                        document.body.style.overflow = '';
+                        document.body.style.paddingRight = '';
+                    } catch (e) {}
+                    location.reload();
+                } else {
+                    alert((data && data.message) || '承認に失敗しました');
+                }
+            }).catch(function (err) {
+                console.error('Approve error:', err);
+                alert('承認リクエストに失敗しました: ' + err.message);
+            });
+        }
+
+        function rejectInModal() {
+            if (!currentDetailId || !currentDetailType) return;
+            if (!confirm('拒否してもよろしいですか？')) return;
+
+            var fd = new FormData();
+            fd.append('id', currentDetailId);
+            fd.append('type', currentDetailType);
+
+            fetch('/application/api/reject', {
+                method: 'POST',
+                body: fd
+            }).then(function (res) {
+                return res.json();
+            }).then(function (data) {
+                if (data && data.success) {
+                    try {
+                        var backdrops = document.querySelectorAll('.modal-backdrop');
+                        for (var i = 0; i < backdrops.length; i++) {
+                            backdrops[i].parentNode.removeChild(backdrops[i]);
+                        }
+                        document.body.classList.remove('modal-open');
+                        document.body.style.overflow = '';
+                        document.body.style.paddingRight = '';
+                    } catch (e) {}
+                    location.reload();
+                } else {
+                    alert((data && data.message) || '拒否に失敗しました');
+                }
+            }).catch(function (err) {
+                console.error('Reject error:', err);
+                alert('拒否リクエストに失敗しました: ' + err.message);
+            });
+        }
+    </script>
+</th:block>
+</body>
+</html>
