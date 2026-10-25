@@ -25,6 +25,14 @@
         .editing .display-mode {
             display: none;
         }
+        @media (max-width: 767.98px) {
+            .attendance-stat-cards {
+                flex-direction: column;
+            }
+            .attendance-stat-cards > div {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -33,7 +41,7 @@
     <input type="hidden" id="currentMonth" th:value="${currentMonth}">
 
     <!-- 终极修复：高颜值 Flex 横排数据卡片 -->
-    <div class="d-flex flex-row gap-3 mb-4 w-100" style="justify-content: space-between;">
+    <div class="attendance-stat-cards d-flex flex-row gap-3 mb-4 w-100" style="justify-content: space-between;">
         <!-- 稼働日数 -->
         <div class="flex-fill bg-white shadow-sm border rounded-3 p-3 text-center">
             <div class="text-secondary small fw-bold mb-2">稼働日数</div>
