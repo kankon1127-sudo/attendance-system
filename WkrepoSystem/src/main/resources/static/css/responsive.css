@@ -3,6 +3,10 @@
     display: none;
 }
 
+.system-name {
+    display: none;
+}
+
 @media (max-width: 767.98px) {
     body.login-page {
         height: auto;
@@ -77,10 +81,32 @@
         align-items: center;
         gap: 10px;
         width: 100%;
+        min-width: 0;
+        flex-wrap: nowrap;
+    }
+
+    .top-bar-titles {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        line-height: 1.25;
+    }
+
+    .system-name {
+        display: block;
+        overflow: hidden;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 600;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .top-bar-left h2 {
-        font-size: 18px;
+        overflow: hidden;
+        font-size: 17px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .sidebar-toggle {
@@ -126,6 +152,7 @@
     }
 
     .user-name {
+        min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -188,6 +215,7 @@
         display: block;
         width: 100%;
         word-break: keep-all;
+        writing-mode: horizontal-tb;
     }
 
     .content-area form input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
@@ -231,8 +259,15 @@
     .content-area a[class*="btn"],
     .content-area .tab {
         max-width: 100%;
+        min-height: 44px;
         word-break: keep-all;
+        writing-mode: horizontal-tb;
         white-space: nowrap;
+    }
+
+    .content-area form button,
+    .content-area form input[type="submit"] {
+        width: 100%;
     }
 
     .content-area .action-buttons,
