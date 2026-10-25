@@ -9,7 +9,9 @@
             border-radius: 16px;
             padding: 22px 28px;
             display: flex;
+            flex-wrap: wrap;
             justify-content: space-between;
+            gap: 12px;
             align-items: center;
             margin-bottom: 24px;
         }
@@ -215,6 +217,10 @@
             / <span th:text="#{user.active}">有効</span> <strong th:text="${activeCount}">0</strong>
             / <span th:text="#{user.inactive}">無効</span> <strong th:text="${totalCount - activeCount}">0</strong>
         </div>
+        <a th:if="${isAdmin}" href="/admin/database-backup" class="btn btn-light">
+            <i class="bi bi-download me-1"></i>
+            <span th:text="#{database.backup.download}">データベースをバックアップ</span>
+        </a>
     </div>
 
     <div class="alert alert-danger"  th:if="${errorMessage}"   style="border-radius:12px;" th:text="${errorMessage}"></div>
