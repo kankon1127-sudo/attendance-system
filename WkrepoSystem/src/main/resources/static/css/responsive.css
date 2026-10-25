@@ -1,0 +1,334 @@
+.sidebar-close,
+.sidebar-toggle {
+    display: none;
+}
+
+@media (max-width: 767.98px) {
+    body.login-page {
+        height: auto;
+        min-height: 100vh;
+        padding: 16px;
+    }
+
+    .login-container {
+        width: 100%;
+        max-width: 400px;
+        padding: 24px;
+    }
+
+    .app-container {
+        display: block;
+        min-height: 100vh;
+    }
+
+    .sidebar {
+        display: none;
+    }
+
+    .sidebar.is-open {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 1050;
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        overflow-y: auto;
+    }
+
+    .sidebar-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 16px;
+    }
+
+    .sidebar-close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: white;
+        font-size: 24px;
+    }
+
+    .sidebar-nav {
+        padding: 8px 0 20px;
+    }
+
+    .main-content {
+        width: 100%;
+        min-width: 0;
+        min-height: 100vh;
+    }
+
+    .top-bar {
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 12px 16px;
+    }
+
+    .top-bar-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .top-bar-left h2 {
+        font-size: 18px;
+    }
+
+    .sidebar-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
+        border: 1px solid #dce1e5;
+        border-radius: 6px;
+        background: white;
+        color: #2c3e50;
+        font-size: 22px;
+    }
+
+    .top-bar-right {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        width: 100%;
+    }
+
+    .top-bar-right > .btn-logout {
+        display: flex;
+        justify-content: center;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .user-info {
+        min-width: 0;
+        gap: 8px;
+    }
+
+    .user-avatar {
+        flex: 0 0 35px;
+    }
+
+    .user-info > div:last-child {
+        min-width: 0;
+    }
+
+    .user-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .top-bar-actions {
+        display: flex;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .btn-home,
+    .btn-logout {
+        display: inline-flex;
+        flex: 1 1 0;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 10px;
+        white-space: nowrap;
+    }
+
+    .content-area {
+        min-width: 0;
+        padding: 16px;
+        overflow-x: auto;
+    }
+
+    .content-area .card {
+        padding: 18px;
+    }
+
+    .content-area .content-wrapper,
+    .content-area .leave-form-card,
+    .content-area .history-card,
+    .content-area .table-card {
+        max-width: 100%;
+        padding: 16px;
+    }
+
+    .content-area form .row > [class*="col-"] {
+        width: 100%;
+        max-width: 100%;
+        flex: 0 0 100%;
+    }
+
+    .content-area form .form-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .content-area form .form-group {
+        width: 100%;
+        min-width: 0;
+        flex: 0 0 100%;
+    }
+
+    .content-area form label,
+    .content-area form .form-label {
+        display: block;
+        width: 100%;
+        word-break: keep-all;
+    }
+
+    .content-area form input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+    .content-area form select,
+    .content-area form textarea {
+        width: 100% !important;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .content-area form.d-flex {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .content-area .filter-card,
+    .content-area .filter-group {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .content-area .filter-select,
+    .content-area .filter-btn,
+    .content-area .filter-btn-reset {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .content-area .filter-spacer {
+        display: none;
+    }
+
+    .content-area .btn-group {
+        flex-wrap: wrap;
+        max-width: 100%;
+    }
+
+    .content-area button,
+    .content-area .btn,
+    .content-area a[class*="btn"],
+    .content-area .tab {
+        max-width: 100%;
+        word-break: keep-all;
+        white-space: nowrap;
+    }
+
+    .content-area .action-buttons,
+    .content-area .action-buttons-um {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .content-area .action-buttons > *,
+    .content-area .action-buttons-um > * {
+        width: 100%;
+    }
+
+    .content-area form > .d-flex.gap-2 {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .content-area form > .d-flex.gap-2 > * {
+        width: 100%;
+    }
+
+    .content-area .row-action-bottom {
+        flex-wrap: wrap;
+    }
+
+    .content-area .row-action-bottom > * {
+        width: 100%;
+    }
+
+    .content-area .stat-cards,
+    .content-area .attendance-stat-cards {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .content-area .stat-cards > *,
+    .content-area .attendance-stat-cards > * {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .content-area .form-header,
+    .content-area .header-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+    }
+
+    .content-area .tab-group {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .content-area .tab,
+    .content-area .btn-submit {
+        width: 100%;
+        min-height: 44px;
+        justify-content: center;
+    }
+
+    .content-area .summary-grid,
+    .content-area .detail-info-grid,
+    .content-area .detail-info-grid-3,
+    .content-area .summary-mini-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .content-area .flow-steps {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .content-area .flow-line {
+        width: 4px;
+        height: 24px;
+        margin: 0;
+    }
+
+    .content-area .info-item {
+        gap: 8px;
+    }
+
+    .content-area .info-label,
+    .content-area .info-value {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .content-area .table-responsive {
+        max-width: 100%;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .content-area .table-responsive > table {
+        min-width: 640px;
+    }
+}
