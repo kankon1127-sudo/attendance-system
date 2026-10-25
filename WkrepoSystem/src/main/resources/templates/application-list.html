@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'application-list', '申請一覧')}">
 <head th:fragment="head">
-    <title>申請一覧 - 月次業務ポータル</title>
+    <title th:text="${#messages.msg('page.application-list') + ' - ' + #messages.msg('brand.name')}">申請一覧</title>
     <style>
         .content-wrapper {
             background: #f1f5f9;
@@ -441,37 +441,37 @@
 <th:block th:fragment="main-content">
     <div class="content-wrapper">
         <div class="header-card">
-            <div class="form-title">申請一覧</div>
+            <div class="form-title" th:text="#{page.application-list}">申請一覧</div>
         </div>
 
         <div class="filter-card">
             <form method="GET" action="/application/list" id="filterForm" style="display: contents;">
                 <div class="filter-group">
-                    <label for="filterType" class="filter-label"><i class="bi bi-funnel"></i> 申請種別</label>
+                    <label for="filterType" class="filter-label"><i class="bi bi-funnel"></i> <span th:text="#{application.type}">申請種別</span></label>
                     <select name="filterType" id="filterType" class="filter-select">
-                        <option value="">すべて</option>
-                        <option value="TRAVEL" th:selected="${filterType == 'TRAVEL'}">交通費</option>
-                        <option value="GENERAL" th:selected="${filterType == 'GENERAL'}">諸経費</option>
-                        <option value="PAID_LEAVE" th:selected="${filterType == 'PAID_LEAVE'}">年休</option>
-                        <option value="MONTHLY_REPORT" th:selected="${filterType == 'MONTHLY_REPORT'}">月報</option>
+                        <option value="" th:text="#{application.all}">すべて</option>
+                        <option value="TRAVEL" th:selected="${filterType == 'TRAVEL'}" th:text="#{application.type.TRAVEL}">交通費</option>
+                        <option value="GENERAL" th:selected="${filterType == 'GENERAL'}" th:text="#{application.type.GENERAL}">諸経費</option>
+                        <option value="PAID_LEAVE" th:selected="${filterType == 'PAID_LEAVE'}" th:text="#{application.type.PAID_LEAVE}">年休</option>
+                        <option value="MONTHLY_REPORT" th:selected="${filterType == 'MONTHLY_REPORT'}" th:text="#{application.type.MONTHLY_REPORT}">月報</option>
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label for="filterStatus" class="filter-label"><i class="bi bi-flag"></i> ステータス</label>
+                    <label for="filterStatus" class="filter-label"><i class="bi bi-flag"></i> <span th:text="#{application.status}">ステータス</span></label>
                     <select name="filterStatus" id="filterStatus" class="filter-select">
-                        <option value="">すべて</option>
+                        <option value="" th:text="#{application.all}">すべて</option>
                         <th:block th:each="st : ${allStatuses}">
-                            <option th:value="${st.name()}" th:text="${st.displayName}" th:selected="${filterStatus == st.name()}"></option>
+                            <option th:value="${st.name()}" th:text="${#messages.msg('application.status.' + st.name())}" th:selected="${filterStatus == st.name()}"></option>
                         </th:block>
                     </select>
                 </div>
                 <div class="filter-group">
-                    <button type="submit" class="filter-btn"><i class="bi bi-search"></i> 絞り込み</button>
-                    <button type="button" class="filter-btn-reset" onclick="resetFilter()"><i class="bi bi-arrow-counterclockwise"></i> リセット</button>
+                    <button type="submit" class="filter-btn"><i class="bi bi-search"></i> <span th:text="#{application.filter}">絞り込み</span></button>
+                    <button type="button" class="filter-btn-reset" onclick="resetFilter()"><i class="bi bi-arrow-counterclockwise"></i> <span th:text="#{application.reset}">リセット</span></button>
                 </div>
                 <div class="filter-spacer"></div>
                 <div class="filter-count">
-                    該当件数：<strong th:text="${#lists.size(applications)}">0</strong> 件
+                    <span th:text="#{application.resultCount}">該当件数：</span><strong th:text="${#lists.size(applications)}">0</strong>
                 </div>
             </form>
         </div>
@@ -497,14 +497,14 @@
                 </colgroup>
                 <thead>
                     <tr>
-                        <th style="text-align: center;">申請番号</th>
-                        <th style="text-align: left;">申請者</th>
-                        <th style="text-align: left;">部署</th>
-                        <th style="text-align: center;">申請種別</th>
-                        <th style="text-align: center;">申請日時</th>
-                        <th style="text-align: right;">金額/日数/対象月</th>
-                        <th style="text-align: center;">ステータス</th>
-                        <th style="text-align: right;">操作</th>
+                        <th style="text-align: center;" th:text="#{application.number}">申請番号</th>
+                        <th style="text-align: left;" th:text="#{application.applicant}">申請者</th>
+                        <th style="text-align: left;" th:text="#{user.department}">部署</th>
+                        <th style="text-align: center;" th:text="#{application.type}">申請種別</th>
+                        <th style="text-align: center;" th:text="#{application.date}">申請日時</th>
+                        <th style="text-align: right;" th:text="#{application.amountDaysMonth}">金額/日数/対象月</th>
+                        <th style="text-align: center;" th:text="#{application.status}">ステータス</th>
+                        <th style="text-align: right;" th:text="#{common.operation}">操作</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -512,7 +512,7 @@
                         <td colspan="8">
                             <div class="empty-state">
                                 <i class="bi bi-inbox"></i>
-                                <div>該当する申請はありません</div>
+                                <div th:text="#{application.noResults}">該当する申請はありません</div>
                             </div>
                         </td>
                     </tr>
@@ -525,7 +525,7 @@
                         <td style="text-align: center;">
                             <span class="type-badge" 
                                   th:classappend="${app.applicationType == 'TRAVEL' ? ' type-travel' : (app.applicationType == 'GENERAL' ? ' type-general' : (app.applicationType == 'PAID_LEAVE' ? ' type-paidleave' : ' type-monthly'))}"
-                                  th:text="${app.applicationTypeLabel}">交通費</span>
+                                  th:text="${#messages.msg('application.type.' + app.applicationType)}">交通費</span>
                         </td>
                         <td style="text-align: center;" th:text="${#temporals.format(app.applicationDate, 'yyyy/MM/dd HH:mm')}">2024/01/15 10:30</td>
                         <td style="text-align: right; font-weight: 700;"
@@ -535,14 +535,14 @@
                         <td style="text-align: center;">
                             <span class="status-badge" 
                                   th:classappend="${stName == 'draft' ? ' status-draft' : (stName == 'submitted' or stName == 'pending' ? ' status-submitted' : (stName == 'manager_approved' or stName == 'approved' ? ' status-approved' : (stName == 'finalized' ? ' status-finalized' : ' status-rejected')))}"
-                                  th:text="${app.status.displayName}">申請中</span>
+                                  th:text="${#messages.msg('application.status.' + #strings.toUpperCase(stName))}">申請中</span>
                         </td>
                         <td style="text-align: right;">
                             <div class="action-buttons">
                                 <button type="button" class="btn-detail"
                                         th:data-id="${app.id}"
                                         th:data-type="${app.applicationType}"
-                                        onclick="showDetail(this.getAttribute('data-id'), this.getAttribute('data-type'))"><i class="bi bi-eye"></i> 詳細</button>
+                                        onclick="showDetail(this.getAttribute('data-id'), this.getAttribute('data-type'))"><i class="bi bi-eye"></i> <span th:text="#{application.detail}">詳細</span></button>
                                 <th:block th:if="${isPending and app.canApprove}">
                                     <form method="POST" action="/application/approve" style="display: inline;">
                                         <input type="hidden" name="id" th:value="${app.id}">
@@ -571,19 +571,19 @@
             <div class="modal-content">
                 <div class="modal-header" style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
                     <div style="display: flex; align-items: center; gap: 12px;">
-                        <span class="type-badge" id="detailTypeLabel" style="margin: 0;">申請種別</span>
-                        <span class="status-badge status-pending" id="detailStatusBadge">ステータス</span>
+                        <span class="type-badge" id="detailTypeLabel" style="margin: 0;" th:text="#{application.type}">申請種別</span>
+                        <span class="status-badge status-pending" id="detailStatusBadge" th:text="#{application.status}">ステータス</span>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body detail-modal-body" id="detailModalBody">
                     <div class="loading-spinner" id="detailLoading">
                         <i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite;"></i>
-                        <div>読み込み中...</div>
+                        <div th:text="#{application.loading}">読み込み中...</div>
                     </div>
                 </div>
                 <div class="modal-footer" id="detailModalFooter" style="border-top: 2px solid #e2e8f0; background: #f8fafc;">
-                    <button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal">閉じる</button>
+                    <button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal" th:text="#{common.close}">閉じる</button>
                 </div>
             </div>
         </div>
@@ -596,7 +596,94 @@
         }
     </style>
 
-    <script>
+    <script th:inline="javascript">
+        const applicationMessages = {
+            close: /*[[#{common.close}]]*/ '閉じる',
+            type: /*[[#{application.type}]]*/ '申請種別',
+            status: /*[[#{application.status}]]*/ 'ステータス',
+            loading: /*[[#{application.loading}]]*/ '読み込み中...',
+            loadingNow: /*[[#{application.loadingNow}]]*/ '読込中...',
+            modalError: /*[[#{application.modalError}]]*/ 'Modal初期化に失敗しました',
+            error: /*[[#{application.error}]]*/ 'エラーが発生しました',
+            fetchFailed: /*[[#{application.fetchFailed}]]*/ 'データ取得に失敗しました',
+            basicInfo: /*[[#{application.basicInfo}]]*/ '基本情報',
+            applicant: /*[[#{application.applicant}]]*/ '申請者',
+            department: /*[[#{user.department}]]*/ '部署',
+            applicationDate: /*[[#{application.date}]]*/ '申請日時',
+            applicationNumber: /*[[#{application.number}]]*/ '申請番号',
+            travelDetails: /*[[#{application.travelDetails}]]*/ '交通費明細',
+            generalDetails: /*[[#{application.generalDetails}]]*/ '諸経費明細',
+            leaveDetails: /*[[#{application.leaveDetails}]]*/ '年休明細',
+            monthlyDetails: /*[[#{application.monthlyDetails}]]*/ '月報明細',
+            date: /*[[#{travel.date}]]*/ '日付',
+            typeLabel: /*[[#{application.type}]]*/ '区分',
+            transportation: /*[[#{travel.transportation}]]*/ '交通手段',
+            amount: /*[[#{common.amount}]]*/ '金額',
+            route: /*[[#{travel.route}]]*/ '経路',
+            summary: /*[[#{common.summary}]]*/ '摘要',
+            expenseItem: /*[[#{application.expenseItem}]]*/ '費目',
+            remarks: /*[[#{common.remarks}]]*/ '備考',
+            startDate: /*[[#{application.startDate}]]*/ '開始日',
+            endDate: /*[[#{application.endDate}]]*/ '終了日',
+            leaveDays: /*[[#{application.leaveDays}]]*/ '取得日数',
+            leaveType: /*[[#{leave.type}]]*/ '種別',
+            leaveReason: /*[[#{application.leaveReason}]]*/ '理由・備考',
+            employeeInfo: /*[[#{monthly.employeeInfo}]]*/ '社員情報',
+            name: /*[[#{user.name}]]*/ '氏名',
+            approver: /*[[#{application.approver}]]*/ '承認依頼先',
+            noApprover: /*[[#{application.noApprover}]]*/ '(指定なし)',
+            workRecord: /*[[#{monthly.workRecord}]]*/ '勤務実績',
+            workDays: /*[[#{monthly.workDays}]]*/ '稼働日数',
+            workHours: /*[[#{attendance.workHours}]]*/ '実働時間',
+            overtimeHours: /*[[#{attendance.overtimeHours}]]*/ '残業時間',
+            expenses: /*[[#{monthly.expenses}]]*/ '経費',
+            nonTaxableTransport: /*[[#{monthly.nonTaxableTransport}]]*/ '非課税交通費',
+            travelExpense: /*[[#{monthly.travelExpense}]]*/ '旅費交通費',
+            generalExpense: /*[[#{monthly.generalExpense}]]*/ '諸経費',
+            total: /*[[#{monthly.total}]]*/ '合計',
+            workContent: /*[[#{application.workContent}]]*/ '作業内容',
+            noInput: /*[[#{application.noInput}]]*/ '(未入力)',
+            dailyAttendance: /*[[#{application.dailyAttendance}]]*/ '毎日勤怠明細',
+            noAttendance: /*[[#{application.noAttendance}]]*/ '勤怠データがありません',
+            approve: /*[[#{application.approve}]]*/ '承認',
+            finalApproval: /*[[#{application.finalApproval}]]*/ '最終承認',
+            reject: /*[[#{application.reject}]]*/ '拒否',
+            approveConfirm: /*[[#{application.approveConfirm}]]*/ '承認してもよろしいですか？',
+            rejectConfirm: /*[[#{application.rejectConfirm}]]*/ '拒否してもよろしいですか？',
+            approveFailed: /*[[#{application.approveFailed}]]*/ '承認に失敗しました',
+            rejectFailed: /*[[#{application.rejectFailed}]]*/ '拒否に失敗しました',
+            approveRequestFailed: /*[[#{application.approveRequestFailed}]]*/ '承認リクエストに失敗しました：',
+            rejectRequestFailed: /*[[#{application.rejectRequestFailed}]]*/ '拒否リクエストに失敗しました：',
+            daysUnit: /*[[#{common.daysUnit}]]*/ '日',
+            hoursUnit: /*[[#{common.hoursUnit}]]*/ '時間',
+            yenUnit: /*[[#{common.yenUnit}]]*/ '円',
+            clockIn: /*[[#{application.clockIn}]]*/ '出勤',
+            clockOut: /*[[#{application.clockOut}]]*/ '退勤',
+            breakLabel: /*[[#{application.break}]]*/ '休憩',
+            weekday: /*[[#{application.weekday}]]*/ '曜日',
+            statusNames: {
+                PENDING: /*[[#{application.status.PENDING}]]*/ '申請中',
+                APPROVED: /*[[#{application.status.APPROVED}]]*/ '承認済',
+                REJECTED: /*[[#{application.status.REJECTED}]]*/ '拒否',
+                DRAFT: /*[[#{application.status.DRAFT}]]*/ '下書き',
+                SUBMITTED: /*[[#{application.status.SUBMITTED}]]*/ '提出済',
+                MANAGER_APPROVED: /*[[#{application.status.MANAGER_APPROVED}]]*/ 'リーダー承認済',
+                FINALIZED: /*[[#{application.status.FINALIZED}]]*/ '総務確認済'
+            },
+            typeNames: {
+                TRAVEL: /*[[#{application.type.TRAVEL}]]*/ '交通費',
+                GENERAL: /*[[#{application.type.GENERAL}]]*/ '諸経費',
+                PAID_LEAVE: /*[[#{application.type.PAID_LEAVE}]]*/ '年休',
+                MONTHLY_REPORT: /*[[#{application.type.MONTHLY_REPORT}]]*/ '月報'
+            },
+            attendanceStatuses: {
+                '出社': /*[[#{attendance.status.office}]]*/ '出社',
+                '在宅': /*[[#{attendance.status.home}]]*/ '在宅',
+                '有給': /*[[#{attendance.status.paidLeave}]]*/ '有給',
+                '欠勤': /*[[#{attendance.status.absent}]]*/ '欠勤'
+            },
+            locale: /*[[${#locale.toLanguageTag()}]]*/ 'ja'
+        };
         var currentDetailId = null;
         var currentDetailType = null;
         var detailModal = null;
@@ -627,20 +714,20 @@
                             body.innerHTML =
                                 '<div class="loading-spinner">' +
                                     '<i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite;"></i>' +
-                                    '<div>読み込み中...</div>' +
+                                    '<div>' + applicationMessages.loading + '</div>' +
                                 '</div>';
                         }
                         var headerLabel = document.getElementById('detailTypeLabel');
-                        if (headerLabel) headerLabel.textContent = '申請種別';
+                        if (headerLabel) headerLabel.textContent = applicationMessages.type;
                         var headerBadge = document.getElementById('detailStatusBadge');
                         if (headerBadge) {
-                            headerBadge.textContent = 'ステータス';
+                            headerBadge.textContent = applicationMessages.status;
                             headerBadge.className = 'status-badge status-pending';
                         }
                         var footer = document.getElementById('detailModalFooter');
                         if (footer) {
                             footer.innerHTML =
-                                '<button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal">閉じる</button>';
+                                '<button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal">' + applicationMessages.close + '</button>';
                         }
                     } catch (e) {}
                     currentDetailId = null;
@@ -687,22 +774,22 @@
         }
 
         function buildBasicSection(d) {
-            return '<div class="detail-section-title">基本情報</div>' +
+            return '<div class="detail-section-title">' + applicationMessages.basicInfo + '</div>' +
                 '<div class="detail-info-grid">' +
                     '<div class="detail-info-item">' +
-                        '<div class="detail-info-label">申請者</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.applicant + '</div>' +
                         val(d.applicantName) +
                     '</div>' +
                     '<div class="detail-info-item">' +
-                        '<div class="detail-info-label">部署</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.department + '</div>' +
                         val(d.applicantDepartment) +
                     '</div>' +
                     '<div class="detail-info-item">' +
-                        '<div class="detail-info-label">申請日時</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.applicationDate + '</div>' +
                         '<span class="detail-info-value">' + formatDateTime(d.applicationDate) + '</span>' +
                     '</div>' +
                     '<div class="detail-info-item">' +
-                        '<div class="detail-info-label">申請番号</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.applicationNumber + '</div>' +
                         '<span class="detail-info-value">#' + d.id + '</span>' +
                     '</div>' +
                 '</div>';
@@ -710,30 +797,30 @@
 
         function buildTravelSection(d) {
             return '<div class="detail-section active" id="section-TRAVEL" style="margin-top: 24px;">' +
-                '<div class="detail-section-title">交通費明細</div>' +
+                '<div class="detail-section-title">' + applicationMessages.travelDetails + '</div>' +
                 '<div class="detail-info-grid">' +
                     '<div class="detail-info-item">' +
-                        '<div class="detail-info-label">日付</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.date + '</div>' +
                         '<span class="detail-info-value">' + formatDate(d.expenseDate) + '</span>' +
                     '</div>' +
                     '<div class="detail-info-item">' +
-                        '<div class="detail-info-label">区分</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.typeLabel + '</div>' +
                         val(d.travelType) +
                     '</div>' +
                     '<div class="detail-info-item">' +
-                        '<div class="detail-info-label">交通手段</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.transportation + '</div>' +
                         val(d.transportation) +
                     '</div>' +
                     '<div class="detail-info-item">' +
-                        '<div class="detail-info-label">金額</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.amount + '</div>' +
                         '<span class="detail-info-value" style="color: #2563eb;">' + (d.travelAmount || 0) + ' 円</span>' +
                     '</div>' +
                     '<div class="detail-info-item full">' +
-                        '<div class="detail-info-label">経路</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.route + '</div>' +
                         val(d.route) +
                     '</div>' +
                     '<div class="detail-info-item full">' +
-                        '<div class="detail-info-label">摘要</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.summary + '</div>' +
                         val(d.travelSummary) +
                     '</div>' +
                 '</div>' +
@@ -742,26 +829,26 @@
 
         function buildGeneralSection(d) {
             return '<div class="detail-section active" id="section-GENERAL" style="margin-top: 24px;">' +
-                '<div class="detail-section-title">諸経費明細</div>' +
+                '<div class="detail-section-title">' + applicationMessages.generalDetails + '</div>' +
                 '<div class="detail-info-grid">' +
                     '<div class="detail-info-item">' +
-                        '<div class="detail-info-label">日付</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.date + '</div>' +
                         '<span class="detail-info-value">' + formatDate(d.generalDate) + '</span>' +
                     '</div>' +
                     '<div class="detail-info-item">' +
-                        '<div class="detail-info-label">費目</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.expenseItem + '</div>' +
                         val(d.expenseType) +
                     '</div>' +
                     '<div class="detail-info-item">' +
-                        '<div class="detail-info-label">金額</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.amount + '</div>' +
                         '<span class="detail-info-value" style="color: #2563eb;">' + (d.generalAmount || 0) + ' 円</span>' +
                     '</div>' +
                     '<div class="detail-info-item full">' +
-                        '<div class="detail-info-label">摘要</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.summary + '</div>' +
                         val(d.generalSummary) +
                     '</div>' +
                     '<div class="detail-info-item full">' +
-                        '<div class="detail-info-label">備考</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.remarks + '</div>' +
                         val(d.generalRemarks) +
                     '</div>' +
                 '</div>' +
@@ -770,26 +857,26 @@
 
         function buildPaidLeaveSection(d) {
             return '<div class="detail-section active" id="section-PAID_LEAVE" style="margin-top: 24px;">' +
-                '<div class="detail-section-title">年休明細</div>' +
+                '<div class="detail-section-title">' + applicationMessages.leaveDetails + '</div>' +
                 '<div class="detail-info-grid">' +
                     '<div class="detail-info-item">' +
-                        '<div class="detail-info-label">開始日</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.startDate + '</div>' +
                         '<span class="detail-info-value">' + formatDate(d.startDate) + '</span>' +
                     '</div>' +
                     '<div class="detail-info-item">' +
-                        '<div class="detail-info-label">終了日</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.endDate + '</div>' +
                         '<span class="detail-info-value">' + formatDate(d.endDate) + '</span>' +
                     '</div>' +
                     '<div class="detail-info-item">' +
-                        '<div class="detail-info-label">取得日数</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.leaveDays + '</div>' +
                         '<span class="detail-info-value" style="color: #2563eb;">' + (d.leaveDays || 0) + ' 日</span>' +
                     '</div>' +
                     '<div class="detail-info-item">' +
-                        '<div class="detail-info-label">種別</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.leaveType + '</div>' +
                         val(d.leaveType) +
                     '</div>' +
                     '<div class="detail-info-item full">' +
-                        '<div class="detail-info-label">理由・備考</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.leaveReason + '</div>' +
                         val(d.leaveRemarks) +
                     '</div>' +
                 '</div>' +
@@ -799,91 +886,91 @@
         function buildMonthlySection(d) {
             var s = d.monthlySummary || {};
             var html = '<div class="detail-section active" id="section-MONTHLY_REPORT" style="margin-top: 24px;">';
-            html += '<div class="detail-section-title">' + (d.reportYear || '') + '年' + (d.reportMonth || '') + '月 月報明細</div>';
+            html += '<div class="detail-section-title">' + (d.reportYear || '') + '-' + String(d.reportMonth || '').padStart(2, '0') + ' ' + applicationMessages.monthlyDetails + '</div>';
 
             html += '<div class="detail-info-grid-3">';
             html += '<div class="detail-info-item">' +
-                        '<div class="detail-info-label">社員情報</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.employeeInfo + '</div>' +
                         '<div class="summary-mini-grid">' +
                             '<div class="summary-mini-item">' +
-                                '<div class="summary-mini-label">氏名</div>' +
+                                '<div class="summary-mini-label">' + applicationMessages.name + '</div>' +
                                 '<div class="summary-mini-value">' + (d.applicantName || '-') + '</div>' +
                             '</div>' +
                             '<div class="summary-mini-item">' +
-                                '<div class="summary-mini-label">部署</div>' +
+                                '<div class="summary-mini-label">' + applicationMessages.department + '</div>' +
                                 '<div class="summary-mini-value">' + (d.applicantDepartment || '-') + '</div>' +
                             '</div>' +
                             '<div class="summary-mini-item" style="grid-column: 1 / -1;">' +
-                                '<div class="summary-mini-label">承認依頼先</div>' +
-                                '<div class="summary-mini-value">' + (d.approverName || '(指定なし)') + '</div>' +
+                                '<div class="summary-mini-label">' + applicationMessages.approver + '</div>' +
+                                '<div class="summary-mini-value">' + (d.approverName || applicationMessages.noApprover) + '</div>' +
                             '</div>' +
                         '</div>' +
                     '</div>';
             html += '<div class="detail-info-item">' +
-                        '<div class="detail-info-label">勤務実績</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.workRecord + '</div>' +
                         '<div class="summary-mini-grid">' +
                             '<div class="summary-mini-item">' +
-                                '<div class="summary-mini-label">稼働日数</div>' +
-                                '<div class="summary-mini-value">' + (s.workDays || 0) + ' 日</div>' +
+                                '<div class="summary-mini-label">' + applicationMessages.workDays + '</div>' +
+                                '<div class="summary-mini-value">' + (s.workDays || 0) + ' ' + applicationMessages.daysUnit + '</div>' +
                             '</div>' +
                             '<div class="summary-mini-item">' +
-                                '<div class="summary-mini-label">実働時間</div>' +
-                                '<div class="summary-mini-value">' + (s.totalWorkHours || 0) + ' 時間</div>' +
+                                '<div class="summary-mini-label">' + applicationMessages.workHours + '</div>' +
+                                '<div class="summary-mini-value">' + (s.totalWorkHours || 0) + ' ' + applicationMessages.hoursUnit + '</div>' +
                             '</div>' +
                             '<div class="summary-mini-item" style="grid-column: 1 / -1;">' +
-                                '<div class="summary-mini-label">残業時間</div>' +
-                                '<div class="summary-mini-value">' + (s.totalOvertimeHours || 0) + ' 時間</div>' +
+                                '<div class="summary-mini-label">' + applicationMessages.overtimeHours + '</div>' +
+                                '<div class="summary-mini-value">' + (s.totalOvertimeHours || 0) + ' ' + applicationMessages.hoursUnit + '</div>' +
                             '</div>' +
                         '</div>' +
                     '</div>';
             html += '<div class="detail-info-item">' +
-                        '<div class="detail-info-label">経費</div>' +
+                        '<div class="detail-info-label">' + applicationMessages.expenses + '</div>' +
                         '<div class="summary-mini-grid">' +
                             '<div class="summary-mini-item">' +
-                                '<div class="summary-mini-label">非課税交通費</div>' +
-                                '<div class="summary-mini-value">' + (s.nonTaxableTransportExpense || 0) + ' 円</div>' +
+                                '<div class="summary-mini-label">' + applicationMessages.nonTaxableTransport + '</div>' +
+                                '<div class="summary-mini-value">' + (s.nonTaxableTransportExpense || 0) + ' ' + applicationMessages.yenUnit + '</div>' +
                             '</div>' +
                             '<div class="summary-mini-item">' +
-                                '<div class="summary-mini-label">旅費交通費</div>' +
-                                '<div class="summary-mini-value">' + (s.travelExpense || 0) + ' 円</div>' +
+                                '<div class="summary-mini-label">' + applicationMessages.travelExpense + '</div>' +
+                                '<div class="summary-mini-value">' + (s.travelExpense || 0) + ' ' + applicationMessages.yenUnit + '</div>' +
                             '</div>' +
                             '<div class="summary-mini-item">' +
-                                '<div class="summary-mini-label">諸経費</div>' +
-                                '<div class="summary-mini-value">' + (s.generalExpense || 0) + ' 円</div>' +
+                                '<div class="summary-mini-label">' + applicationMessages.generalExpense + '</div>' +
+                                '<div class="summary-mini-value">' + (s.generalExpense || 0) + ' ' + applicationMessages.yenUnit + '</div>' +
                             '</div>' +
                             '<div class="summary-mini-item">' +
-                                '<div class="summary-mini-label">合計</div>' +
-                                '<div class="summary-mini-value total">' + (s.totalExpense || 0) + ' 円</div>' +
+                                '<div class="summary-mini-label">' + applicationMessages.total + '</div>' +
+                                '<div class="summary-mini-value total">' + (s.totalExpense || 0) + ' ' + applicationMessages.yenUnit + '</div>' +
                             '</div>' +
                         '</div>' +
                     '</div>';
             html += '</div>';
 
             html += '<div class="detail-info-item full" style="margin-bottom: 24px;">' +
-                        '<div class="detail-info-label" style="margin-bottom: 8px;">作業内容</div>' +
-                        '<div class="work-content-box">' + (d.workContent || '(未入力)') + '</div>' +
+                        '<div class="detail-info-label" style="margin-bottom: 8px;">' + applicationMessages.workContent + '</div>' +
+                        '<div class="work-content-box">' + (d.workContent || applicationMessages.noInput) + '</div>' +
                     '</div>';
 
-            html += '<div class="detail-section-title" style="margin-top: 8px;">毎日勤怠明細</div>';
+            html += '<div class="detail-section-title" style="margin-top: 8px;">' + applicationMessages.dailyAttendance + '</div>';
             html += '<div class="table-responsive" style="border-radius: 12px; border: 2px solid #e2e8f0;">';
             html += '<table class="table table-hover align-middle mb-0 text-center" style="font-size: 0.85rem;">' +
                         '<thead style="background-color: #1a252f; color: white;">' +
                             '<tr>' +
-                                '<th style="width: 80px;">日付</th>' +
-                                '<th style="width: 55px;">曜日</th>' +
-                                '<th style="width: 90px;">出勤</th>' +
-                                '<th style="width: 90px;">退勤</th>' +
-                                '<th style="width: 90px;">休憩</th>' +
-                                '<th style="width: 75px;">実働</th>' +
-                                '<th style="width: 75px;">残業</th>' +
-                                '<th style="width: 95px;">区分</th>' +
-                                '<th style="width: 140px;">備考</th>' +
+                                '<th style="width: 80px;">' + applicationMessages.date + '</th>' +
+                                '<th style="width: 55px;">' + applicationMessages.weekday + '</th>' +
+                                '<th style="width: 90px;">' + applicationMessages.clockIn + '</th>' +
+                                '<th style="width: 90px;">' + applicationMessages.clockOut + '</th>' +
+                                '<th style="width: 90px;">' + applicationMessages.breakLabel + '</th>' +
+                                '<th style="width: 75px;">' + applicationMessages.workHours + '</th>' +
+                                '<th style="width: 75px;">' + applicationMessages.overtimeHours + '</th>' +
+                                '<th style="width: 95px;">' + applicationMessages.status + '</th>' +
+                                '<th style="width: 140px;">' + applicationMessages.remarks + '</th>' +
                             '</tr>' +
                         '</thead>' +
                         '<tbody>';
             var attList = d.attendanceList || [];
             if (attList.length === 0) {
-                html += '<tr><td colspan="9" style="padding: 30px; color: #94a3b8;">勤怠データがありません</td></tr>';
+                html += '<tr><td colspan="9" style="padding: 30px; color: #94a3b8;">' + applicationMessages.noAttendance + '</td></tr>';
             } else {
                 for (var i = 0; i < attList.length; i++) {
                     var a = attList[i];
@@ -897,14 +984,15 @@
                     var wh = (a.workHours != null && a.workHours !== undefined) ? Number(a.workHours).toFixed(2) : '0.00';
                     var oh = (a.overtimeHours != null && a.overtimeHours !== undefined) ? Number(a.overtimeHours).toFixed(2) : '0.00';
                     var stCls = '';
-                    var statusVal = a.status || '-';
-                    if (['出社','在宅','正常'].indexOf(statusVal) >= 0) stCls = 'color:#16a34a; font-weight:600;';
-                    else if (['有給','有休'].indexOf(statusVal) >= 0) stCls = 'color:#2563eb; font-weight:600;';
-                    else if (['欠勤','未出勤'].indexOf(statusVal) >= 0) stCls = 'color:#dc2626; font-weight:600;';
-                    else if (statusVal.indexOf('休日') >= 0 || statusVal.indexOf('加班') >= 0 || statusVal.indexOf('深夜') >= 0) stCls = 'color:#d97706; font-weight:600;';
+                    var rawStatus = a.status || '-';
+                    var statusVal = applicationMessages.attendanceStatuses[rawStatus] || rawStatus;
+                    if (['出社','在宅','正常'].indexOf(rawStatus) >= 0) stCls = 'color:#16a34a; font-weight:600;';
+                    else if (['有給','有休'].indexOf(rawStatus) >= 0) stCls = 'color:#2563eb; font-weight:600;';
+                    else if (['欠勤','未出勤'].indexOf(rawStatus) >= 0) stCls = 'color:#dc2626; font-weight:600;';
+                    else if (rawStatus.indexOf('休日') >= 0 || rawStatus.indexOf('加班') >= 0 || rawStatus.indexOf('深夜') >= 0) stCls = 'color:#d97706; font-weight:600;';
                     html += '<tr>' +
                         '<td style="' + dateCls + '">' + (a.dateLabel || '') + '</td>' +
-                        '<td style="' + dowCls + '">' + (a.dayOfWeek || '') + '</td>' +
+                        '<td style="' + dowCls + '">' + (a.date ? new Intl.DateTimeFormat(applicationMessages.locale, { weekday: 'short' }).format(new Date(a.date + 'T00:00:00')) : (a.dayOfWeek || '')) + '</td>' +
                         '<td>' + (a.startTime || '-') + '</td>' +
                         '<td>' + (a.endTime || '-') + '</td>' +
                         '<td>' + (a.breakTime || '-') + '</td>' +
@@ -932,9 +1020,9 @@
 
         function renderDetail(d) {
             var body = document.getElementById('detailModalBody');
-            document.getElementById('detailTypeLabel').textContent = d.applicationTypeLabel || '';
+            document.getElementById('detailTypeLabel').textContent = applicationMessages.typeNames[d.applicationType] || d.applicationTypeLabel || '';
             var sb = document.getElementById('detailStatusBadge');
-            sb.textContent = d.statusDisplayName || '';
+            sb.textContent = applicationMessages.statusNames[d.status] || d.statusDisplayName || '';
             sb.className = 'status-badge ' + getStatusBadgeClass(d.status);
 
             var html = buildBasicSection(d);
@@ -946,23 +1034,24 @@
             body.innerHTML = html;
 
             var footer = document.getElementById('detailModalFooter');
-            var approveBtnLabel = d.approveButtonLabel || '承認';
+            var approveBtnLabel = d.approveButtonLabel === '最終承認'
+                ? applicationMessages.finalApproval : applicationMessages.approve;
             if (d.canApprove) {
                 footer.innerHTML =
-                    '<button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal">閉じる</button>' +
-                    '<button type="button" class="btn-reject" onclick="rejectInModal()">拒否</button>' +
+                    '<button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal">' + applicationMessages.close + '</button>' +
+                    '<button type="button" class="btn-reject" onclick="rejectInModal()">' + applicationMessages.reject + '</button>' +
                     '<button type="button" class="btn-approve" onclick="approveInModal()">' + approveBtnLabel + '</button>';
             } else {
                 footer.innerHTML =
-                    '<button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal">閉じる</button>';
+                    '<button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal">' + applicationMessages.close + '</button>';
             }
         }
 
         function renderDetailError(msg) {
             var body = document.getElementById('detailModalBody');
-            body.innerHTML = '<div class="error-message-box"><i class="bi bi-exclamation-triangle"></i> ' + (msg || 'エラーが発生しました') + '</div>';
+            body.innerHTML = '<div class="error-message-box"><i class="bi bi-exclamation-triangle"></i> ' + (msg || applicationMessages.error) + '</div>';
             document.getElementById('detailModalFooter').innerHTML =
-                '<button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal">閉じる</button>';
+                '<button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal">' + applicationMessages.close + '</button>';
         }
 
         function showDetail(id, type) {
@@ -971,7 +1060,7 @@
 
             var modal = ensureDetailModal();
             if (!modal) {
-                alert('Modal初期化に失敗しました');
+                alert(applicationMessages.modalError);
                 return;
             }
 
@@ -980,11 +1069,11 @@
                 body.innerHTML =
                     '<div class="loading-spinner">' +
                         '<i class="bi bi-arrow-repeat" style="animation: spin 1s linear infinite;"></i>' +
-                        '<div>読み込み中...</div>' +
+                        '<div>' + applicationMessages.loading + '</div>' +
                     '</div>';
             }
             var headerLabel = document.getElementById('detailTypeLabel');
-            if (headerLabel) headerLabel.textContent = '読込中...';
+            if (headerLabel) headerLabel.textContent = applicationMessages.loadingNow;
             var headerBadge = document.getElementById('detailStatusBadge');
             if (headerBadge) {
                 headerBadge.textContent = '-';
@@ -993,7 +1082,7 @@
             var footer = document.getElementById('detailModalFooter');
             if (footer) {
                 footer.innerHTML =
-                    '<button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal">閉じる</button>';
+                    '<button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal">' + applicationMessages.close + '</button>';
             }
 
             modal.show();
@@ -1013,14 +1102,14 @@
                 .catch(function (err) {
                     console.error('Detail fetch error:', err);
                     if (String(currentDetailId) === String(id) && currentDetailType === type) {
-                        renderDetailError(err.message || 'データ取得に失敗しました');
+                        renderDetailError(err.message || applicationMessages.fetchFailed);
                     }
                 });
         }
 
         function approveInModal() {
             if (!currentDetailId || !currentDetailType) return;
-            if (!confirm('承認してもよろしいですか？')) return;
+            if (!confirm(applicationMessages.approveConfirm)) return;
 
             var fd = new FormData();
             fd.append('id', currentDetailId);
@@ -1044,17 +1133,17 @@
                     } catch (e) {}
                     location.reload();
                 } else {
-                    alert((data && data.message) || '承認に失敗しました');
+                    alert((data && data.message) || applicationMessages.approveFailed);
                 }
             }).catch(function (err) {
                 console.error('Approve error:', err);
-                alert('承認リクエストに失敗しました: ' + err.message);
+                alert(applicationMessages.approveRequestFailed + ' ' + err.message);
             });
         }
 
         function rejectInModal() {
             if (!currentDetailId || !currentDetailType) return;
-            if (!confirm('拒否してもよろしいですか？')) return;
+            if (!confirm(applicationMessages.rejectConfirm)) return;
 
             var fd = new FormData();
             fd.append('id', currentDetailId);
@@ -1078,11 +1167,11 @@
                     } catch (e) {}
                     location.reload();
                 } else {
-                    alert((data && data.message) || '拒否に失敗しました');
+                    alert((data && data.message) || applicationMessages.rejectFailed);
                 }
             }).catch(function (err) {
                 console.error('Reject error:', err);
-                alert('拒否リクエストに失敗しました: ' + err.message);
+                alert(applicationMessages.rejectRequestFailed + ' ' + err.message);
             });
         }
     </script>

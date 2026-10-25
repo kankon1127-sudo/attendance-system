@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'home', 'ホーム')}">
 <head th:fragment="head">
-    <title>ホーム - 月次業務ポータル</title>
+    <title th:text="${#messages.msg('page.home') + ' - ' + #messages.msg('brand.name')}">ホーム</title>
     <style>
         .stat-card {
             background: white;
@@ -42,28 +42,28 @@
     <div class="row mb-4">
         <div class="col-12 col-md-3 mb-3">
             <div class="stat-card">
-                <h4>実働時間</h4>
+                <h4 th:text="#{attendance.workHours}">実働時間</h4>
                 <div class="stat-value">0</div>
                 <div class="stat-unit">h</div>
             </div>
         </div>
         <div class="col-12 col-md-3 mb-3">
             <div class="stat-card">
-                <h4>残業時間</h4>
+                <h4 th:text="#{attendance.overtimeHours}">残業時間</h4>
                 <div class="stat-value">0</div>
                 <div class="stat-unit">h</div>
             </div>
         </div>
         <div class="col-12 col-md-3 mb-3">
             <div class="stat-card">
-                <h4>年休残日数</h4>
+                <h4 th:text="#{home.remainingLeave}">年休残日数</h4>
                 <div class="stat-value">40</div>
                 <div class="stat-unit">日</div>
             </div>
         </div>
         <div class="col-12 col-md-3 mb-3">
             <div class="stat-card">
-                <h4>今月出勤日数</h4>
+                <h4 th:text="#{attendance.daysWorked}">今月出勤日数</h4>
                 <div class="stat-value">0</div>
                 <div class="stat-unit">日</div>
             </div>
@@ -72,11 +72,11 @@
     
     <!-- 36协定管理 -->
     <div class="card">
-        <h4 class="mb-4">三六协定 残業時間管理</h4>
+        <h4 class="mb-4" th:text="#{home.overtimeManagement}">三六协定 残業時間管理</h4>
         
         <div class="mb-4">
             <div class="d-flex justify-content-between mb-2">
-                <span>当月残業時間</span>
+                <span th:text="#{home.monthlyOvertime}">当月残業時間</span>
                 <span class="fw-bold">0h / 45h</span>
             </div>
             <div class="progress">
@@ -86,7 +86,7 @@
         
         <div class="mb-4">
             <div class="d-flex justify-content-between mb-2">
-                <span>警告閾値（40h）</span>
+                <span th:text="#{home.warningThreshold}">警告閾値（40h）</span>
                 <span class="fw-bold text-warning">0%</span>
             </div>
             <div class="progress">
@@ -96,7 +96,7 @@
         
         <div>
             <div class="d-flex justify-content-between mb-2">
-                <span>上限（45h）</span>
+                <span th:text="#{home.overtimeLimit}">上限（45h）</span>
                 <span class="fw-bold text-danger">0%</span>
             </div>
             <div class="progress">

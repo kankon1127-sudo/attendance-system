@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'attendance', '勤怠入力')}">
 <head th:fragment="head">
-    <title>勤怠入力 - 月次業務ポータル</title>
+    <title th:text="${#messages.msg('page.attendance') + ' - ' + #messages.msg('brand.name')}">勤怠入力</title>
     <style>
         .attendance-header-card {
             background: white;
@@ -44,21 +44,21 @@
     <div class="attendance-stat-cards d-flex flex-row gap-3 mb-4 w-100" style="justify-content: space-between;">
         <!-- 稼働日数 -->
         <div class="flex-fill bg-white shadow-sm border rounded-3 p-3 text-center">
-            <div class="text-secondary small fw-bold mb-2">稼働日数</div>
+            <div class="text-secondary small fw-bold mb-2" th:text="#{attendance.daysWorked}">稼働日数</div>
             <div class="h2 fw-bold mb-0 text-primary">
                 <span id="totalWorkDays" th:text="${totalWorkDays}">0</span><span class="fs-6 fw-normal text-muted ms-1">日</span>
             </div>
         </div>
         <!-- 実働時間 -->
         <div class="flex-fill bg-white shadow-sm border rounded-3 p-3 text-center">
-            <div class="text-secondary small fw-bold mb-2">実働時間</div>
+            <div class="text-secondary small fw-bold mb-2" th:text="#{attendance.workHours}">実働時間</div>
             <div class="h2 fw-bold mb-0 text-dark">
                 <span id="totalWorkHours" th:text="${totalWorkHours}">0.00</span><span class="fs-6 fw-normal text-muted ms-1">h</span>
             </div>
         </div>
         <!-- 残業時間 -->
         <div class="flex-fill bg-white shadow-sm border rounded-3 p-3 text-center" style="border-top: 4px solid #ffc107;">
-            <div class="text-secondary small fw-bold mb-2">残業時間</div>
+            <div class="text-secondary small fw-bold mb-2" th:text="#{attendance.overtimeHours}">残業時間</div>
             <div class="h2 fw-bold mb-0 text-warning">
                 <span id="totalOvertimeHours" th:text="${totalOvertimeHours}">0.00</span><span class="fs-6 fw-normal text-muted ms-1">h</span>
             </div>
@@ -66,7 +66,7 @@
     </div>
 
     <div class="alert alert-light border mb-4 py-2 px-3 small text-muted">
-        区分で「有給」を選択した日は、年休申請を行い、リーダー承認後に月報を提出できます。
+        <span th:text="#{attendance.leaveNotice}">区分で「有給」を選択した日は、年休申請を行い、リーダー承認後に月報を提出できます。</span>
     </div>
 
     <!-- 月份切换与工具栏：独立カードレイアウト，確保上下並べ -->
@@ -78,10 +78,10 @@
                     <h4 class="mb-0 fw-bold text-primary" th:text="${currentYear + '年' + currentMonth + '月'}">2024年1月</h4>
                     <div class="btn-group shadow-sm">
                         <a th:href="@{/attendance(year=${prevYear}, month=${prevMonth})}" class="btn btn-white btn-sm border bg-white">
-                            <i class="bi bi-chevron-left"></i> 前月
+                            <i class="bi bi-chevron-left"></i> <span th:text="#{attendance.previousMonth}">前月</span>
                         </a>
                         <a th:if="${showNextMonth}" th:href="@{/attendance(year=${nextYear}, month=${nextMonth})}" class="btn btn-white btn-sm border bg-white">
-                            次月 <i class="bi bi-chevron-right"></i>
+                            <span th:text="#{attendance.nextMonth}">次月</span> <i class="bi bi-chevron-right"></i>
                         </a>
                     </div>
                 </div>
@@ -89,9 +89,13 @@
             <!-- 右側：ツールバー -->
             <div class="col-md-7 text-end">
                 <div class="btn-group gap-2">
-                    <a href="/default-attendance-setting" class="btn btn-outline-primary btn-sm rounded"><i class="bi bi-gear"></i> デフォルト設定</a>
-                    <button type="button" class="btn btn-outline-secondary btn-sm rounded" onclick="applyDefaultValues()"><i class="bi bi-magic"></i> 一括デフォルト入力</button>
-                    <button type="button" class="btn btn-primary btn-sm rounded px-3"><i class="bi bi-pencil-square"></i> 一括編集</button>
+                    <a href="/default-attendance-setting" class="btn btn-outline-primary btn-sm rounded"><i class="bi bi-gear"></i> <span th:text="#{attendance.defaultSettings}">デフォルト設定</span></a>
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded" onclick="applyDefaultValues()"><i class="bi bi-magic"></i> <span th:text="#{attendance.bulkDefault}">一括デフォルト入力</span></button>
+                    <button type="button" class="btn btn-primary btn-sm rounded px-3"><i class="bi bi-pencil-square"></i> <span th:text="#{attendance.bulkEdit}">一括編集</span></button>
+                    <a th:href="@{/attendance/export(year=${currentYear}, month=${currentMonth})}"
+                       class="btn btn-success btn-sm rounded" th:title="#{attendance.export.title}">
+                        <i class="bi bi-file-earmark-excel"></i> <span th:text="#{action.exportExcel}">Excel出力</span>
+                    </a>
                 </div>
             </div>
             <!-- 新增：默认值显示 -->
@@ -101,18 +105,18 @@
                         <div class="d-flex align-items-center gap-4 text-muted small">
                             <div>
                                 <i class="bi bi-info-circle me-1"></i>
-                                <strong>ログインデフォルト値:</strong>
+                                <strong th:text="#{attendance.loggedInDefaults}">ログインデフォルト値:</strong>
                             </div>
                             <div>
-                                <span class="fw-bold">出勤:</span>
+                                <span class="fw-bold" th:text="#{attendance.clockIn} + ':'">出勤:</span>
                                 <span th:text="${defaultSetting.defaultStartTime ?: '-'}">09:00</span>
                             </div>
                             <div>
-                                <span class="fw-bold">退勤:</span>
+                                <span class="fw-bold" th:text="#{attendance.clockOut} + ':'">退勤:</span>
                                 <span th:text="${defaultSetting.defaultEndTime ?: '-'}">18:00</span>
                             </div>
                             <div>
-                                <span class="fw-bold">休憩:</span>
+                                <span class="fw-bold" th:text="#{attendance.break} + ':'">休憩:</span>
                                 <span th:text="${defaultSetting.defaultBreakMinutes != null ? (defaultSetting.defaultBreakMinutes / 60 + ':' + #numbers.formatInteger(defaultSetting.defaultBreakMinutes % 60, 2)) : '-'}">01:00</span>
                             </div>
                             <div>
@@ -131,16 +135,16 @@
             <table class="table table-hover align-middle mb-0 text-center" style="font-size: 0.9rem;">
                 <thead style="background-color: #1a252f; color: white;">
                     <tr>
-                        <th style="width: 80px;">日付</th>
-                        <th style="width: 60px;">曜日</th>
-                        <th style="width: 100px;">出勤</th>
-                        <th style="width: 100px;">退勤</th>
-                        <th style="width: 100px;">休憩</th>
-                        <th style="width: 80px;">実働</th>
-                        <th style="width: 80px;">残業</th>
-                        <th style="width: 100px;">区分</th>
-                        <th style="width: 150px;">備考</th>
-                        <th style="width: 80px;">編集</th>
+                        <th style="width: 80px;" th:text="#{attendance.date}">日付</th>
+                        <th style="width: 60px;" th:text="#{attendance.weekday}">曜日</th>
+                        <th style="width: 100px;" th:text="#{attendance.startTime}">出勤</th>
+                        <th style="width: 100px;" th:text="#{attendance.endTime}">退勤</th>
+                        <th style="width: 100px;" th:text="#{attendance.breakTime}">休憩</th>
+                        <th style="width: 80px;" th:text="#{attendance.workHours}">実働</th>
+                        <th style="width: 80px;" th:text="#{attendance.overtimeHours}">残業</th>
+                        <th style="width: 100px;" th:text="#{attendance.status}">区分</th>
+                        <th style="width: 150px;" th:text="#{attendance.remarks}">備考</th>
+                        <th style="width: 80px;" th:text="#{attendance.edit}">編集</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -173,14 +177,14 @@
                         <td th:id="'workHours-' + ${day.day}" th:text="${isNoInput ? '0.00' : ((day.attendance?.workHours != null && day.attendance.workHours != 0) ? day.attendance.workHours : '0.00')}">0.00</td>
                         <td th:id="'overtimeHours-' + ${day.day}" th:text="${isNoInput ? '0.00' : ((day.attendance?.overtimeHours != null && day.attendance.overtimeHours != 0) ? day.attendance.overtimeHours : '0.00')}">0.00</td>
                         <td>
-                            <span class="display-mode" th:text="${(day.attendance?.agreement36Status != null && !#strings.isEmpty(day.attendance.agreement36Status)) ? day.attendance.agreement36Status : '-'}">-</span>
+                            <span class="display-mode" th:text="${attendanceStatus == '出社' ? #messages.msg('attendance.status.office') : (attendanceStatus == '在宅' ? #messages.msg('attendance.status.home') : (attendanceStatus == '有給' ? #messages.msg('attendance.status.paidLeave') : (attendanceStatus == '欠勤' ? #messages.msg('attendance.status.absent') : '-')))}">-</span>
                             <select class="form-select form-select-sm edit-mode" name="agreement36Status" th:id="'status-' + ${day.day}"
                                     th:onchange="'handleStatusChange(' + ${day.day} + ')'">
                                 <option value="">-</option>
-                                <option value="出社" th:selected="${day.attendance?.agreement36Status == '出社'}">出社</option>
-                                <option value="在宅" th:selected="${day.attendance?.agreement36Status == '在宅'}">在宅</option>
-                                <option value="有給" th:selected="${day.attendance?.agreement36Status == '有給'}">有給</option>
-                                <option value="欠勤" th:selected="${day.attendance?.agreement36Status == '欠勤'}">欠勤</option>
+                                <option value="出社" th:selected="${day.attendance?.agreement36Status == '出社'}" th:text="#{attendance.status.office}">出社</option>
+                                <option value="在宅" th:selected="${day.attendance?.agreement36Status == '在宅'}" th:text="#{attendance.status.home}">在宅</option>
+                                <option value="有給" th:selected="${day.attendance?.agreement36Status == '有給'}" th:text="#{attendance.status.paidLeave}">有給</option>
+                                <option value="欠勤" th:selected="${day.attendance?.agreement36Status == '欠勤'}" th:text="#{attendance.status.absent}">欠勤</option>
                             </select>
                         </td>
                         <td>
@@ -191,7 +195,7 @@
                                    th:id="'remarks-' + ${day.day}">
                         </td>
                         <td>
-                            <button type="button" class="btn btn-sm btn-primary" th:onclick="'toggleEdit(event, ' + ${day.day} + ')'" th:id="'btn-' + ${day.day}">編集</button>
+                            <button type="button" class="btn btn-sm btn-primary" th:onclick="'toggleEdit(event, ' + ${day.day} + ')'" th:id="'btn-' + ${day.day}" th:text="#{attendance.edit}">編集</button>
                         </td>
                     </tr>
                 </tbody>
@@ -199,7 +203,16 @@
         </div>
     </div>
     
-    <script>
+    <script th:inline="javascript">
+        const attendanceMessages = {
+            edit: /*[[#{attendance.edit}]]*/ '編集',
+            save: /*[[#{attendance.inlineSave}]]*/ '保存',
+            futureMonth: /*[[#{attendance.futureMonthError}]]*/ '選択した年月は未来の日付です。',
+            bulkConfirm: /*[[#{attendance.bulkApplyConfirm}]]*/ '未入力日にデフォルト値を一括入力しますか？',
+            bulkFailed: /*[[#{attendance.bulkApplyFailed}]]*/ '一括入力に失敗しました。',
+            saveFailed: /*[[#{attendance.saveFailed}]]*/ '保存に失敗しました。',
+            networkError: /*[[#{common.networkError}]]*/ '通信エラーが発生しました。'
+        };
         let editingDay = null;
 
         function toggleEdit(event, day) {
@@ -214,7 +227,7 @@
                     cancelEdit(editingDay);
                 }
                 row.classList.add('editing');
-                btn.textContent = '保存';
+                btn.textContent = attendanceMessages.save;
                 btn.classList.replace('btn-primary', 'btn-success');
                 editingDay = day;
             }
@@ -225,7 +238,7 @@
             if (row) row.classList.remove('editing');
             const btn = document.getElementById('btn-' + day);
             if (btn) {
-                btn.textContent = '編集';
+                btn.textContent = attendanceMessages.edit;
                 btn.classList.replace('btn-success', 'btn-primary');
             }
             editingDay = null;
@@ -243,7 +256,7 @@
                 
                 // 检查所选月份是否超过当前月份
                 if (year > maxCurrentYear || (year == maxCurrentYear && month > maxCurrentMonth)) {
-                    alert('選択した年月は未来の日付です。現在の年月までしか選択できません。');
+                    alert(attendanceMessages.futureMonth);
                     // 重置为当前月份
                     document.getElementById('monthSelector').value = maxCurrentYear + ',' + maxCurrentMonth;
                     return;
@@ -320,7 +333,7 @@
         }
 
         function applyDefaultValues() {
-            if (!confirm('平日（月～金）の未入力日にデフォルト値を一括入力しますか？')) {
+            if (!confirm(attendanceMessages.bulkConfirm)) {
                 return;
             }
             
@@ -340,12 +353,12 @@
                 if (data.success) {
                     window.location.reload();
                 } else {
-                    alert(data.message || '一括入力に失敗しました。');
+                    alert(data.message || attendanceMessages.bulkFailed);
                 }
             })
             .catch(err => {
                 console.error('Bulk apply error:', err);
-                alert('通信エラーが発生しました。');
+                alert(attendanceMessages.networkError);
             });
         }
 
@@ -384,12 +397,12 @@
                 if (response.ok) {
                     window.location.reload();
                 } else {
-                    alert('保存に失敗しました。');
+                    alert(attendanceMessages.saveFailed);
                 }
             })
             .catch(err => {
                 console.error('Save error:', err);
-                alert('通信エラーが発生しました。');
+                alert(attendanceMessages.networkError);
             });
         }
     </script>

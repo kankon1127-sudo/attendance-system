@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.toLanguageTag()}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>月次业务门户系统 - 登录</title>
+    <title th:text="${#messages.msg('login.title')}">月次业务门户系统 - 登录</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
@@ -65,9 +65,17 @@
     <link rel="stylesheet" th:href="@{/css/responsive.css}">
 </head>
 <body class="login-page">
+    <div class="login-language">
+        <select class="form-select form-select-sm language-switcher"
+                th:attr="aria-label=#{language.label}"
+                onchange="var query = window.location.search.substring(1).split('&'); var kept = []; for (var i = 0; i < query.length; i++) { if (query[i] && query[i].split('=')[0] !== 'lang') kept.push(query[i]); } kept.push('lang=' + encodeURIComponent(this.value)); window.location.href = window.location.pathname + '?' + kept.join('&') + window.location.hash;">
+            <option value="ja" th:selected="${#locale.language == 'ja'}" th:text="#{language.japanese}">日本語</option>
+            <option value="zh-CN" th:selected="${#locale.language == 'zh'}" th:text="#{language.chinese}">简体中文</option>
+        </select>
+    </div>
     <div class="login-container">
         <div class="login-header">
-            <h2>月次业务门户系统</h2>
+            <h2 th:text="#{brand.name}">月次业务门户系统</h2>
             <p>Wkrepo System</p>
         </div>
         
@@ -81,16 +89,16 @@
         
         <form th:action="@{/login}" method="post">
             <div class="mb-3">
-                <label for="username" class="form-label">用户名</label>
-                <input type="text" class="form-control" id="username" name="username" required placeholder="请输入用户名">
+                <label for="username" class="form-label" th:text="#{login.username}">用户名</label>
+                <input type="text" class="form-control" id="username" name="username" required th:placeholder="#{login.usernamePlaceholder}">
             </div>
             
             <div class="mb-3">
-                <label for="password" class="form-label">密码</label>
-                <input type="password" class="form-control" id="password" name="password" required placeholder="请输入密码">
+                <label for="password" class="form-label" th:text="#{login.password}">密码</label>
+                <input type="password" class="form-control" id="password" name="password" required th:placeholder="#{login.passwordPlaceholder}">
             </div>
             
-            <button type="submit" class="btn btn-primary btn-login w-100">登录</button>
+            <button type="submit" class="btn btn-primary btn-login w-100" th:text="#{login.submit}">登录</button>
         </form>
         
         <div class="text-center mt-4">

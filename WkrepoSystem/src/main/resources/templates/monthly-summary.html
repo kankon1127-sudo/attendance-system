@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'monthly-summary', '月報サマリー')}">
 <head th:fragment="head">
-    <title>月報サマリー - 月次業務ポータル</title>
+    <title th:text="${#messages.msg('page.monthly-summary') + ' - ' + #messages.msg('brand.name')}">月報サマリー</title>
     <style>
         .content-wrapper {
             background: #f1f5f9;
@@ -319,20 +319,20 @@
     <div class="content-wrapper">
         <div class="header-card">
             <div class="header-row">
-                <div class="form-title">月報サマリー・提出</div>
+                <div class="form-title" th:text="#{page.monthly-summary}">月報サマリー・提出</div>
                 <div class="month-nav">
                     <a th:href="@{/monthly-summary(year=${prevYear}, month=${prevMonth})}" class="month-btn">◀</a>
                     <div class="month-display" th:text="${year} + '年' + ${month} + '月'">2024年1月</div>
                     <a th:href="@{/monthly-summary(year=${nextYear}, month=${nextMonth})}" class="month-btn">▶</a>
                 </div>
-                <div class="status-badge" th:text="${currentStep == 1 ? '⚪ 下書き' : (currentStep == 2 ? '🟡 提出済' : (currentStep == 3 ? '🟢 リーダー承認済' : '✅ 総務確認済'))}">⚪ 下書き</div>
+                <div class="status-badge" th:text="${currentStep == 1 ? '⚪ ' + #messages.msg('monthly.draft') : (currentStep == 2 ? '🟡 ' + #messages.msg('monthly.submittedStatus') : (currentStep == 3 ? '🟢 ' + #messages.msg('monthly.approved') : '✅ ' + #messages.msg('monthly.finalized')))}">⚪ 下書き</div>
             </div>
         </div>
 
         <div class="error-banner" th:if="${errorMessage}" th:text="${errorMessage}"></div>
         
         <div class="approval-flow-card">
-            <div class="form-title">承認フロー</div>
+            <div class="form-title" th:text="#{monthly.approvalFlow}">承認フロー</div>
             <div class="flow-steps">
                 <th:block th:each="step, iterStat : ${approvalSteps}">
                     <div class="flow-step">
@@ -340,7 +340,7 @@
                             <span th:if="${step.completed}">✓</span>
                             <span th:text="${step.step}" th:if="${!step.completed}">1</span>
                         </div>
-                        <div class="step-label" th:classappend="${step.completed ? ' completed' : (step.active ? ' active' : ' inactive')}" th:text="${step.name}">下書き</div>
+                        <div class="step-label" th:classappend="${step.completed ? ' completed' : (step.active ? ' active' : ' inactive')}" th:text="${#messages.msg('monthly.step.' + (iterStat.count == 1 ? 'draft' : iterStat.count == 2 ? 'submitted' : iterStat.count == 3 ? 'managerApproval' : 'generalAffairs'))}">下書き</div>
                     </div>
                     <div class="flow-line" th:if="${!iterStat.last}"></div>
                 </th:block>
@@ -348,54 +348,54 @@
         </div>
         
         <div class="summary-card">
-            <div class="form-title">月報概要</div>
+            <div class="form-title" th:text="#{monthly.overview}">月報概要</div>
             <div class="summary-grid">
                 <div class="info-box">
-                    <div class="info-title">社員情報</div>
+                    <div class="info-title" th:text="#{monthly.employeeInfo}">社員情報</div>
                     <div class="info-item">
-                        <span class="info-label">氏名</span>
+                        <span class="info-label" th:text="#{user.name}">氏名</span>
                         <span class="info-value" th:text="${user?.name ?: '-'}">山田太郎</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">雇用形態</span>
+                        <span class="info-label" th:text="#{monthly.employmentType}">雇用形態</span>
                         <span class="info-value">正社員</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">対象月</span>
+                        <span class="info-label" th:text="#{common.period}">対象月</span>
                         <span class="info-value" th:text="${year} + '年' + ${month} + '月'">2024年1月</span>
                     </div>
                 </div>
                 <div class="info-box">
-                    <div class="info-title">勤務実績</div>
+                    <div class="info-title" th:text="#{monthly.workRecord}">勤務実績</div>
                     <div class="info-item">
-                        <span class="info-label">稼働日数</span>
+                        <span class="info-label" th:text="#{monthly.workDays}">稼働日数</span>
                         <span class="info-value" th:text="${summary.workDays} + '日'">0日</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">実働時間</span>
+                        <span class="info-label" th:text="#{attendance.workHours}">実働時間</span>
                         <span class="info-value" th:text="${summary.totalWorkHours} + '時間'">0時間</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">残業時間</span>
+                        <span class="info-label" th:text="#{attendance.overtimeHours}">残業時間</span>
                         <span class="info-value" th:text="${summary.totalOvertimeHours} + '時間'">0時間</span>
                     </div>
                 </div>
                 <div class="info-box">
-                    <div class="info-title">経費</div>
+                    <div class="info-title" th:text="#{monthly.expenses}">経費</div>
                     <div class="info-item">
-                        <span class="info-label">非課税交通費</span>
+                        <span class="info-label" th:text="#{monthly.nonTaxableTransport}">非課税交通費</span>
                         <span class="info-value" th:text="${summary.nonTaxableTransportExpense} + '円'">0円</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">旅費交通費</span>
+                        <span class="info-label" th:text="#{monthly.travelExpense}">旅費交通費</span>
                         <span class="info-value" th:text="${summary.travelExpense} + '円'">0円</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">諸経費</span>
+                        <span class="info-label" th:text="#{monthly.generalExpense}">諸経費</span>
                         <span class="info-value" th:text="${summary.generalExpense} + '円'">0円</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">合計</span>
+                        <span class="info-label" th:text="#{monthly.total}">合計</span>
                         <span class="info-value total" th:text="${summary.totalExpense} + '円'">0円</span>
                     </div>
                 </div>
@@ -403,33 +403,33 @@
         </div>
         
         <div class="work-content-card">
-            <div class="form-title">📝 作業内容（当月の報告）</div>
-            <textarea class="work-content-area" name="workContent" th:disabled="${currentStep >= 2}" th:text="${workContent}" placeholder="今月の主な作業内容、進捗、特記事項を入力してください&#10;例：&#10;・○○プロジェクトの設計書作成（完了）&#10;・○○システムの不具合対応（対応中）"></textarea>
+            <div class="form-title" th:text="'📝 ' + #{monthly.workContent}">📝 作業内容（当月の報告）</div>
+            <textarea class="work-content-area" name="workContent" th:disabled="${currentStep >= 2}" th:text="${workContent}" th:placeholder="#{monthly.workContentHint}"></textarea>
             <div class="action-buttons" th:if="${currentStep < 2}">
-                <button type="button" class="btn-save-draft" onclick="saveDraft()">📄 下書き保存</button>
+                <button type="button" class="btn-save-draft" onclick="saveDraft()" th:text="'📄 ' + #{monthly.saveDraft}">📄 下書き保存</button>
             </div>
         </div>
         
         <div class="approver-card" th:if="${currentStep < 2}">
-            <div class="approver-title">🔔 承認依頼先（任意）</div>
+            <div class="approver-title" th:text="'🔔 ' + #{monthly.approver}">🔔 承認依頼先（任意）</div>
             <select class="approver-select" name="approverId">
-                <option value="">選択してください</option>
+                <option value="" th:text="#{monthly.selectApprover}">選択してください</option>
                 <option value="1">佐藤 部長（リーダー）</option>
             </select>
-            <button type="button" class="btn-submit" onclick="submitReport()">📤 月報を提出する</button>
+            <button type="button" class="btn-submit" onclick="submitReport()" th:text="'📤 ' + #{monthly.submit}">📤 月報を提出する</button>
             <div class="submit-hint">
-                内容を確認後、提出してください。提出後はリーダーの承認待ちとなります。<br>
-                勤怠で有給を選択した日は、年休申請しリーダー承認後でないと提出できません。
+                <span th:text="#{monthly.submitHint}">内容を確認後、提出してください。提出後はリーダーの承認待ちとなります。</span><br>
+                <span th:text="#{monthly.leaveWarning}">勤怠で有給を選択した日は、年休申請しリーダー承認後でないと提出できません。</span>
             </div>
         </div>
         
         <div class="approver-card" th:if="${currentStep >= 2}">
             <div style="text-align: center; padding: 20px;">
                 <div style="font-size: 18px; font-weight: bold; color: #22c55e; margin-bottom: 10px;">
-                    月報は既に提出されています
+                    <span th:text="#{monthly.submitted}">月報は既に提出されています</span>
                 </div>
                 <div style="color: #64748b;">
-                    次のステップ：リーダー承認待ち
+                    <span th:text="#{monthly.waitingApproval}">次のステップ：リーダー承認待ち</span>
                 </div>
             </div>
         </div>

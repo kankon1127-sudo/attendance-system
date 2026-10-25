@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'travel-expense', '交通費入力')}">
 <head th:fragment="head">
-    <title>交通費入力 - 月次業務ポータル</title>
+    <title th:text="${#messages.msg('page.travel-expense') + ' - ' + #messages.msg('brand.name')}">交通費入力</title>
     <style>
         .expense-form {
             max-width: 800px;
@@ -106,14 +106,18 @@
 </head>
 <body>
 <th:block th:fragment="main-content">
+    <div class="alert alert-success" th:if="${notificationStatus == 'SENT'}"
+         th:text="${#messages.msg('notification.' + #strings.toLowerCase(notificationStatus))}"></div>
+    <div class="alert alert-warning" th:if="${notificationStatus != null and notificationStatus != 'SENT' and notificationStatus != 'NOT_APPLICABLE'}"
+         th:text="${#messages.msg('notification.' + #strings.toLowerCase(notificationStatus))}"></div>
     <div class="card">
-        <h3 class="mb-4">交通費入力</h3>
+        <h3 class="mb-4" th:text="#{page.travel-expense}">交通費入力</h3>
         
         <!-- 月選択セクション -->
         <div class="row mb-4">
             <div class="col-md-6">
                 <form method="GET" action="/travel-expense" class="d-flex align-items-center">
-                    <label for="year" class="me-2">年度:</label>
+                    <label for="year" class="me-2" th:text="#{common.year} + ':'">年度:</label>
                     <select name="year" id="year" class="form-select me-3" style="width: auto;">
                         <option value="">----</option>
                         <option th:each="year : ${availableYears}"
@@ -122,7 +126,7 @@
                                 th:selected="${currentYear == year}">2023</option>
                     </select>
                     
-                    <label for="month" class="me-2">月度:</label>
+                    <label for="month" class="me-2" th:text="#{common.month} + ':'">月度:</label>
                     <select name="month" id="month" class="form-select" style="width: auto;">
                         <option value="">--</option>
                         <option th:each="m : ${#numbers.sequence(1, 12)}"
@@ -131,7 +135,7 @@
                                 th:selected="${currentMonth == m}">1</option>
                     </select>
                     
-                    <button type="submit" class="btn btn-primary ms-3">表示</button>
+                    <button type="submit" class="btn btn-primary ms-3" th:text="#{common.show}">表示</button>
                 </form>
             </div>
         </div>
@@ -139,52 +143,52 @@
         <!-- 非課税交通費 -->
         <div class="card mb-4 expense-section non-taxable">
             <div class="card-body">
-                <h5 class="card-title">非課税交通費</h5>
-                <p class="text-muted small mb-3">通勤等、非課税対象の交通費を入力してください。</p>
+                <h5 class="card-title" th:text="#{travel.nonTaxableTitle}">非課税交通費</h5>
+                <p class="text-muted small mb-3" th:text="#{travel.nonTaxableHelp}">通勤等、非課税対象の交通費を入力してください。</p>
                 <form method="POST" action="/travel-expense/save" th:object="${newNonTaxableExpense}">
                     <input type="hidden" th:field="*{type}">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="nonTaxableDate">日付</label>
+                            <label for="nonTaxableDate" th:text="#{travel.date}">日付</label>
                             <input type="date" id="nonTaxableDate" th:field="*{expenseDate}" required>
                         </div>
                         <div class="form-group">
-                            <label for="nonTaxableTransportation">交通手段</label>
-                            <input type="text" id="nonTaxableTransportation" th:field="*{transportation}" placeholder="例：電車、バス">
+                            <label for="nonTaxableTransportation" th:text="#{travel.transportation}">交通手段</label>
+                            <input type="text" id="nonTaxableTransportation" th:field="*{transportation}" th:placeholder="#{travel.transportationPlaceholder}">
                         </div>
                         <div class="form-group">
-                            <label for="nonTaxableRoute">ルート</label>
-                            <input type="text" id="nonTaxableRoute" th:field="*{route}" placeholder="例：自宅→会社">
+                            <label for="nonTaxableRoute" th:text="#{travel.route}">ルート</label>
+                            <input type="text" id="nonTaxableRoute" th:field="*{route}" th:placeholder="#{travel.routePlaceholder}">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="nonTaxableSummary">摘要</label>
-                            <input type="text" id="nonTaxableSummary" th:field="*{summary}" placeholder="用途を記入">
+                            <label for="nonTaxableSummary" th:text="#{travel.description}">摘要</label>
+                            <input type="text" id="nonTaxableSummary" th:field="*{summary}" th:placeholder="#{travel.summaryPlaceholder}">
                         </div>
                         <div class="form-group">
-                            <label for="nonTaxableAmount">金額</label>
+                            <label for="nonTaxableAmount" th:text="#{travel.amount}">金額</label>
                             <input type="number" id="nonTaxableAmount" th:field="*{amount}" placeholder="0" min="0" required>
                         </div>
                     </div>
-                    <button type="submit" class="btn-add">追加</button>
+                    <button type="submit" class="btn-add" th:text="#{travel.save}">追加</button>
                 </form>
 
                 <div class="table-responsive">
                     <table class="table table-striped">
                         <thead>
                             <tr>
-                                <th>日付</th>
-                                <th>交通手段</th>
-                                <th>ルート</th>
-                                <th>摘要</th>
-                                <th>金額</th>
-                                <th>操作</th>
+                                <th th:text="#{travel.date}">日付</th>
+                                <th th:text="#{travel.transportation}">交通手段</th>
+                                <th th:text="#{travel.route}">ルート</th>
+                                <th th:text="#{travel.description}">摘要</th>
+                                <th th:text="#{travel.amount}">金額</th>
+                                <th th:text="#{common.operation}">操作</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr th:if="${nonTaxableExpenses.empty}">
-                                <td colspan="6" class="text-center">データがありません</td>
+                                <td colspan="6" class="text-center" th:text="#{common.noData}">データがありません</td>
                             </tr>
                             <tr th:each="expense : ${nonTaxableExpenses}">
                                 <td th:text="${#temporals.format(expense.expenseDate, 'yyyy/MM/dd')}">2023/01/01</td>
@@ -194,7 +198,7 @@
                                 <td th:text="|${#numbers.formatInteger(#objects.nullSafe(expense.amount, 0), 0, 'COMMA')}円|">1,000円</td>
                                 <td>
                                     <form th:action="@{/travel-expense/delete/{id}(id=${expense.id})}" method="post" style="display:inline;" onsubmit="return confirm('削除してもよろしいですか？');">
-                                        <button type="submit" class="btn-delete">削除</button>
+                                        <button type="submit" class="btn-delete" th:text="#{common.delete}">削除</button>
                                     </form>
                                 </td>
                             </tr>
@@ -202,7 +206,7 @@
                     </table>
                 </div>
                 <div class="section-total">
-                    非課税交通費 小計: <span th:text="|${#numbers.formatInteger(#objects.nullSafe(nonTaxableTotal, 0), 0, 'COMMA')}円|">0円</span>
+                    <span th:text="#{travel.nonTaxableSubtotal}">非課税交通費 小計</span>: <span th:text="|${#numbers.formatInteger(#objects.nullSafe(nonTaxableTotal, 0), 0, 'COMMA')}円|">0円</span>
                 </div>
             </div>
         </div>
@@ -210,52 +214,52 @@
         <!-- 旅費交通費 -->
         <div class="card mb-4 expense-section travel">
             <div class="card-body">
-                <h5 class="card-title">旅費交通費</h5>
-                <p class="text-muted small mb-3">出張・外勤等、旅費として精算する交通費を入力してください。</p>
+                <h5 class="card-title" th:text="#{travel.travelTitle}">旅費交通費</h5>
+                <p class="text-muted small mb-3" th:text="#{travel.travelHelp}">出張・外勤等、旅費として精算する交通費を入力してください。</p>
                 <form method="POST" action="/travel-expense/save" th:object="${newTravelExpense}">
                     <input type="hidden" th:field="*{type}">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="travelDate">日付</label>
+                            <label for="travelDate" th:text="#{travel.date}">日付</label>
                             <input type="date" id="travelDate" th:field="*{expenseDate}" required>
                         </div>
                         <div class="form-group">
-                            <label for="travelTransportation">交通手段</label>
-                            <input type="text" id="travelTransportation" th:field="*{transportation}" placeholder="例：電車、タクシー、新幹線">
+                            <label for="travelTransportation" th:text="#{travel.transportation}">交通手段</label>
+                            <input type="text" id="travelTransportation" th:field="*{transportation}" th:placeholder="#{travel.transportationPlaceholder}">
                         </div>
                         <div class="form-group">
-                            <label for="travelRoute">ルート</label>
-                            <input type="text" id="travelRoute" th:field="*{route}" placeholder="例：東京→大阪">
+                            <label for="travelRoute" th:text="#{travel.route}">ルート</label>
+                            <input type="text" id="travelRoute" th:field="*{route}" th:placeholder="#{travel.routePlaceholderTravel}">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="travelSummary">摘要</label>
-                            <input type="text" id="travelSummary" th:field="*{summary}" placeholder="例：クライアント訪問">
+                            <label for="travelSummary" th:text="#{travel.description}">摘要</label>
+                            <input type="text" id="travelSummary" th:field="*{summary}" th:placeholder="#{travel.summaryPlaceholder}">
                         </div>
                         <div class="form-group">
-                            <label for="travelAmount">金額</label>
+                            <label for="travelAmount" th:text="#{travel.amount}">金額</label>
                             <input type="number" id="travelAmount" th:field="*{amount}" placeholder="0" min="0" required>
                         </div>
                     </div>
-                    <button type="submit" class="btn-add">追加</button>
+                    <button type="submit" class="btn-add" th:text="#{travel.save}">追加</button>
                 </form>
 
                 <div class="table-responsive">
                     <table class="table table-striped">
                         <thead>
                             <tr>
-                                <th>日付</th>
-                                <th>交通手段</th>
-                                <th>ルート</th>
-                                <th>摘要</th>
-                                <th>金額</th>
-                                <th>操作</th>
+                                <th th:text="#{travel.date}">日付</th>
+                                <th th:text="#{travel.transportation}">交通手段</th>
+                                <th th:text="#{travel.route}">ルート</th>
+                                <th th:text="#{travel.description}">摘要</th>
+                                <th th:text="#{travel.amount}">金額</th>
+                                <th th:text="#{common.operation}">操作</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr th:if="${travelExpenses.empty}">
-                                <td colspan="6" class="text-center">データがありません</td>
+                                <td colspan="6" class="text-center" th:text="#{common.noData}">データがありません</td>
                             </tr>
                             <tr th:each="expense : ${travelExpenses}">
                                 <td th:text="${#temporals.format(expense.expenseDate, 'yyyy/MM/dd')}">2023/01/01</td>
@@ -265,7 +269,7 @@
                                 <td th:text="|${#numbers.formatInteger(#objects.nullSafe(expense.amount, 0), 0, 'COMMA')}円|">1,000円</td>
                                 <td>
                                     <form th:action="@{/travel-expense/delete/{id}(id=${expense.id})}" method="post" style="display:inline;" onsubmit="return confirm('削除してもよろしいですか？');">
-                                        <button type="submit" class="btn-delete">削除</button>
+                                        <button type="submit" class="btn-delete" th:text="#{common.delete}">削除</button>
                                     </form>
                                 </td>
                             </tr>
@@ -273,14 +277,14 @@
                     </table>
                 </div>
                 <div class="section-total">
-                    旅費交通費 小計: <span th:text="|${#numbers.formatInteger(#objects.nullSafe(travelTotal, 0), 0, 'COMMA')}円|">0円</span>
+                    <span th:text="#{common.travelSubtotal}">旅費交通費 小計</span>: <span th:text="|${#numbers.formatInteger(#objects.nullSafe(travelTotal, 0), 0, 'COMMA')}円|">0円</span>
                 </div>
             </div>
         </div>
         
         <!-- 合計金額 -->
         <div class="grand-total">
-            <div>合計金額: <span class="total-amount" th:text="|${#numbers.formatInteger(#objects.nullSafe(totalAmount, 0), 0, 'COMMA')}円|">0円</span></div>
+            <div><span th:text="#{common.totalAmount}">合計金額</span>: <span class="total-amount" th:text="|${#numbers.formatInteger(#objects.nullSafe(totalAmount, 0), 0, 'COMMA')}円|">0円</span></div>
         </div>
     </div>
 </th:block>
