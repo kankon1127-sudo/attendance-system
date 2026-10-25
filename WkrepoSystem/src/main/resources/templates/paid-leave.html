@@ -12,6 +12,24 @@
             .stat-cards {
                 flex-direction: column;
             }
+            .form-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 16px;
+            }
+            .tab-group {
+                flex-direction: column;
+                width: 100%;
+            }
+            .tab {
+                width: 100%;
+                min-height: 44px;
+                justify-content: center;
+            }
+            .btn-submit {
+                width: 100%;
+                min-height: 44px;
+            }
         }
         .stat-card {
             flex: 1;
@@ -312,7 +330,8 @@
         <div th:if="${leaves.empty}" class="history-empty">
             年休申請はまだありません
         </div>
-        <table th:if="${!leaves.empty}" class="history-table">
+        <div class="table-responsive">
+            <table th:if="${!leaves.empty}" class="history-table">
             <thead>
                 <tr>
                     <th>取得開始日</th>
@@ -339,7 +358,8 @@
                     </td>
                 </tr>
             </tbody>
-        </table>
+            </table>
+        </div>
     </div>
 </div>
 

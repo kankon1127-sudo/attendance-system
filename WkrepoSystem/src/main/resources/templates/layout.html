@@ -239,12 +239,16 @@
             }
             .top-bar-right {
                 width: 100%;
-                justify-content: space-between;
-                gap: 10px;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
             }
             .user-info {
                 min-width: 0;
                 gap: 8px;
+            }
+            .user-avatar {
+                flex: 0 0 35px;
             }
             .user-info > div:last-child {
                 min-width: 0;
@@ -255,11 +259,91 @@
                 white-space: nowrap;
             }
             .top-bar-actions {
-                flex: 0 0 auto;
+                display: flex;
+                width: 100%;
+                gap: 8px;
             }
             .btn-home,
             .btn-logout {
+                display: inline-flex;
+                flex: 1 1 0;
+                align-items: center;
+                justify-content: center;
                 padding: 8px 10px;
+                white-space: nowrap;
+            }
+            .content-area form .row > [class*="col-"] {
+                width: 100%;
+                max-width: 100%;
+                flex: 0 0 100%;
+            }
+            .content-area form .form-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+            .content-area form .form-group {
+                width: 100%;
+                min-width: 0;
+                flex: 0 0 100%;
+            }
+            .content-area form label,
+            .content-area form .form-label {
+                display: block;
+                width: 100%;
+                word-break: keep-all;
+            }
+            .content-area form input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+            .content-area form select,
+            .content-area form textarea {
+                width: 100% !important;
+                max-width: 100%;
+                min-width: 0;
+            }
+            .content-area form.d-flex {
+                flex-direction: column;
+                align-items: stretch !important;
+            }
+            .content-area button,
+            .content-area .btn,
+            .content-area a[class*="btn"],
+            .content-area .tab {
+                max-width: 100%;
+                word-break: keep-all;
+                white-space: nowrap;
+            }
+            .content-area .action-buttons,
+            .content-area .action-buttons-um {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            .content-area .action-buttons > *,
+            .content-area .action-buttons-um > * {
+                width: 100%;
+            }
+            .content-area .row-action-bottom {
+                flex-wrap: wrap;
+            }
+            .content-area .row-action-bottom > * {
+                width: 100%;
+            }
+            .content-area .stat-cards,
+            .content-area .attendance-stat-cards {
+                flex-direction: column;
+                gap: 12px;
+            }
+            .content-area .stat-cards > *,
+            .content-area .attendance-stat-cards > * {
+                width: 100%;
+                min-width: 0;
+            }
+            .content-area .table-responsive {
+                max-width: 100%;
+                -webkit-overflow-scrolling: touch;
+            }
+            .content-area .table-responsive > table {
+                min-width: 640px;
             }
             .content-area {
                 min-width: 0;
@@ -269,9 +353,17 @@
             .content-area .card {
                 padding: 18px;
             }
+            .content-area .content-wrapper,
+            .content-area .leave-form-card,
+            .content-area .history-card,
+            .content-area .table-card {
+                max-width: 100%;
+                padding: 16px;
+            }
         }
     </style>
     <th:block th:replace="${title}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/responsive.css}">
 </head>
 <body>
     <div class="app-container">
