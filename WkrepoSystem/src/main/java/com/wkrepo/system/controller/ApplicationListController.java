@@ -78,6 +78,11 @@ public class ApplicationListController {
         if (user == null) {
             return "redirect:/login";
         }
+        if (!applicationListService.canApproveApplication(id, type, user)) {
+            log.warn("[ApplicationListController] 権限なしの承認要求 id={}, type={}, userId={}",
+                    id, type, user.getId());
+            return "redirect:/application/list";
+        }
 
         switch (type) {
             case "TRAVEL":
@@ -110,6 +115,11 @@ public class ApplicationListController {
         User user = (User) session.getAttribute("user");
         if (user == null) {
             return "redirect:/login";
+        }
+        if (!applicationListService.canApproveApplication(id, type, user)) {
+            log.warn("[ApplicationListController] 権限なしの拒否要求 id={}, type={}, userId={}",
+                    id, type, user.getId());
+            return "redirect:/application/list";
         }
 
         switch (type) {
@@ -177,6 +187,14 @@ public class ApplicationListController {
             err.put("message", "未ログイン");
             return ResponseEntity.status(401).body(err);
         }
+        if (!applicationListService.canApproveApplication(id, type, user)) {
+            log.warn("[ApplicationListController] 権限なしのAPI承認要求 id={}, type={}, userId={}",
+                    id, type, user.getId());
+            Map<String, Object> err = new HashMap<>();
+            err.put("success", false);
+            err.put("message", "権限がないか、申請が承認可能な状態ではありません");
+            return ResponseEntity.status(403).body(err);
+        }
         try {
             switch (type) {
                 case "TRAVEL":
@@ -224,6 +242,14 @@ public class ApplicationListController {
             err.put("success", false);
             err.put("message", "未ログイン");
             return ResponseEntity.status(401).body(err);
+        }
+        if (!applicationListService.canApproveApplication(id, type, user)) {
+            log.warn("[ApplicationListController] 権限なしのAPI拒否要求 id={}, type={}, userId={}",
+                    id, type, user.getId());
+            Map<String, Object> err = new HashMap<>();
+            err.put("success", false);
+            err.put("message", "権限がないか、申請が拒否可能な状態ではありません");
+            return ResponseEntity.status(403).body(err);
         }
         try {
             switch (type) {
