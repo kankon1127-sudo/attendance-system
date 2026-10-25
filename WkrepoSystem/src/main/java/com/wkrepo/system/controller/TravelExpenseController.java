@@ -2,6 +2,7 @@ package com.wkrepo.system.controller;
 
 import com.wkrepo.system.entity.TravelExpense;
 import com.wkrepo.system.entity.User;
+import com.wkrepo.system.service.ApplicationNotificationService;
 import com.wkrepo.system.service.TravelExpenseService;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -27,6 +29,9 @@ public class TravelExpenseController {
     
     @Autowired
     private TravelExpenseService travelExpenseService;
+
+    @Autowired
+    private ApplicationNotificationService applicationNotificationService;
     
     @GetMapping
     public String showTravelExpense(
@@ -109,7 +114,7 @@ public class TravelExpenseController {
     }
     
     @PostMapping("/save")
-    public String saveTravelExpense(TravelExpense expense, HttpSession session) {
+    public String saveTravelExpense(TravelExpense expense, HttpSession session, RedirectAttributes redirectAttributes) {
         
         logger.info("Entering saveTravelExpense - type: {}, expense date: {}, amount: {}", 
                    expense.getType(), expense.getExpenseDate(), expense.getAmount());
@@ -128,6 +133,15 @@ public class TravelExpenseController {
         try {
             expense.setUser(user);
             TravelExpense savedExpense = travelExpenseService.saveTravelExpense(expense);
+
+            ApplicationNotificationService.Result notificationResult = applicationNotificationService.notifyManager(
+                    user,
+                    "【Wkrepo】交通費申請の承認依頼",
+                    "申請日: " + savedExpense.getExpenseDate() + "\n金額: "
+                            + (savedExpense.getAmount() == null ? "-" : savedExpense.getAmount()) + " 円");
+            if (notificationResult != ApplicationNotificationService.Result.NOT_APPLICABLE) {
+                redirectAttributes.addFlashAttribute("notificationStatus", notificationResult.name());
+            }
             
             logger.debug("Saved expense with ID: {}, date: {}, amount: {}", 
                         savedExpense.getId(), savedExpense.getExpenseDate(), savedExpense.getAmount());

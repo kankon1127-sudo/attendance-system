@@ -2,6 +2,7 @@ package com.wkrepo.system.controller;
 
 import com.wkrepo.system.entity.PaidLeave;
 import com.wkrepo.system.entity.User;
+import com.wkrepo.system.service.ApplicationNotificationService;
 import com.wkrepo.system.service.PaidLeaveService;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -24,6 +26,9 @@ public class PaidLeaveController {
     
     @Autowired
     private PaidLeaveService paidLeaveService;
+
+    @Autowired
+    private ApplicationNotificationService applicationNotificationService;
     
     @GetMapping
     public String showPaidLeave(HttpSession session, Model model) {
@@ -65,7 +70,7 @@ public class PaidLeaveController {
     }
     
     @PostMapping("/save")
-    public String savePaidLeave(PaidLeave paidLeave, HttpSession session) {
+    public String savePaidLeave(PaidLeave paidLeave, HttpSession session, RedirectAttributes redirectAttributes) {
         
         logger.info("Entering savePaidLeave - type: {}, startDate: {}, endDate: {}, days: {}", 
                    paidLeave.getLeaveType(), paidLeave.getStartDate(), paidLeave.getEndDate(), paidLeave.getLeaveDays());
@@ -85,6 +90,16 @@ public class PaidLeaveController {
             
             paidLeave.setUser(user);
             PaidLeave savedLeave = paidLeaveService.savePaidLeave(paidLeave);
+
+            ApplicationNotificationService.Result notificationResult = applicationNotificationService.notifyManager(
+                    user,
+                    "【Wkrepo】年休申請の承認依頼",
+                    "取得期間: " + savedLeave.getStartDate() + " ～ " + savedLeave.getEndDate()
+                            + "\n区分: " + savedLeave.getLeaveType()
+                            + "\n日数: " + savedLeave.getLeaveDays());
+            if (notificationResult != ApplicationNotificationService.Result.NOT_APPLICABLE) {
+                redirectAttributes.addFlashAttribute("notificationStatus", notificationResult.name());
+            }
             
             logger.debug("Saved leave with ID: {}, startDate: {}, endDate: {}", 
                         savedLeave.getId(), savedLeave.getStartDate(), savedLeave.getEndDate());

@@ -3,16 +3,26 @@ package com.wkrepo.system.controller;
 import com.wkrepo.system.entity.Attendance;
 import com.wkrepo.system.entity.DefaultAttendanceSetting;
 import com.wkrepo.system.entity.User;
+import com.wkrepo.system.repository.UserRepository;
 import com.wkrepo.system.service.AttendanceService;
+import com.wkrepo.system.service.AttendanceExcelExportService;
 import com.wkrepo.system.service.DefaultAttendanceSettingService;
 import com.wkrepo.system.service.HolidayService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -22,6 +32,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Controller
@@ -37,6 +48,12 @@ public class AttendanceController {
     @Autowired
     private DefaultAttendanceSettingService defaultAttendanceSettingService;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private AttendanceExcelExportService attendanceExcelExportService;
+
     /**
      * 1. 勤怠入力 画面表示逻辑
      */
@@ -44,7 +61,7 @@ public class AttendanceController {
     public String showAttendance(
             @RequestParam(name = "year", required = false) Integer year,
             @RequestParam(name = "month", required = false) Integer month,
-            HttpSession session, Model model) {
+            HttpSession session, Model model, Locale locale) {
 
         User user = (User) session.getAttribute("user");
         if (user == null) {
@@ -85,7 +102,7 @@ public class AttendanceController {
             dayMap.put("day", i);
             dayMap.put("date", date.toString());
             dayMap.put("dateString", date.format(DateTimeFormatter.ofPattern("MM-dd")));
-            dayMap.put("dayOfWeekName", getDayOfWeekName(date));
+            dayMap.put("dayOfWeekName", getDayOfWeekName(date, locale));
             
             dayMap.put("sunday", date.getDayOfWeek() == DayOfWeek.SUNDAY);
             dayMap.put("saturday", date.getDayOfWeek() == DayOfWeek.SATURDAY);
@@ -188,6 +205,62 @@ public class AttendanceController {
         model.addAttribute("defaultSetting", defaultSetting);
 
         return "attendance";
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportMonthlyAttendance(
+            @RequestParam(name = "year", required = false) Integer year,
+            @RequestParam(name = "month", required = false) Integer month,
+            HttpSession session) {
+        User currentUser = (User) session.getAttribute("user");
+        if (currentUser == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        LocalDate today = LocalDate.now();
+        YearMonth yearMonth;
+        try {
+            yearMonth = YearMonth.of(year == null ? today.getYear() : year,
+                    month == null ? today.getMonthValue() : month);
+        } catch (java.time.DateTimeException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid attendance export month", exception);
+        }
+        if (yearMonth.isAfter(YearMonth.from(today))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Future attendance cannot be exported");
+        }
+        LocalDate startDate = yearMonth.atDay(1);
+        LocalDate endDate = yearMonth.atEndOfMonth();
+
+        List<User> visibleUsers = userRepository.findAll().stream()
+                .filter(user -> canViewAttendance(currentUser, user))
+                .toList();
+        List<Attendance> attendances = attendanceService.getAllAttendancesByDateRange(startDate, endDate);
+
+        try {
+            byte[] workbook = attendanceExcelExportService.exportMonthlyAttendance(visibleUsers, attendances, yearMonth);
+            String filename = "attendance-" + yearMonth + ".xlsx";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType(
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+            headers.setContentDisposition(ContentDisposition.attachment()
+                    .filename(filename, StandardCharsets.UTF_8)
+                    .build());
+            return new ResponseEntity<>(workbook, headers, HttpStatus.OK);
+        } catch (IOException exception) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to generate the attendance workbook", exception);
+        }
+    }
+
+    private boolean canViewAttendance(User currentUser, User targetUser) {
+        if ("ADMIN".equals(currentUser.getRole()) || "SOUMU".equals(currentUser.getRole())) {
+            return true;
+        }
+        if ("MANAGER".equals(currentUser.getRole())) {
+            return currentUser.getDepartment() != null
+                    && currentUser.getDepartment().equals(targetUser.getDepartment());
+        }
+        return currentUser.getId().equals(targetUser.getId());
     }
 
     /**
@@ -335,16 +408,7 @@ public class AttendanceController {
         return response;
     }
 
-    private String getDayOfWeekName(LocalDate date) {
-        switch (date.getDayOfWeek()) {
-            case MONDAY: return "月";
-            case TUESDAY: return "火";
-            case WEDNESDAY: return "水";
-            case THURSDAY: return "木";
-            case FRIDAY: return "金";
-            case SATURDAY: return "土";
-            case SUNDAY: return "日";
-            default: return "";
-        }
+    private String getDayOfWeekName(LocalDate date, Locale locale) {
+        return date.getDayOfWeek().getDisplayName(java.time.format.TextStyle.SHORT, locale);
     }
 }

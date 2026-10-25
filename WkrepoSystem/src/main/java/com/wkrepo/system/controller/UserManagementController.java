@@ -133,6 +133,7 @@ public class UserManagementController {
             @RequestParam("password") String password,
             @RequestParam("name") String name,
             @RequestParam("employeeId") String employeeId,
+            @RequestParam(value = "email", required = false) String email,
             @RequestParam("department") String department,
             @RequestParam("role") String role,
             @RequestParam(value = "managerId", required = false) Long managerId,
@@ -169,6 +170,7 @@ public class UserManagementController {
             newUser.setPassword(password);
             newUser.setName(name == null ? "" : name.trim());
             newUser.setEmployeeId(employeeId == null ? "" : employeeId.trim());
+            newUser.setEmail(normalizeEmail(email));
             newUser.setDepartment(department);
             newUser.setRole(role);
             newUser.setManagerId(managerId != null && managerId > 0 ? managerId : null);
@@ -188,6 +190,7 @@ public class UserManagementController {
             @RequestParam(value = "name", required = false) String name,
             @RequestParam(value = "username", required = false) String username,
             @RequestParam(value = "employeeId", required = false) String employeeId,
+            @RequestParam(value = "email", required = false) String email,
             @RequestParam(value = "password", required = false) String password,
             @RequestParam(value = "department", required = false) String department,
             @RequestParam(value = "role", required = false) String role,
@@ -257,6 +260,9 @@ public class UserManagementController {
         }
         if (employeeId != null && !employeeId.trim().isEmpty()) {
             targetUser.setEmployeeId(employeeId.trim());
+        }
+        if (email != null) {
+            targetUser.setEmail(normalizeEmail(email));
         }
         if (password != null && !password.trim().isEmpty()) {
             try {
@@ -331,6 +337,13 @@ public class UserManagementController {
             redirectUrl.append(hasParam ? "&" : "?").append("searchDepartment=").append(searchDepartment);
         }
         return redirectUrl.toString();
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return null;
+        }
+        return email.trim();
     }
 
     private boolean containsIgnoreNull(String value, String keyword) {

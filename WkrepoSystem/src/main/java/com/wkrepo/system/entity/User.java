@@ -21,6 +21,9 @@ public class User {
     
     @Column(nullable = false, length = 100)
     private String name;
+
+    @Column(length = 254)
+    private String email;
     
     @Column(nullable = false, unique = true, length = 20)
     private String employeeId;
@@ -98,6 +101,14 @@ public class User {
     
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
     
     public String getEmployeeId() {
