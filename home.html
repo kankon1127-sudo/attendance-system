@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'home', 'ホーム')}">
+<head th:fragment="head">
+    <title>ホーム - 月次業務ポータル</title>
+    <style>
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-card h4 {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+        .stat-card .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        .stat-card .stat-unit {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        .progress {
+            height: 25px;
+            border-radius: 12px;
+        }
+        .progress-bar-warning {
+            background: linear-gradient(90deg, #ffc107 0%, #ff9800 100%);
+        }
+        .progress-bar-danger {
+            background: linear-gradient(90deg, #dc3545 0%, #c0392b 100%);
+        }
+    </style>
+</head>
+<body>
+<th:block th:fragment="main-content">
+    <!-- 统计卡片 -->
+    <div class="row mb-4">
+        <div class="col-12 col-md-3 mb-3">
+            <div class="stat-card">
+                <h4>実働時間</h4>
+                <div class="stat-value">0</div>
+                <div class="stat-unit">h</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-3 mb-3">
+            <div class="stat-card">
+                <h4>残業時間</h4>
+                <div class="stat-value">0</div>
+                <div class="stat-unit">h</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-3 mb-3">
+            <div class="stat-card">
+                <h4>年休残日数</h4>
+                <div class="stat-value">40</div>
+                <div class="stat-unit">日</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-3 mb-3">
+            <div class="stat-card">
+                <h4>今月出勤日数</h4>
+                <div class="stat-value">0</div>
+                <div class="stat-unit">日</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 36协定管理 -->
+    <div class="card">
+        <h4 class="mb-4">三六协定 残業時間管理</h4>
+        
+        <div class="mb-4">
+            <div class="d-flex justify-content-between mb-2">
+                <span>当月残業時間</span>
+                <span class="fw-bold">0h / 45h</span>
+            </div>
+            <div class="progress">
+                <div class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <div class="mb-4">
+            <div class="d-flex justify-content-between mb-2">
+                <span>警告閾値（40h）</span>
+                <span class="fw-bold text-warning">0%</span>
+            </div>
+            <div class="progress">
+                <div class="progress-bar progress-bar-warning" role="progressbar" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <div>
+            <div class="d-flex justify-content-between mb-2">
+                <span>上限（45h）</span>
+                <span class="fw-bold text-danger">0%</span>
+            </div>
+            <div class="progress">
+                <div class="progress-bar progress-bar-danger" role="progressbar" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+</th:block>
+</body>
+</html>

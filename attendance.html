@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'attendance', '勤怠入力')}">
+<head th:fragment="head">
+    <title>勤怠入力 - 月次業務ポータル</title>
+    <style>
+        .attendance-header-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .attendance-table-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+        .edit-mode {
+            display: none;
+        }
+        .editing .edit-mode {
+            display: inline-block;
+        }
+        .editing .display-mode {
+            display: none;
+        }
+        @media (max-width: 767.98px) {
+            .attendance-stat-cards {
+                flex-direction: column;
+            }
+            .attendance-stat-cards > div {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+<th:block th:fragment="main-content">
+    <input type="hidden" id="currentYear" th:value="${currentYear}">
+    <input type="hidden" id="currentMonth" th:value="${currentMonth}">
+
+    <!-- 终极修复：高颜值 Flex 横排数据卡片 -->
+    <div class="attendance-stat-cards d-flex flex-row gap-3 mb-4 w-100" style="justify-content: space-between;">
+        <!-- 稼働日数 -->
+        <div class="flex-fill bg-white shadow-sm border rounded-3 p-3 text-center">
+            <div class="text-secondary small fw-bold mb-2">稼働日数</div>
+            <div class="h2 fw-bold mb-0 text-primary">
+                <span id="totalWorkDays" th:text="${totalWorkDays}">0</span><span class="fs-6 fw-normal text-muted ms-1">日</span>
+            </div>
+        </div>
+        <!-- 実働時間 -->
+        <div class="flex-fill bg-white shadow-sm border rounded-3 p-3 text-center">
+            <div class="text-secondary small fw-bold mb-2">実働時間</div>
+            <div class="h2 fw-bold mb-0 text-dark">
+                <span id="totalWorkHours" th:text="${totalWorkHours}">0.00</span><span class="fs-6 fw-normal text-muted ms-1">h</span>
+            </div>
+        </div>
+        <!-- 残業時間 -->
+        <div class="flex-fill bg-white shadow-sm border rounded-3 p-3 text-center" style="border-top: 4px solid #ffc107;">
+            <div class="text-secondary small fw-bold mb-2">残業時間</div>
+            <div class="h2 fw-bold mb-0 text-warning">
+                <span id="totalOvertimeHours" th:text="${totalOvertimeHours}">0.00</span><span class="fs-6 fw-normal text-muted ms-1">h</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-light border mb-4 py-2 px-3 small text-muted">
+        区分で「有給」を選択した日は、年休申請を行い、リーダー承認後に月報を提出できます。
+    </div>
+
+    <!-- 月份切换与工具栏：独立カードレイアウト，確保上下並べ -->
+    <div class="attendance-header-card p-3 mb-4">
+        <div class="row align-items-center">
+            <!-- 左側：月份切り替えロジック -->
+            <div class="col-md-5">
+                <div class="d-flex align-items-center gap-3">
+                    <h4 class="mb-0 fw-bold text-primary" th:text="${currentYear + '年' + currentMonth + '月'}">2024年1月</h4>
+                    <div class="btn-group shadow-sm">
+                        <a th:href="@{/attendance(year=${prevYear}, month=${prevMonth})}" class="btn btn-white btn-sm border bg-white">
+                            <i class="bi bi-chevron-left"></i> 前月
+                        </a>
+                        <a th:if="${showNextMonth}" th:href="@{/attendance(year=${nextYear}, month=${nextMonth})}" class="btn btn-white btn-sm border bg-white">
+                            次月 <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <!-- 右側：ツールバー -->
+            <div class="col-md-7 text-end">
+                <div class="btn-group gap-2">
+                    <a href="/default-attendance-setting" class="btn btn-outline-primary btn-sm rounded"><i class="bi bi-gear"></i> デフォルト設定</a>
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded" onclick="applyDefaultValues()"><i class="bi bi-magic"></i> 一括デフォルト入力</button>
+                    <button type="button" class="btn btn-primary btn-sm rounded px-3"><i class="bi bi-pencil-square"></i> 一括編集</button>
+                </div>
+            </div>
+            <!-- 新增：默认值显示 -->
+            <div class="col-md-12 mt-2" th:if="${defaultSetting != null}">
+                <div class="card bg-light border-0">
+                    <div class="card-body py-2 px-3">
+                        <div class="d-flex align-items-center gap-4 text-muted small">
+                            <div>
+                                <i class="bi bi-info-circle me-1"></i>
+                                <strong>ログインデフォルト値:</strong>
+                            </div>
+                            <div>
+                                <span class="fw-bold">出勤:</span>
+                                <span th:text="${defaultSetting.defaultStartTime ?: '-'}">09:00</span>
+                            </div>
+                            <div>
+                                <span class="fw-bold">退勤:</span>
+                                <span th:text="${defaultSetting.defaultEndTime ?: '-'}">18:00</span>
+                            </div>
+                            <div>
+                                <span class="fw-bold">休憩:</span>
+                                <span th:text="${defaultSetting.defaultBreakMinutes != null ? (defaultSetting.defaultBreakMinutes / 60 + ':' + #numbers.formatInteger(defaultSetting.defaultBreakMinutes % 60, 2)) : '-'}">01:00</span>
+                            </div>
+                            <div>
+                                <span class="fw-bold">区分:</span>
+                                <span th:text="${defaultSetting.defaultAgreement36Status ?: '-'}">出社</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="attendance-table-card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-center" style="font-size: 0.9rem;">
+                <thead style="background-color: #1a252f; color: white;">
+                    <tr>
+                        <th style="width: 80px;">日付</th>
+                        <th style="width: 60px;">曜日</th>
+                        <th style="width: 100px;">出勤</th>
+                        <th style="width: 100px;">退勤</th>
+                        <th style="width: 100px;">休憩</th>
+                        <th style="width: 80px;">実働</th>
+                        <th style="width: 80px;">残業</th>
+                        <th style="width: 100px;">区分</th>
+                        <th style="width: 150px;">備考</th>
+                        <th style="width: 80px;">編集</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="day : ${calendarDays}" th:id="'row-' + ${day.day}" th:attr="data-date=${day.date}"
+                        th:with="attendanceStatus=${day.attendance?.agreement36Status},
+                                 isNoInput=${attendanceStatus == null or #strings.isEmpty(attendanceStatus) or attendanceStatus == '-'}">
+                        <td th:class="${day.sunday || day.holiday ? 'text-danger' : (day.saturday ? 'text-primary' : 'text-muted')}" th:text="${day.dateString}">05-01</td>
+                        <td th:class="${day.sunday || day.holiday ? 'text-danger' : (day.saturday ? 'text-primary' : '')}" th:text="${day.dayOfWeekName}">金</td>
+                        <td>
+                            <span class="display-mode" th:text="${isNoInput ? '-' : (day.attendance?.startTime != null ? day.attendance.startTime : '-')}">-</span>
+                            <input type="time" class="form-control form-control-sm edit-mode" 
+                                   th:value="${isNoInput ? '' : (day.attendance?.startTime != null ? day.attendance.startTime : '08:30')}"
+                                   th:id="'startTime-' + ${day.day}"
+                                   th:onblur="'calculateWorkHours(' + ${day.day} + ')'">
+                        </td>
+                        <td>
+                            <span class="display-mode" th:text="${isNoInput ? '-' : (day.attendance?.endTime != null ? day.attendance.endTime : '-')}">-</span>
+                            <input type="time" class="form-control form-control-sm edit-mode" 
+                                   th:value="${isNoInput ? '' : (day.attendance?.endTime != null ? day.attendance.endTime : '18:00')}"
+                                   th:id="'endTime-' + ${day.day}"
+                                   th:onblur="'calculateWorkHours(' + ${day.day} + ')'">
+                        </td>
+                        <td>
+                            <span class="display-mode" th:text="${isNoInput ? '-' : (day.attendance?.breakTime != null ? day.attendance.breakTime : '-')}">-</span>
+                            <input type="time" class="form-control form-control-sm edit-mode" 
+                                   th:value="${isNoInput ? '' : (day.attendance?.breakTime != null ? day.attendance.breakTime : '01:00')}"
+                                   th:id="'breakTime-' + ${day.day}"
+                                   th:onblur="'calculateWorkHours(' + ${day.day} + ')'">
+                        </td>
+                        <td th:id="'workHours-' + ${day.day}" th:text="${isNoInput ? '0.00' : ((day.attendance?.workHours != null && day.attendance.workHours != 0) ? day.attendance.workHours : '0.00')}">0.00</td>
+                        <td th:id="'overtimeHours-' + ${day.day}" th:text="${isNoInput ? '0.00' : ((day.attendance?.overtimeHours != null && day.attendance.overtimeHours != 0) ? day.attendance.overtimeHours : '0.00')}">0.00</td>
+                        <td>
+                            <span class="display-mode" th:text="${(day.attendance?.agreement36Status != null && !#strings.isEmpty(day.attendance.agreement36Status)) ? day.attendance.agreement36Status : '-'}">-</span>
+                            <select class="form-select form-select-sm edit-mode" name="agreement36Status" th:id="'status-' + ${day.day}"
+                                    th:onchange="'handleStatusChange(' + ${day.day} + ')'">
+                                <option value="">-</option>
+                                <option value="出社" th:selected="${day.attendance?.agreement36Status == '出社'}">出社</option>
+                                <option value="在宅" th:selected="${day.attendance?.agreement36Status == '在宅'}">在宅</option>
+                                <option value="有給" th:selected="${day.attendance?.agreement36Status == '有給'}">有給</option>
+                                <option value="欠勤" th:selected="${day.attendance?.agreement36Status == '欠勤'}">欠勤</option>
+                            </select>
+                        </td>
+                        <td>
+                            <span class="display-mode" th:text="${day.attendance?.remarks != null ? day.attendance.remarks : '-'}">-</span>
+                            <input type="text" class="form-control form-control-sm edit-mode" 
+                                   th:value="${day.attendance?.remarks != null ? day.attendance.remarks : ''}" 
+                                   placeholder="-"
+                                   th:id="'remarks-' + ${day.day}">
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-primary" th:onclick="'toggleEdit(event, ' + ${day.day} + ')'" th:id="'btn-' + ${day.day}">編集</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        let editingDay = null;
+
+        function toggleEdit(event, day) {
+            event.preventDefault();
+            const row = document.getElementById('row-' + day);
+            const btn = document.getElementById('btn-' + day);
+
+            if (editingDay === day) {
+                saveInline(day);
+            } else {
+                if (editingDay !== null) {
+                    cancelEdit(editingDay);
+                }
+                row.classList.add('editing');
+                btn.textContent = '保存';
+                btn.classList.replace('btn-primary', 'btn-success');
+                editingDay = day;
+            }
+        }
+
+        function cancelEdit(day) {
+            const row = document.getElementById('row-' + day);
+            if (row) row.classList.remove('editing');
+            const btn = document.getElementById('btn-' + day);
+            if (btn) {
+                btn.textContent = '編集';
+                btn.classList.replace('btn-success', 'btn-primary');
+            }
+            editingDay = null;
+        }
+
+        function changeMonth() {
+            const selector = document.getElementById('monthSelector');
+            const selectedValue = selector.value;
+            if (selectedValue) {
+                const [year, month] = selectedValue.split(',');
+                
+                // 获取当前年月作为最大限制
+                const maxCurrentYear = parseInt(document.getElementById('currentYear').value);
+                const maxCurrentMonth = parseInt(document.getElementById('currentMonth').value);
+                
+                // 检查所选月份是否超过当前月份
+                if (year > maxCurrentYear || (year == maxCurrentYear && month > maxCurrentMonth)) {
+                    alert('選択した年月は未来の日付です。現在の年月までしか選択できません。');
+                    // 重置为当前月份
+                    document.getElementById('monthSelector').value = maxCurrentYear + ',' + maxCurrentMonth;
+                    return;
+                }
+                
+                window.location.href = '/attendance?year=' + year + '&month=' + month;
+            }
+        }
+
+        function handleStatusChange(day) {
+            const status = document.getElementById('status-' + day).value;
+            // 【未入力铁律】：如果选择重置类状态，物理抹除前端输入框
+            if (!status || status === '-' || status === '欠勤' || status === '有給') {
+                document.getElementById('startTime-' + day).value = '';
+                document.getElementById('endTime-' + day).value = '';
+                document.getElementById('breakTime-' + day).value = '';
+            }
+            calculateWorkHours(day);
+        }
+
+        function calculateWorkHours(day) {
+            const status = document.getElementById('status-' + day).value;
+            const startTime = document.getElementById('startTime-' + day).value;
+            const endTime = document.getElementById('endTime-' + day).value;
+            const breakTime = document.getElementById('breakTime-' + day).value || "00:00";
+            
+            const workHoursCell = document.getElementById('workHours-' + day);
+            const overtimeHoursCell = document.getElementById('overtimeHours-' + day);
+
+            // 【未入力逻辑】：状态无效或时间不全，强制清零显示
+            if (!status || status === '-' || status === '欠勤' || status === '有給' || !startTime || !endTime) {
+                workHoursCell.innerText = '0.00';
+                overtimeHoursCell.innerText = '0.00';
+                refreshTopPanel();
+                return;
+            }
+
+            try {
+                const d1 = new Date("1970-01-01T" + startTime);
+                let d2 = new Date("1970-01-01T" + endTime);
+                if (d2 < d1) d2.setDate(d2.getDate() + 1);
+
+                const bParts = breakTime.split(':');
+                const bMs = (parseInt(bParts[0]) * 60 + (parseInt(bParts[1]) || 0)) * 60000;
+                const workH = Math.max(0, (d2 - d1 - bMs) / 3600000);
+                const overH = Math.max(0, workH - 8.0);
+
+                workHoursCell.innerText = workH.toFixed(2);
+                overtimeHoursCell.innerText = overH.toFixed(2);
+            } catch (e) {
+                workHoursCell.innerText = '0.00';
+                overtimeHoursCell.innerText = '0.00';
+            }
+            refreshTopPanel();
+        }
+
+        function refreshTopPanel() {
+            let totalDays = 0, totalWH = 0, totalOH = 0;
+            document.querySelectorAll('tbody tr[id^="row-"]').forEach(tr => {
+                const dayId = tr.id.replace('row-', '');
+                const wh = parseFloat(document.getElementById('workHours-' + dayId).innerText) || 0;
+                const oh = parseFloat(document.getElementById('overtimeHours-' + dayId).innerText) || 0;
+                const status = document.getElementById('status-' + dayId)?.value || '';
+
+                // 累加工时
+                totalWH += wh;
+                totalOH += oh;
+                // 只有"出社"或"在宅"状态且工时大于0才计入出勤天数
+                if ((status === '出社' || status === '在宅') && wh > 0) totalDays++;
+            });
+            document.getElementById('totalWorkDays').innerText = totalDays;
+            document.getElementById('totalWorkHours').innerText = totalWH.toFixed(2);
+            document.getElementById('totalOvertimeHours').innerText = totalOH.toFixed(2);
+        }
+
+        function applyDefaultValues() {
+            if (!confirm('平日（月～金）の未入力日にデフォルト値を一括入力しますか？')) {
+                return;
+            }
+            
+            const year = document.getElementById('currentYear').value;
+            const month = document.getElementById('currentMonth').value;
+            
+            const formData = new FormData();
+            formData.append('year', year);
+            formData.append('month', month);
+
+            fetch('/attendance/bulkApplyDefaults', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.message || '一括入力に失敗しました。');
+                }
+            })
+            .catch(err => {
+                console.error('Bulk apply error:', err);
+                alert('通信エラーが発生しました。');
+            });
+        }
+
+        function saveInline(day) {
+            const row = document.getElementById('row-' + day);
+            const status = document.getElementById('status-' + day).value;
+            const formData = new FormData();
+            
+            formData.append('date', row.getAttribute('data-date'));
+            formData.append('agreement36Status', status);
+            formData.append('remarks', document.getElementById('remarks-' + day).value);
+            formData.append('year', document.getElementById('currentYear')?.value || '');
+            formData.append('month', document.getElementById('currentMonth')?.value || '');
+
+            // 【保存期物理抹除】：如果区分是非出勤状态，不仅时间传空，工時も必須強制伝 '0.00'，徹底洗浄後端データベース！
+            if (!status || status === '-' || status === '欠勤' || status === '有給') {
+                formData.append('startTime', '');
+                formData.append('endTime', '');
+                formData.append('breakTime', '');
+                formData.append('workHours', '0.00');       // 核心补丁：强行传0
+                formData.append('overtimeHours', '0.00');   // 核心补丁：强行传0
+            } else {
+                formData.append('startTime', document.getElementById('startTime-' + day).value);
+                formData.append('endTime', document.getElementById('endTime-' + day).value);
+                formData.append('breakTime', document.getElementById('breakTime-' + day).value);
+                // 正常状态下，把页面計算好的実働と残業时间传过去
+                formData.append('workHours', document.getElementById('workHours-' + day).innerText || '0.00');
+                formData.append('overtimeHours', document.getElementById('overtimeHours-' + day).innerText || '0.00');
+            }
+            
+            fetch('/attendance/saveInline', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('保存に失敗しました。');
+                }
+            })
+            .catch(err => {
+                console.error('Save error:', err);
+                alert('通信エラーが発生しました。');
+            });
+        }
+    </script>
+</th:block>
+</html>
