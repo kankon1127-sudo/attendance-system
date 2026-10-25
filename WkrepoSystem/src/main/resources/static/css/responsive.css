@@ -362,6 +362,43 @@
         gap: 8px;
     }
 
+    .content-area .approval-flow-card .flow-steps {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0;
+        width: 100%;
+        min-width: 0;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .content-area .approval-flow-card .flow-step {
+        flex: 0 0 64px;
+    }
+
+    .content-area .approval-flow-card .step-circle {
+        width: 36px;
+        height: 36px;
+        flex: 0 0 36px;
+        margin-bottom: 4px;
+        font-size: 14px;
+    }
+
+    .content-area .approval-flow-card .step-label {
+        font-size: 10px;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+
+    .content-area .approval-flow-card .flow-line {
+        flex: 1 0 10px;
+        width: auto;
+        height: 0;
+        margin: 18px 2px 0;
+        border-top: 2px solid #e2e8f0;
+    }
+
     .content-area .flow-line {
         width: 4px;
         height: 24px;
