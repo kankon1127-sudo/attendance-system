@@ -234,6 +234,41 @@ public class ApplicationListService {
         return ApplicationStatus.PENDING.equals(status) || ApplicationStatus.SUBMITTED.equals(status);
     }
 
+    public boolean canApproveApplication(Long id, String applicationType, User currentUser) {
+        if (id == null || applicationType == null || currentUser == null) {
+            return false;
+        }
+
+        switch (applicationType) {
+            case "TRAVEL":
+                return travelExpenseRepository.findById(id)
+                        .map(application -> canApprove(currentUser, application.getUser(),
+                                application.getStatus() != null ? application.getStatus() : ApplicationStatus.PENDING,
+                                null, applicationType))
+                        .orElse(false);
+            case "GENERAL":
+                return generalExpenseRepository.findById(id)
+                        .map(application -> canApprove(currentUser, application.getUser(),
+                                application.getStatus() != null ? application.getStatus() : ApplicationStatus.PENDING,
+                                null, applicationType))
+                        .orElse(false);
+            case "PAID_LEAVE":
+                return paidLeaveRepository.findById(id)
+                        .map(application -> canApprove(currentUser, application.getUser(),
+                                application.getStatus() != null ? application.getStatus() : ApplicationStatus.PENDING,
+                                null, applicationType))
+                        .orElse(false);
+            case "MONTHLY_REPORT":
+                return monthlyReportRepository.findById(id)
+                        .map(application -> canApprove(currentUser, application.getUser(),
+                                application.getStatus() != null ? application.getStatus() : ApplicationStatus.DRAFT,
+                                application.getApproverId(), applicationType))
+                        .orElse(false);
+            default:
+                return false;
+        }
+    }
+
     // ===== 交通费转换 =====
     private ApplicationItem convertToApplicationItem(TravelExpense te, User currentUser) {
         ApplicationItem item = new ApplicationItem();
@@ -325,8 +360,8 @@ public class ApplicationListService {
                     return true;
                 }
                 if (isManager) {
-                    if (approverId != null) {
-                        return approverId.equals(currentUser.getId());
+                    if (approverId != null && approverId.equals(currentUser.getId())) {
+                        return true;
                     }
                     return currentUser.getDepartment() != null &&
                             currentUser.getDepartment().equals(applicant.getDepartment());
