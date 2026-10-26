@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'monthly-summary', '月報サマリー')}">
+<head th:fragment="head">
+    <title th:text="${#messages.msg('page.monthly-summary') + ' - ' + #messages.msg('brand.name')}">月報サマリー</title>
+    <style>
+        .content-wrapper {
+            background: #f1f5f9;
+            padding: 30px;
+            border-radius: 16px;
+        }
+        
+        .header-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .header-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .form-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #1e3a5f;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .form-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 24px;
+            background: #3b82f6;
+            border-radius: 2px;
+        }
+        
+        .month-nav {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .month-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        
+        .month-display {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1e3a5f;
+            min-width: 140px;
+            text-align: center;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: #f1f5f9;
+            font-size: 14px;
+            color: #64748b;
+            font-weight: 600;
+        }
+        
+        .approval-flow-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .flow-steps {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        
+        .flow-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .step-circle {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .step-circle.inactive {
+            background: #e2e8f0;
+            color: #94a3b8;
+        }
+        
+        .step-circle.active {
+            background: #2563eb;
+            color: white;
+        }
+        
+        .step-circle.completed {
+            background: #22c55e;
+            color: white;
+        }
+        
+        .step-label {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .step-label.inactive {
+            color: #94a3b8;
+        }
+        
+        .step-label.active {
+            color: #2563eb;
+        }
+        
+        .step-label.completed {
+            color: #22c55e;
+        }
+        
+        .flow-line {
+            width: 80px;
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            margin-bottom: 28px;
+        }
+        
+        .summary-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 16px;
+        }
+        
+        .info-box {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .info-title {
+            font-weight: bold;
+            color: #475569;
+            margin-bottom: 12px;
+            font-size: 15px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            color: #64748b;
+        }
+        
+        .info-value {
+            font-weight: 600;
+            color: #1e3a5f;
+        }
+        
+        .info-value.total {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1e3a5f;
+        }
+        
+        .work-content-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .work-content-area {
+            width: 100%;
+            min-height: 180px;
+            padding: 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            resize: vertical;
+            margin-bottom: 16px;
+        }
+        
+        .work-content-area:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .btn-save-draft {
+            background: #e2e8f0;
+            color: #1e3a5f;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .btn-save-draft:hover {
+            background: #cbd5e1;
+        }
+        
+        .approver-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .approver-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1e3a5f;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .approver-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .btn-submit {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .btn-submit:hover {
+            background: #1d4ed8;
+        }
+        
+        .submit-hint {
+            color: #94a3b8;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        .error-banner {
+            background: #fef2f2;
+            border: 2px solid #fecaca;
+            color: #b91c1c;
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 24px;
+            font-weight: 600;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+<th:block th:fragment="main-content">
+    <input type="hidden" id="reportYear" th:value="${year}">
+    <input type="hidden" id="reportMonth" th:value="${month}">
+    <div class="content-wrapper">
+        <div class="header-card">
+            <div class="header-row">
+                <div class="form-title" th:text="#{page.monthly-summary}">月報サマリー・提出</div>
+                <div class="month-nav">
+                    <a th:href="@{/monthly-summary(year=${prevYear}, month=${prevMonth})}" class="month-btn">◀</a>
+                    <div class="month-display" th:text="${year} + '年' + ${month} + '月'">2024年1月</div>
+                    <a th:href="@{/monthly-summary(year=${nextYear}, month=${nextMonth})}" class="month-btn">▶</a>
+                </div>
+                <div class="status-badge" th:text="${currentStep == 1 ? '⚪ ' + #messages.msg('monthly.draft') : (currentStep == 2 ? '🟡 ' + #messages.msg('monthly.submittedStatus') : (currentStep == 3 ? '🟢 ' + #messages.msg('monthly.approved') : '✅ ' + #messages.msg('monthly.finalized')))}">⚪ 下書き</div>
+            </div>
+        </div>
+
+        <div class="error-banner" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+        
+        <div class="approval-flow-card">
+            <div class="form-title" th:text="#{monthly.approvalFlow}">承認フロー</div>
+            <div class="flow-steps">
+                <th:block th:each="step, iterStat : ${approvalSteps}">
+                    <div class="flow-step">
+                        <div class="step-circle" th:classappend="${step.completed ? ' completed' : (step.active ? ' active' : ' inactive')}">
+                            <span th:if="${step.completed}">✓</span>
+                            <span th:text="${step.step}" th:if="${!step.completed}">1</span>
+                        </div>
+                        <div class="step-label" th:classappend="${step.completed ? ' completed' : (step.active ? ' active' : ' inactive')}" th:text="${#messages.msg('monthly.step.' + (iterStat.count == 1 ? 'draft' : iterStat.count == 2 ? 'submitted' : iterStat.count == 3 ? 'managerApproval' : 'generalAffairs'))}">下書き</div>
+                    </div>
+                    <div class="flow-line" th:if="${!iterStat.last}"></div>
+                </th:block>
+            </div>
+        </div>
+        
+        <div class="summary-card">
+            <div class="form-title" th:text="#{monthly.overview}">月報概要</div>
+            <div class="summary-grid">
+                <div class="info-box">
+                    <div class="info-title" th:text="#{monthly.employeeInfo}">社員情報</div>
+                    <div class="info-item">
+                        <span class="info-label" th:text="#{user.name}">氏名</span>
+                        <span class="info-value" th:text="${user?.name ?: '-'}">山田太郎</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label" th:text="#{monthly.employmentType}">雇用形態</span>
+                        <span class="info-value">正社員</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label" th:text="#{common.period}">対象月</span>
+                        <span class="info-value" th:text="${year} + '年' + ${month} + '月'">2024年1月</span>
+                    </div>
+                </div>
+                <div class="info-box">
+                    <div class="info-title" th:text="#{monthly.workRecord}">勤務実績</div>
+                    <div class="info-item">
+                        <span class="info-label" th:text="#{monthly.workDays}">稼働日数</span>
+                        <span class="info-value" th:text="${summary.workDays} + '日'">0日</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label" th:text="#{attendance.workHours}">実働時間</span>
+                        <span class="info-value" th:text="${summary.totalWorkHours} + '時間'">0時間</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label" th:text="#{attendance.overtimeHours}">残業時間</span>
+                        <span class="info-value" th:text="${summary.totalOvertimeHours} + '時間'">0時間</span>
+                    </div>
+                </div>
+                <div class="info-box">
+                    <div class="info-title" th:text="#{monthly.expenses}">経費</div>
+                    <div class="info-item">
+                        <span class="info-label" th:text="#{monthly.nonTaxableTransport}">非課税交通費</span>
+                        <span class="info-value" th:text="${summary.nonTaxableTransportExpense} + '円'">0円</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label" th:text="#{monthly.travelExpense}">旅費交通費</span>
+                        <span class="info-value" th:text="${summary.travelExpense} + '円'">0円</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label" th:text="#{monthly.generalExpense}">諸経費</span>
+                        <span class="info-value" th:text="${summary.generalExpense} + '円'">0円</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label" th:text="#{monthly.total}">合計</span>
+                        <span class="info-value total" th:text="${summary.totalExpense} + '円'">0円</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="work-content-card">
+            <div class="form-title" th:text="'📝 ' + #{monthly.workContent}">📝 作業内容（当月の報告）</div>
+            <textarea class="work-content-area" name="workContent" th:disabled="${currentStep >= 2}" th:text="${workContent}" th:placeholder="#{monthly.workContentHint}"></textarea>
+            <div class="action-buttons" th:if="${currentStep < 2}">
+                <button type="button" class="btn-save-draft" onclick="saveDraft()" th:text="'📄 ' + #{monthly.saveDraft}">📄 下書き保存</button>
+            </div>
+        </div>
+        
+        <div class="approver-card" th:if="${currentStep < 2}">
+            <div class="approver-title" th:text="'🔔 ' + #{monthly.approver}">🔔 承認依頼先（任意）</div>
+            <select class="approver-select" name="approverId">
+                <option th:if="${directApprover == null}" value="" th:text="#{monthly.noDirectApprover}">
+                    直属上司が設定されていません
+                </option>
+                <option th:if="${directApprover != null}"
+                        th:value="${directApprover.id}"
+                        th:selected="${selectedApproverId == directApprover.id}"
+                        th:text="${directApprover.name + ' (' + directApprover.employeeId + ')'}">
+                    直属上司
+                </option>
+            </select>
+            <button type="button" class="btn-submit" onclick="submitReport()" th:text="'📤 ' + #{monthly.submit}">📤 月報を提出する</button>
+            <div class="submit-hint">
+                <span th:text="#{monthly.submitHint}">内容を確認後、提出してください。提出後はリーダーの承認待ちとなります。</span><br>
+                <span th:text="#{monthly.leaveWarning}">勤怠で有給を選択した日は、年休申請しリーダー承認後でないと提出できません。</span>
+            </div>
+        </div>
+        
+        <div class="approver-card" th:if="${currentStep >= 2}">
+            <div style="text-align: center; padding: 20px;">
+                <div style="font-size: 18px; font-weight: bold; color: #22c55e; margin-bottom: 10px;">
+                    <span th:text="#{monthly.submitted}">月報は既に提出されています</span>
+                </div>
+                <div style="color: #64748b;">
+                    <span th:text="#{monthly.waitingApproval}">次のステップ：リーダー承認待ち</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function getReportYearMonth() {
+            return {
+                year: document.getElementById('reportYear').value,
+                month: document.getElementById('reportMonth').value
+            };
+        }
+
+        function saveDraft() {
+            const workContent = document.querySelector('[name="workContent"]').value;
+            const { year, month } = getReportYearMonth();
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/monthly-summary/save-draft';
+            
+            const yearInput = document.createElement('input');
+            yearInput.type = 'hidden';
+            yearInput.name = 'year';
+            yearInput.value = year;
+            
+            const monthInput = document.createElement('input');
+            monthInput.type = 'hidden';
+            monthInput.name = 'month';
+            monthInput.value = month;
+            
+            const contentInput = document.createElement('input');
+            contentInput.type = 'hidden';
+            contentInput.name = 'workContent';
+            contentInput.value = workContent;
+            
+            form.appendChild(yearInput);
+            form.appendChild(monthInput);
+            form.appendChild(contentInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+        
+        function submitReport() {
+            const workContent = document.querySelector('[name="workContent"]').value;
+            const approverId = document.querySelector('[name="approverId"]').value;
+            const { year, month } = getReportYearMonth();
+            
+            if (!workContent.trim()) {
+                alert('作業内容を入力してください');
+                return;
+            }
+            
+            if (!approverId) {
+                alert('承認依頼先を選択してください');
+                return;
+            }
+            
+            if (!confirm('月報を提出してもよろしいですか？')) {
+                return;
+            }
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/monthly-summary/submit';
+            
+            const yearInput = document.createElement('input');
+            yearInput.type = 'hidden';
+            yearInput.name = 'year';
+            yearInput.value = year;
+            
+            const monthInput = document.createElement('input');
+            monthInput.type = 'hidden';
+            monthInput.name = 'month';
+            monthInput.value = month;
+            
+            const contentInput = document.createElement('input');
+            contentInput.type = 'hidden';
+            contentInput.name = 'workContent';
+            contentInput.value = workContent;
+            
+            const approverInput = document.createElement('input');
+            approverInput.type = 'hidden';
+            approverInput.name = 'approverId';
+            approverInput.value = approverId;
+            
+            form.appendChild(yearInput);
+            form.appendChild(monthInput);
+            form.appendChild(contentInput);
+            form.appendChild(approverInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+    </script>
+</th:block>
+</body>
+</html>

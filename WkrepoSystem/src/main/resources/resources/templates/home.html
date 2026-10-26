@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'home', 'ホーム')}">
+<head th:fragment="head">
+    <title th:text="${#messages.msg('page.home') + ' - ' + #messages.msg('brand.name')}">ホーム</title>
+    <style>
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-card h4 {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+        .stat-card .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        .stat-card .stat-unit {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        .progress {
+            height: 25px;
+            border-radius: 12px;
+        }
+        .progress-bar-warning {
+            background: linear-gradient(90deg, #ffc107 0%, #ff9800 100%);
+        }
+        .progress-bar-danger {
+            background: linear-gradient(90deg, #dc3545 0%, #c0392b 100%);
+        }
+        .approval-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .approval-item:last-child {
+            border-bottom: 0;
+        }
+        .approval-item-main {
+            min-width: 0;
+        }
+        .approval-item-meta {
+            color: #6c757d;
+            font-size: 13px;
+        }
+        @media (max-width: 575.98px) {
+            .approval-item {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+<th:block th:fragment="main-content">
+    <!-- 统计卡片 -->
+    <div class="row mb-4">
+        <div class="col-12 col-md-3 mb-3">
+            <div class="stat-card">
+                <h4 th:text="#{attendance.workHours}">実働時間</h4>
+                <div class="stat-value" th:text="${#numbers.formatDecimal(homeWorkHours, 1, 2)}">0.00</div>
+                <div class="stat-unit">h</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-3 mb-3">
+            <div class="stat-card">
+                <h4 th:text="#{attendance.overtimeHours}">残業時間</h4>
+                <div class="stat-value" th:text="${#numbers.formatDecimal(homeOvertimeHours, 1, 2)}">0.00</div>
+                <div class="stat-unit">h</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-3 mb-3">
+            <div class="stat-card">
+                <h4 th:text="#{home.remainingLeave}">年休残日数</h4>
+                <div class="stat-value" th:text="${#numbers.formatDecimal(homeRemainingLeave, 1, 1)}">0.0</div>
+                <div class="stat-unit" th:text="#{common.daysUnit}">日</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-3 mb-3">
+            <div class="stat-card">
+                <h4 th:text="#{attendance.daysWorked}">今月出勤日数</h4>
+                <div class="stat-value" th:text="${homeWorkDays}">0</div>
+                <div class="stat-unit" th:text="#{common.daysUnit}">日</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
+            <h4 class="mb-0" th:text="#{home.pendingApprovals}">待审批事项</h4>
+            <a class="btn btn-outline-primary btn-sm text-nowrap" th:href="@{/application/list}"
+               th:text="#{home.viewAllApprovals}">查看全部</a>
+        </div>
+        <p class="text-muted mb-3">
+            <span th:text="#{home.pendingApprovalCount}">待处理</span>
+            <strong th:text="${pendingApprovalCount}">0</strong>
+            <span th:text="#{home.items}">项</span>
+        </p>
+        <div th:if="${pendingApprovals.empty}" class="text-muted py-3">
+            <i class="bi bi-check-circle me-2"></i>
+            <span th:text="#{home.noPendingApprovals}">当前没有需要您审批的事项。</span>
+        </div>
+        <div th:each="approval : ${pendingApprovals}" class="approval-item">
+            <div class="approval-item-main">
+                <div class="fw-semibold">
+                    <span th:text="${#messages.msg('application.type.' + approval.applicationType)}">申请类型</span>
+                    <span class="text-muted">·</span>
+                    <span th:text="${approval.applicantName}">申请人</span>
+                </div>
+                <div class="approval-item-meta">
+                    <span th:if="${approval.applicantDepartment != null and !approval.applicantDepartment.isEmpty()}"
+                          th:text="${approval.applicantDepartment}">部门</span>
+                    <span th:if="${approval.applicationDate != null}"
+                          th:text="${#temporals.format(approval.applicationDate, 'yyyy/MM/dd')}">日期</span>
+                    <span th:if="${approval.amountLabel != null}" th:text="${approval.amountLabel}">详情</span>
+                </div>
+            </div>
+            <span class="badge text-bg-warning"
+                  th:text="${#messages.msg('application.status.' + approval.status.name())}">待审批</span>
+        </div>
+    </div>
+    
+    <!-- 36协定管理 -->
+    <div class="card">
+        <h4 class="mb-4" th:text="#{home.overtimeManagement}">三六协定 残業時間管理</h4>
+        
+        <div class="mb-4">
+            <div class="d-flex justify-content-between mb-2">
+                <span th:text="#{home.monthlyOvertime}">当月残業時間</span>
+                <span class="fw-bold">0h / 45h</span>
+            </div>
+            <div class="progress">
+                <div class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <div class="mb-4">
+            <div class="d-flex justify-content-between mb-2">
+                <span th:text="#{home.warningThreshold}">警告閾値（40h）</span>
+                <span class="fw-bold text-warning">0%</span>
+            </div>
+            <div class="progress">
+                <div class="progress-bar progress-bar-warning" role="progressbar" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <div>
+            <div class="d-flex justify-content-between mb-2">
+                <span th:text="#{home.overtimeLimit}">上限（45h）</span>
+                <span class="fw-bold text-danger">0%</span>
+            </div>
+            <div class="progress">
+                <div class="progress-bar progress-bar-danger" role="progressbar" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+</th:block>
+</body>
+</html>

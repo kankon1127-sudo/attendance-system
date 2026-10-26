@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'general-expense', '諸費用登録')}">
+<head th:fragment="head">
+    <title th:text="${#messages.msg('page.general-expense') + ' - ' + #messages.msg('brand.name')}">諸費用登録</title>
+    <style>
+        .expense-form {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: end;
+        }
+        .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .btn-save {
+            background: #0d6efd;
+            color: white;
+            border: none;
+            padding: 10px 30px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .btn-save:hover {
+            background: #0b5ed7;
+        }
+        .btn-clear {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 30px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .btn-clear:hover {
+            background: #5a6268;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .btn-delete:hover {
+            background: #c82333;
+        }
+        .total-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-align: right;
+        }
+        .total-amount {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .required {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+<th:block th:fragment="main-content">
+    <div class="card">
+        <h3 class="mb-4" th:text="#{page.general-expense}">諸費用登録</h3>
+        
+        <!-- 月選択セクション -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <form method="GET" action="/general-expense" class="d-flex align-items-center gap-2">
+                    <label for="year" class="me-2 fw-bold" th:text="#{common.year} + ':'">年度:</label>
+                    <select name="year" id="year" class="form-select" style="width: auto;">
+                        <option th:each="yr : ${availableYears}"
+                                th:value="${yr}"
+                                th:text="${yr}"
+                                th:selected="${currentYear == yr}">2024</option>
+                    </select>
+                    
+                    <label for="month" class="me-2 fw-bold" th:text="#{common.month} + ':'">月度:</label>
+                    <select name="month" id="month" class="form-select" style="width: auto;">
+                        <option th:each="m : ${#numbers.sequence(1, 12)}"
+                                th:value="${m}"
+                                th:text="${m}"
+                                th:selected="${currentMonth == m}">1</option>
+                    </select>
+                    
+                    <button type="submit" class="btn btn-primary" th:text="#{common.show}">表示</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- 登録フォーム -->
+        <div class="expense-form">
+            <form method="POST" action="/general-expense/save" th:object="${newExpense}">
+                <input type="hidden" name="year" th:value="${currentYear}">
+                <input type="hidden" name="month" th:value="${currentMonth}">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="date"><span th:text="#{common.expenseDate}">費用年月</span> <span class="required">*</span></label>
+                        <input type="date" id="date" name="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="expenseType"><span th:text="#{common.category}">カテゴリ</span> <span class="required">*</span></label>
+                        <select id="expenseType" name="expenseType" required>
+                            <option value="" th:text="#{monthly.selectApprover}">選択してください</option>
+                            <option value="消耗品" th:text="#{expense.category.consumables}">消耗品</option>
+                            <option value="交際費" th:text="#{expense.category.entertainment}">交際費</option>
+                            <option value="通信費" th:text="#{expense.category.communication}">通信費</option>
+                            <option value="光熱費" th:text="#{expense.category.utilities}">光熱費</option>
+                            <option value="家賃" th:text="#{expense.category.rent}">家賃</option>
+                            <option value="その他" th:text="#{expense.category.other}">その他</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="summary"><span th:text="#{common.summary}">摘要</span> <span class="required">*</span></label>
+                        <input type="text" id="summary" name="summary" th:placeholder="#{expense.summaryPlaceholder}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="amount"><span th:text="#{common.amount}">金額</span> <span class="required">*</span></label>
+                        <input type="number" id="amount" name="amount" placeholder="0" min="0" step="0.01" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group" style="flex: 2;">
+                        <label for="remarks" th:text="#{common.remarks}">備考</label>
+                        <textarea id="remarks" name="remarks" th:placeholder="#{expense.remarksPlaceholder}"></textarea>
+                    </div>
+                </div>
+                
+                <div class="d-flex gap-2 mt-3">
+                    <button type="submit" class="btn-save">
+                        <i class="bi bi-save"></i> <span th:text="#{common.save}">保存</span>
+                    </button>
+                    <button type="button" class="btn-clear" onclick="clearForm()">
+                        <i class="bi bi-eraser"></i> <span th:text="#{common.clear}">クリア</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- 登録済み一覧 -->
+        <div class="mt-5">
+            <h4 class="mb-3" th:text="#{common.registeredList}">登録済み一覧</h4>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;" th:text="#{travel.date}">日付</th>
+                            <th style="width: 120px;" th:text="#{common.category}">カテゴリ</th>
+                            <th th:text="#{common.summary}">摘要</th>
+                            <th style="width: 120px;" th:text="#{common.amount}">金額</th>
+                            <th style="width: 200px;" th:text="#{common.remarks}">備考</th>
+                            <th style="width: 80px;" th:text="#{common.operation}">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${expenses.empty}">
+                            <td colspan="6" class="text-center" th:text="#{common.noData}">データがありません</td>
+                        </tr>
+                        <tr th:each="expense : ${expenses}">
+                            <td th:text="${#temporals.format(expense.date, 'yyyy/MM/dd')}">2024/01/01</td>
+                            <td th:text="${expense.expenseType == '消耗品' ? #messages.msg('expense.category.consumables') : (expense.expenseType == '交際費' ? #messages.msg('expense.category.entertainment') : (expense.expenseType == '通信費' ? #messages.msg('expense.category.communication') : (expense.expenseType == '光熱費' ? #messages.msg('expense.category.utilities') : (expense.expenseType == '家賃' ? #messages.msg('expense.category.rent') : (expense.expenseType == 'その他' ? #messages.msg('expense.category.other') : expense.expenseType)))))}">カテゴリ</td>
+                            <td th:text="${expense.summary}">摘要</td>
+                            <td th:text="${#numbers.formatInteger(#objects.nullSafe(expense.amount, 0), 0, 'COMMA') + '円'}">1,000円</td>
+                            <td th:text="${expense.remarks}">備考</td>
+                            <td>
+                                <form th:action="@{/general-expense/delete/{id}(id=${expense.id})}" method="post" style="display: inline;">
+                                    <input type="hidden" name="year" th:value="${currentYear}">
+                                    <input type="hidden" name="month" th:value="${currentMonth}">
+                                    <button type="submit" class="btn-delete" onclick="return confirm('削除してもよろしいですか？');">
+                                        <span th:text="#{common.delete}">削除</span>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 合計金額 -->
+            <div class="total-section">
+                <div><span th:text="#{common.totalAmount}">合計金額</span>: <span class="total-amount" th:text="${#numbers.formatInteger(#objects.nullSafe(totalAmount, 0), 0, 'COMMA') + '円'}">0円</span></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function clearForm() {
+            document.getElementById('date').value = '';
+            document.getElementById('expenseType').value = '';
+            document.getElementById('summary').value = '';
+            document.getElementById('amount').value = '';
+            document.getElementById('remarks').value = '';
+        }
+    </script>
+</th:block>
+</body>
+</html>

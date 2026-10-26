@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.toLanguageTag()}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${#messages.msg('login.title')}">月次业务门户系统 - 登录</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            max-width: 400px;
+            width: 100%;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .login-header h2 {
+            color: #333;
+            font-weight: 600;
+        }
+        .login-header p {
+            color: #666;
+            font-size: 14px;
+        }
+        .form-control {
+            height: 45px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            padding: 12px;
+        }
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .btn-login {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            height: 45px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .btn-login:hover {
+            background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .alert {
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+    <link rel="stylesheet" th:href="@{/css/responsive.css}">
+</head>
+<body class="login-page">
+    <div class="login-language">
+        <select class="form-select form-select-sm language-switcher"
+                th:attr="aria-label=#{language.label}"
+                onchange="var query = window.location.search.substring(1).split('&'); var kept = []; for (var i = 0; i < query.length; i++) { if (query[i] && query[i].split('=')[0] !== 'lang') kept.push(query[i]); } kept.push('lang=' + encodeURIComponent(this.value)); window.location.href = window.location.pathname + '?' + kept.join('&') + window.location.hash;">
+            <option value="ja" th:selected="${#locale.language == 'ja'}" th:text="#{language.japanese}">日本語</option>
+            <option value="zh-CN" th:selected="${#locale.language == 'zh'}" th:text="#{language.chinese}">简体中文</option>
+        </select>
+    </div>
+    <div class="login-container">
+        <div class="login-header">
+            <h2 th:text="#{brand.name}">月次业务门户系统</h2>
+            <p>Wkrepo System</p>
+        </div>
+        
+        <div th:if="${error}" class="alert alert-danger" role="alert">
+            <span th:text="${error}"></span>
+        </div>
+        
+        <div th:if="${message}" class="alert alert-success" role="alert">
+            <span th:text="${message}"></span>
+        </div>
+        
+        <form th:action="@{/login}" method="post">
+            <div class="mb-3">
+                <label for="username" class="form-label" th:text="#{login.username}">用户名</label>
+                <input type="text" class="form-control" id="username" name="username" required th:placeholder="#{login.usernamePlaceholder}">
+            </div>
+            
+            <div class="mb-3">
+                <label for="password" class="form-label" th:text="#{login.password}">密码</label>
+                <input type="password" class="form-control" id="password" name="password" required th:placeholder="#{login.passwordPlaceholder}">
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-login w-100" th:text="#{login.submit}">登录</button>
+        </form>
+        
+        <div class="text-center mt-4">
+            <small class="text-muted">© 2026 Wkrepo System. All rights reserved.</small>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
