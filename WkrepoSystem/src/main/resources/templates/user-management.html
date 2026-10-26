@@ -225,6 +225,34 @@
 
     <div class="alert alert-danger"  th:if="${errorMessage}"   style="border-radius:12px;" th:text="${errorMessage}"></div>
     <div class="alert alert-success" th:if="${successMessage}" style="border-radius:12px;" th:text="${successMessage}"></div>
+    <div class="alert alert-danger" th:if="${databaseRestoreErrorKey}" style="border-radius:12px;"
+         th:text="${#messages.msg(databaseRestoreErrorKey)}"></div>
+    <div class="alert alert-success" th:if="${databaseRestoreSuccess}" style="border-radius:12px;"
+         th:text="#{database.restore.success}"></div>
+
+    <div class="card mb-4" th:if="${isAdmin}">
+        <div class="card-header">
+            <h5><i class="bi bi-database-fill-gear"></i> <span th:text="#{database.restore.title}">データベースのバックアップと復元</span></h5>
+        </div>
+        <p class="text-danger fw-bold" th:text="#{database.restore.warning}">復元すると、オンラインデータベースの既存データがすべて置き換わります。</p>
+        <form method="post" action="/admin/database-restore" enctype="multipart/form-data"
+              th:attr="data-confirm=#{database.restore.confirmDialog}"
+              onsubmit="return confirm(this.dataset.confirm);">
+            <div class="mb-3">
+                <label for="databaseBackupFile" class="form-label" th:text="#{database.restore.file}">ダウンロード済みのSQLバックアップを選択（最大50MB）</label>
+                <input type="file" id="databaseBackupFile" name="backupFile" class="form-control"
+                       accept=".sql" required>
+            </div>
+            <div class="form-check mb-3">
+                <input type="checkbox" id="confirmDatabaseReplace" name="confirmReplace"
+                       value="true" class="form-check-input" required>
+                <label for="confirmDatabaseReplace" class="form-check-label" th:text="#{database.restore.confirm}">この操作でオンラインデータベースの全データが置き換わることを理解しました</label>
+            </div>
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-upload me-1"></i> <span th:text="#{database.restore.submit}">アップロードして復元</span>
+            </button>
+        </form>
+    </div>
 
     <!-- 社員追加 -->
     <div class="card mb-4">
