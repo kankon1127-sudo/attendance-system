@@ -3,6 +3,7 @@ package com.wkrepo.system.controller;
 import com.wkrepo.system.dto.MonthlySummaryDTO;
 import com.wkrepo.system.entity.MonthlyReport;
 import com.wkrepo.system.entity.User;
+import com.wkrepo.system.repository.UserRepository;
 import com.wkrepo.system.service.MonthlyReportService;
 import com.wkrepo.system.service.MonthlySummaryService;
 import jakarta.servlet.http.HttpSession;
@@ -35,6 +36,9 @@ public class MonthlySummaryController {
     @Autowired
     private MonthlyReportService monthlyReportService;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @GetMapping("/monthly-summary")
     public String showMonthlySummary(
             @RequestParam(name = "year", required = false) Integer year,
@@ -60,6 +64,15 @@ public class MonthlySummaryController {
         model.addAttribute("yearMonth", yearMonth);
         model.addAttribute("year", currentYear);
         model.addAttribute("month", currentMonth);
+        User directApprover = user.getManagerId() == null
+                ? null
+                : userRepository.findById(user.getManagerId())
+                        .filter(manager -> "MANAGER".equals(manager.getRole())
+                                || "ADMIN".equals(manager.getRole()))
+                        .orElse(null);
+        model.addAttribute("directApprover", directApprover);
+        model.addAttribute("selectedApproverId",
+                directApprover != null ? directApprover.getId() : null);
 
         YearMonth prev = yearMonth.minusMonths(1);
         YearMonth next = yearMonth.plusMonths(1);
@@ -78,6 +91,7 @@ public class MonthlySummaryController {
             if (reportOpt.isPresent()) {
                 MonthlyReport report = reportOpt.get();
                 currentStep = monthlyReportService.statusToStep(report.getStatus());
+                model.addAttribute("selectedApproverId", report.getApproverId());
                 if (report.getWorkContent() != null) {
                     workContent = report.getWorkContent();
                 }
@@ -155,16 +169,27 @@ public class MonthlySummaryController {
             @RequestParam("year") int year,
             @RequestParam("month") int month,
             @RequestParam("workContent") String workContent,
-            @RequestParam("approverId") Long approverId,
+            @RequestParam(name = "approverId", required = false) Long approverId,
             HttpSession session,
             RedirectAttributes redirectAttributes) {
 
         User user = (User) session.getAttribute("user");
         if (user != null) {
             try {
+                User directApprover = user.getManagerId() == null
+                        ? null
+                        : userRepository.findById(user.getManagerId())
+                                .filter(manager -> "MANAGER".equals(manager.getRole())
+                                        || "ADMIN".equals(manager.getRole()))
+                                .orElse(null);
+                if (directApprover == null || !directApprover.getId().equals(approverId)) {
+                    throw new IllegalArgumentException("直属上司未设置或审批人信息不正确，请联系管理员更新员工信息。");
+                }
                 log.info("[月報サマリー] 提出開始 userId={}, year={}, month={}, approverId={}, workContentLength={}",
-                        user.getId(), year, month, approverId, workContent == null ? 0 : workContent.length());
-                MonthlyReport saved = monthlyReportService.submitReport(user, year, month, workContent, approverId);
+                        user.getId(), year, month, directApprover.getId(),
+                        workContent == null ? 0 : workContent.length());
+                MonthlyReport saved = monthlyReportService.submitReport(
+                        user, year, month, workContent, directApprover.getId());
                 session.setAttribute("monthlyStep_" + user.getId() + "_" + year + "_" + month, 2);
                 log.info("[月報サマリー] 提出成功 reportId={}, status={}", saved.getId(), saved.getStatus());
             } catch (Exception e) {
