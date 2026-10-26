@@ -123,6 +123,36 @@ public class AttendanceService {
     public List<Attendance> getAttendancesByUserAndDateRange(User user, LocalDate startDate, LocalDate endDate) {
         return attendanceRepository.findByUserAndDateBetweenOrderByDateAsc(user, startDate, endDate);
     }
+
+    public MonthlyStatistics calculateMonthlyStatistics(List<Attendance> attendances, YearMonth yearMonth) {
+        BigDecimal totalWorkHours = BigDecimal.ZERO;
+        BigDecimal totalOvertimeHours = BigDecimal.ZERO;
+        int totalWorkDays = 0;
+
+        for (Attendance attendance : attendances) {
+            if (attendance.getDate() == null || !YearMonth.from(attendance.getDate()).equals(yearMonth)) {
+                continue;
+            }
+            String status = attendance.getAgreement36Status();
+            boolean excludedStatus = "-".equals(status) || "欠勤".equals(status) || "有給".equals(status);
+            if (excludedStatus || status == null || status.isBlank()) {
+                continue;
+            }
+
+            BigDecimal workHours = attendance.getWorkHours() == null
+                    ? BigDecimal.ZERO : attendance.getWorkHours();
+            BigDecimal overtimeHours = attendance.getOvertimeHours() == null
+                    ? BigDecimal.ZERO : attendance.getOvertimeHours();
+            totalWorkHours = totalWorkHours.add(workHours);
+            totalOvertimeHours = totalOvertimeHours.add(overtimeHours);
+
+            if (("出社".equals(status) || "在宅".equals(status))
+                    && workHours.compareTo(BigDecimal.ZERO) > 0) {
+                totalWorkDays++;
+            }
+        }
+        return new MonthlyStatistics(totalWorkHours, totalOvertimeHours, totalWorkDays);
+    }
     
     public YearMonth getFirstAttendanceYearMonth(User user) {
         LocalDate firstDate = attendanceRepository.findFirstDateByUser(user);
@@ -343,5 +373,11 @@ public class AttendanceService {
         }
         
         return true;
+    }
+
+    public record MonthlyStatistics(
+            BigDecimal workHours,
+            BigDecimal overtimeHours,
+            int workDays) {
     }
 }

@@ -90,11 +90,6 @@ public class AttendanceController {
             attendanceMap.put(a.getDate(), a);
         }
 
-        // 统计数据初始化
-        BigDecimal totalWorkHours = BigDecimal.ZERO;
-        BigDecimal totalOvertimeHours = BigDecimal.ZERO;
-        int totalWorkDays = 0;
-
         List<Map<String, Object>> calendarDays = new ArrayList<>();
         for (int i = 1; i <= yearMonth.lengthOfMonth(); i++) {
             LocalDate date = yearMonth.atDay(i);
@@ -112,62 +107,16 @@ public class AttendanceController {
             Attendance attendance = attendanceMap.get(date);
             dayMap.put("attendance", attendance);
 
-            // ================= 终极核能统计网（解决多累计的关键） =================
-            if (attendance != null) {
-                BigDecimal hours = attendance.getWorkHours();
-                BigDecimal overtime = attendance.getOvertimeHours();
-                String status = attendance.getAgreement36Status();
-
-                // 核心过滤条件：状态不能是 "-", "欠勤" 或 "有給"
-                boolean isExcludedStatus = "-".equals(status) || "欠勤".equals(status) || "有給".equals(status);
-                
-                if (!isExcludedStatus && status != null && !status.trim().isEmpty()) {
-                    // 确保工时字段不为null，否则视为0
-                    if (hours == null) hours = BigDecimal.ZERO;
-                    if (overtime == null) overtime = BigDecimal.ZERO;
-
-                    // 判断是否为周末或节假日
-                    boolean isWeekendOrHoliday = holidayService.isRestDay(date);
-                    
-                    if (isWeekendOrHoliday) {
-                        // 周末或节假日出勤：实际工作时间全部算作加班时间
-                        if (hours != null && hours.compareTo(BigDecimal.ZERO) > 0) {
-                            totalOvertimeHours = totalOvertimeHours.add(hours);
-                        }
-                        // 如果原本就有加班时间，也要加上
-                        if (overtime != null && overtime.compareTo(BigDecimal.ZERO) > 0) {
-                            totalOvertimeHours = totalOvertimeHours.add(overtime);
-                        }
-                    } else {
-                        // 工作日：正常分别计算工作时间和加班时间
-                        if (hours != null && hours.compareTo(BigDecimal.ZERO) > 0) {
-                            totalWorkHours = totalWorkHours.add(hours);
-                        }
-                        if (overtime != null && overtime.compareTo(BigDecimal.ZERO) > 0) {
-                            totalOvertimeHours = totalOvertimeHours.add(overtime);
-                        }
-                    }
-                    
-                    // 只有"出社"或"在宅"状态才计入出勤天数
-                    if ("出社".equals(status) || "在宅".equals(status)) {
-                        totalWorkDays++;
-                    }
-                }
-                // 注意：这里去掉了 else if (isExcludedStatus) の continue 语句
-                // 这样即使遇到排除状态，日期也会被添加到日历中
-            }
-            // ===================================================================
             calendarDays.add(dayMap);
         }
 
-        // 最終確保統計數據正確性
-        if (totalWorkHours == null) totalWorkHours = BigDecimal.ZERO;
-        if (totalOvertimeHours == null) totalOvertimeHours = BigDecimal.ZERO;
+        AttendanceService.MonthlyStatistics statistics =
+                attendanceService.calculateMonthlyStatistics(attendances, yearMonth);
         
         model.addAttribute("calendarDays", calendarDays);
-        model.addAttribute("totalWorkDays", totalWorkDays);
-        model.addAttribute("totalWorkHours", totalWorkHours);
-        model.addAttribute("totalOvertimeHours", totalOvertimeHours);
+        model.addAttribute("totalWorkDays", statistics.workDays());
+        model.addAttribute("totalWorkHours", statistics.workHours());
+        model.addAttribute("totalOvertimeHours", statistics.overtimeHours());
         model.addAttribute("currentYear", currentYear);
         model.addAttribute("currentMonth", currentMonth);
         model.addAttribute("user", user);

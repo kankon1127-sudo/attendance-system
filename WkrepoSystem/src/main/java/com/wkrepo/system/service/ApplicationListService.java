@@ -73,6 +73,12 @@ public class ApplicationListService {
         return getApplicationsForUser(currentUser, null, null);
     }
 
+    public List<ApplicationItem> getPendingApprovalsForUser(User currentUser) {
+        return getApplicationsForUser(currentUser).stream()
+                .filter(ApplicationItem::isCanApprove)
+                .collect(Collectors.toList());
+    }
+
     public List<ApplicationItem> getApplicationsForUser(User currentUser, String filterType, String filterStatus) {
         log.info("[ApplicationListService] getApplicationsForUser 開始 userId={}, name={}, role={}, filterType={}, filterStatus={}",
                 currentUser != null ? currentUser.getId() : null,
