@@ -23,6 +23,9 @@ public interface PaidLeaveRepository extends JpaRepository<PaidLeave, Long> {
 
     List<PaidLeave> findByUserAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
             User user, LocalDate startDate, LocalDate endDate);
+
+    List<PaidLeave> findByUserAndStatusInAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+            User user, List<ApplicationStatus> statuses, LocalDate endDate, LocalDate startDate);
     
     @Query("SELECT COALESCE(SUM(pl.leaveDays), 0) FROM PaidLeave pl WHERE pl.user.id = :userId AND pl.startDate >= :startDate AND pl.endDate <= :endDate")
     Double getTotalLeaveDaysByUserAndDateRange(@Param("userId") Long userId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);

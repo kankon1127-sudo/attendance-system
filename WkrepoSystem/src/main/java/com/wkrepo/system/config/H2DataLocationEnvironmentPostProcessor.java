@@ -12,7 +12,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Map;
 
 /**
- * H2 をプロジェクトの data/ に固定する（target 配下ではないので clean/compile で消えない）。
+ * H2 の保存先を APP_DATA_DIR で指定可能にする。未指定時はプロジェクトの data/ を使う。
  * AUTO_SERVER は使わない。起動前に古い lock ファイルを削除して接続失敗を防ぐ。
  */
 public class H2DataLocationEnvironmentPostProcessor implements EnvironmentPostProcessor {
@@ -20,7 +20,11 @@ public class H2DataLocationEnvironmentPostProcessor implements EnvironmentPostPr
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Path projectRoot = findProjectRoot();
-        Path dataDir = projectRoot.resolve("data");
+        String configuredDataDir = environment.getProperty("APP_DATA_DIR");
+        Path dataDir = configuredDataDir == null || configuredDataDir.isBlank()
+                ? projectRoot.resolve("data")
+                : Path.of(configuredDataDir);
+        dataDir = dataDir.toAbsolutePath().normalize();
         try {
             Files.createDirectories(dataDir);
         } catch (IOException e) {
@@ -43,7 +47,7 @@ public class H2DataLocationEnvironmentPostProcessor implements EnvironmentPostPr
         environment.getPropertySources().addFirst(new MapPropertySource("wkrepoH2Path", Map.of(
                 "spring.datasource.url", url
         )));
-        System.out.println("【DB】永続ファイル: " + dbFile + ".mv.db");
+        System.out.println("【DB】データベースファイル: " + dbFile + ".mv.db");
     }
 
     private Path findProjectRoot() {

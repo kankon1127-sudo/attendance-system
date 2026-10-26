@@ -17,7 +17,8 @@ public class PermissionInterceptor implements HandlerInterceptor {
     
     // 需要管理员权限的路径
     private static final List<String> ADMIN_PATHS = Arrays.asList(
-        "/default-attendance-setting"
+        "/default-attendance-setting",
+        "/admin/database-backup"
     );
     
     // 需要主管或管理员权限的路径
