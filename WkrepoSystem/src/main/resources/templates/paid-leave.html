@@ -12,10 +12,17 @@
             .stat-cards {
                 flex-direction: column;
             }
+            .content-wrapper {
+                padding: 16px;
+            }
             .form-header {
                 flex-direction: column;
                 align-items: stretch;
                 gap: 16px;
+            }
+            .form-row {
+                flex-direction: column;
+                gap: 12px;
             }
             .tab-group {
                 flex-direction: column;
@@ -257,27 +264,76 @@
 </head>
 <body>
 <th:block th:fragment="main-content">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <a class="btn btn-outline-secondary" th:href="@{/paid-leave(year=${year - 1})}">
+            <i class="bi bi-chevron-left"></i>
+            <span th:text="#{common.previousYear}">前年</span>
+        </a>
+        <h4 class="mb-0" th:text="${year} + #{common.year}">2026年</h4>
+        <a class="btn btn-outline-secondary" th:href="@{/paid-leave(year=${year + 1})}">
+            <span th:text="#{common.nextYear}">次年</span>
+            <i class="bi bi-chevron-right"></i>
+        </a>
+    </div>
+    <div class="alert alert-success" th:if="${entitlementSaved}" th:text="#{leave.entitlementSaved}"></div>
+    <div class="alert alert-danger" th:if="${entitlementError}" th:text="${entitlementError}"></div>
+    <div class="alert alert-danger" th:if="${leaveError}" th:text="${#messages.msg(leaveError)}"></div>
     <div class="alert alert-success" th:if="${notificationStatus == 'SENT'}"
          th:text="${#messages.msg('notification.' + #strings.toLowerCase(notificationStatus))}"></div>
     <div class="alert alert-warning" th:if="${notificationStatus != null and notificationStatus != 'SENT' and notificationStatus != 'NOT_APPLICABLE'}"
          th:text="${#messages.msg('notification.' + #strings.toLowerCase(notificationStatus))}"></div>
     <div class="stat-cards">
         <div class="stat-card blue">
-            <div class="stat-label" th:text="#{leave.remainingDays}">年休残日数</div>
-            <div class="stat-value blue" th:text="${remainingDays} + #{common.daysUnit}">40日</div>
+            <div class="stat-label" th:text="#{leave.grantedDays}">付与日数</div>
+            <div class="stat-value blue" th:text="${grantedDays} + #{common.daysUnit}">20日</div>
         </div>
         <div class="stat-card green">
             <div class="stat-label" th:text="#{leave.usedDays}">取得済み日数</div>
             <div class="stat-value green" th:text="${usedDays} + #{common.daysUnit}">0日</div>
         </div>
         <div class="stat-card orange">
-            <div class="stat-label" th:text="#{leave.daysUntilObligation}">5日義務まで</div>
-            <div class="stat-value orange" th:text="${daysTo5Year} + #{common.daysUnit}">5日</div>
+            <div class="stat-label" th:text="#{leave.remainingDays}">年休残日数</div>
+            <div class="stat-value orange" th:text="${remainingDays} + #{common.daysUnit}">20日</div>
         </div>
         <div class="stat-card purple">
-            <div class="stat-label" th:text="#{leave.grantedDays}">付与日数</div>
-            <div class="stat-value purple" th:text="${grantedDays} + #{common.daysUnit}">20日</div>
-            <div class="stat-sub" th:text="#{leave.expiryNotSet}">期限未設定</div>
+            <div class="stat-label" th:text="#{leave.pendingDays}">承認待ち</div>
+            <div class="stat-value purple" th:text="${pendingDays} + #{common.daysUnit}">0日</div>
+        </div>
+    </div>
+
+    <div class="history-card mb-4" th:if="${canManageEntitlements}">
+        <div class="history-title" th:text="#{leave.entitlementManagement}">年休付与日数の設定</div>
+        <p class="text-muted" th:text="#{leave.entitlementHelp}">社員ごとに対象年の年休付与日数を設定してください。</p>
+        <div class="table-responsive">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th th:text="#{user.employeeId}">社員番号</th>
+                        <th th:text="#{user.name}">氏名</th>
+                        <th th:text="#{user.department}">部署</th>
+                        <th th:text="#{leave.grantedDays}">付与日数</th>
+                        <th th:text="#{common.operation}">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="entitlement : ${entitlements}">
+                        <td th:text="${entitlement.employeeId}">EMP001</td>
+                        <td th:text="${entitlement.name}">社員名</td>
+                        <td th:text="${entitlement.department}">部署</td>
+                        <td colspan="2">
+                            <form method="post" th:action="@{/paid-leave/entitlement}"
+                                  class="d-flex align-items-center gap-2">
+                                <input type="hidden" name="userId" th:value="${entitlement.userId}">
+                                <input type="hidden" name="year" th:value="${year}">
+                                <input type="number" name="grantedDays" class="form-control"
+                                       min="0" max="365" step="0.1" required
+                                       th:value="${entitlement.grantedDays}" style="max-width:120px;">
+                                <button type="submit" class="btn btn-outline-primary" th:text="#{common.save}">保存</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -322,8 +378,11 @@
 
             <div class="days-calculation">
                 <span th:text="#{leave.plannedDays}">取得予定日数：</span>
-                <span class="days-value" id="calculatedDays">—</span>
+                <span class="days-value" id="calculatedDays" th:data-day-unit="#{common.daysUnit}">—</span>
             </div>
+            <div class="alert alert-warning d-none" id="dateValidationMessage"
+                 th:data-half-day-message="#{leave.application.halfDaySingleDate}"
+                 th:data-invalid-date-message="#{leave.application.invalidDate}"></div>
 
             <button type="submit" class="btn-submit" id="submitBtn" disabled th:text="#{leave.apply}">申請する</button>
         </form>
@@ -342,6 +401,7 @@
                     <th th:text="#{leave.endDate}">取得終了日</th>
                     <th th:text="#{leave.type}">区分</th>
                     <th th:text="#{leave.days}">日数</th>
+                    <th th:text="#{application.status}">ステータス</th>
                     <th th:text="#{leave.reason}">理由</th>
                     <th th:text="#{common.operation}">操作</th>
                 </tr>
@@ -352,6 +412,7 @@
                     <td th:text="${#temporals.format(leave.endDate, 'yyyy/MM/dd')}">2024/01/01</td>
                     <td th:text="${leave.leaveType == '全日' ? #messages.msg('leave.type.fullDay') : (leave.leaveType == '午前' ? #messages.msg('leave.type.morning') : (leave.leaveType == '午後' ? #messages.msg('leave.type.afternoon') : leave.leaveType))}">全日</td>
                     <td th:text="${leave.leaveDays} + #{common.daysUnit}">1日</td>
+                    <td th:text="${#messages.msg('application.status.' + (leave.status != null ? leave.status.name() : 'PENDING'))}">申請中</td>
                     <td th:text="${leave.remarks}">理由</td>
                     <td>
                         <form th:action="@{/paid-leave/delete/{id}(id=${leave.id})}" method="post" style="display: inline;">
@@ -370,37 +431,63 @@
 <script>
     const startDateInput = document.getElementById('startDate');
     const endDateInput = document.getElementById('endDate');
+    const leaveTypeInput = document.getElementById('leaveType');
     const calculatedDaysSpan = document.getElementById('calculatedDays');
     const submitBtn = document.getElementById('submitBtn');
+    const dateValidationMessage = document.getElementById('dateValidationMessage');
+    const dayUnit = calculatedDaysSpan.dataset.dayUnit;
     
     function calculateDays() {
         const startDate = startDateInput.value;
         const endDate = endDateInput.value || startDate;
-        
-        if (startDate) {
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-            const diffTime = Math.abs(end - start);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-            calculatedDaysSpan.textContent = diffDays + '日';
-            submitBtn.disabled = false;
-            submitBtn.classList.add('active');
-        } else {
+
+        if (!startDate) {
             calculatedDaysSpan.textContent = '—';
             submitBtn.disabled = true;
             submitBtn.classList.remove('active');
+            dateValidationMessage.classList.add('d-none');
+            return;
         }
+        if (endDate < startDate) {
+            calculatedDaysSpan.textContent = '—';
+            submitBtn.disabled = true;
+            submitBtn.classList.remove('active');
+            dateValidationMessage.textContent = dateValidationMessage.dataset.invalidDateMessage;
+            dateValidationMessage.classList.remove('d-none');
+            return;
+        }
+
+        const halfDay = leaveTypeInput.value === '午前' || leaveTypeInput.value === '午後';
+        if (halfDay && startDate !== endDate) {
+            calculatedDaysSpan.textContent = '—';
+            submitBtn.disabled = true;
+            submitBtn.classList.remove('active');
+            dateValidationMessage.textContent = dateValidationMessage.dataset.halfDayMessage;
+            dateValidationMessage.classList.remove('d-none');
+            return;
+        }
+
+        dateValidationMessage.classList.add('d-none');
+        let days = 0.5;
+        if (!halfDay) {
+            const start = new Date(startDate + 'T00:00:00');
+            const end = new Date(endDate + 'T00:00:00');
+            days = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+        }
+        calculatedDaysSpan.textContent = days + dayUnit;
+        submitBtn.disabled = false;
+        submitBtn.classList.add('active');
     }
     
     startDateInput.addEventListener('change', calculateDays);
     endDateInput.addEventListener('change', calculateDays);
-    
-    // 初始化时如果只有开始日期，结束日期默认等于开始日期
     startDateInput.addEventListener('change', function() {
-        if (!endDateInput.value) {
+        if (!endDateInput.value || endDateInput.value < startDateInput.value) {
             endDateInput.value = startDateInput.value;
+            calculateDays();
         }
     });
+    leaveTypeInput.addEventListener('change', calculateDays);
 </script>
 </th:block>
 </body>
