@@ -413,8 +413,15 @@
         <div class="approver-card" th:if="${currentStep < 2}">
             <div class="approver-title" th:text="'🔔 ' + #{monthly.approver}">🔔 承認依頼先（任意）</div>
             <select class="approver-select" name="approverId">
-                <option value="" th:text="#{monthly.selectApprover}">選択してください</option>
-                <option value="1">佐藤 部長（リーダー）</option>
+                <option th:if="${directApprover == null}" value="" th:text="#{monthly.noDirectApprover}">
+                    直属上司が設定されていません
+                </option>
+                <option th:if="${directApprover != null}"
+                        th:value="${directApprover.id}"
+                        th:selected="${selectedApproverId == directApprover.id}"
+                        th:text="${directApprover.name + ' (' + directApprover.employeeId + ')'}">
+                    直属上司
+                </option>
             </select>
             <button type="button" class="btn-submit" onclick="submitReport()" th:text="'📤 ' + #{monthly.submit}">📤 月報を提出する</button>
             <div class="submit-hint">
