@@ -611,6 +611,9 @@
             department: /*[[#{user.department}]]*/ '部署',
             applicationDate: /*[[#{application.date}]]*/ '申請日時',
             applicationNumber: /*[[#{application.number}]]*/ '申請番号',
+            approvalHistory: /*[[#{application.approvalHistory}]]*/ '承認履歴',
+            noApprovalHistory: /*[[#{application.noApprovalHistory}]]*/ '承認履歴はまだありません。',
+            statusTransition: /*[[#{application.statusTransition}]]*/ 'ステータス変更',
             travelDetails: /*[[#{application.travelDetails}]]*/ '交通費明細',
             generalDetails: /*[[#{application.generalDetails}]]*/ '諸経費明細',
             leaveDetails: /*[[#{application.leaveDetails}]]*/ '年休明細',
@@ -771,6 +774,38 @@
                 return '<span class="detail-info-value empty">' + (emptyText || '-') + '</span>';
             }
             return '<span class="detail-info-value">' + v + '</span>';
+        }
+
+        function escapeHtml(value) {
+            return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
+                return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[char];
+            });
+        }
+
+        function buildApprovalHistorySection(d) {
+            var history = d.approvalHistory || [];
+            var html = '<div class="detail-section-title" style="margin-top: 24px;">' +
+                applicationMessages.approvalHistory + '</div>';
+            if (history.length === 0) {
+                return html + '<div class="text-muted py-2">' +
+                    applicationMessages.noApprovalHistory + '</div>';
+            }
+
+            html += '<div class="list-group list-group-flush">';
+            for (var i = 0; i < history.length; i++) {
+                var entry = history[i];
+                var previous = applicationMessages.statusNames[entry.previousStatus] || entry.previousStatus || '-';
+                var next = applicationMessages.statusNames[entry.nextStatus] || entry.nextStatus || '-';
+                html += '<div class="list-group-item px-0">' +
+                    '<div class="d-flex flex-wrap justify-content-between gap-2">' +
+                    '<strong>' + escapeHtml(entry.actorName || '-') + '</strong>' +
+                    '<span class="text-muted small">' + escapeHtml(formatDateTime(entry.actionAt)) + '</span>' +
+                    '</div>' +
+                    '<div class="text-muted small">' + applicationMessages.statusTransition + ': ' +
+                    escapeHtml(previous) + ' → ' + escapeHtml(next) + '</div>' +
+                    '</div>';
+            }
+            return html + '</div>';
         }
 
         function buildBasicSection(d) {
@@ -1030,6 +1065,7 @@
             else if (d.applicationType === 'GENERAL') html += buildGeneralSection(d);
             else if (d.applicationType === 'PAID_LEAVE') html += buildPaidLeaveSection(d);
             else if (d.applicationType === 'MONTHLY_REPORT') html += buildMonthlySection(d);
+            html += buildApprovalHistorySection(d);
 
             body.innerHTML = html;
 
