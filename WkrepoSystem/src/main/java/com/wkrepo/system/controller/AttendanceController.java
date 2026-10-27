@@ -1,5 +1,6 @@
 package com.wkrepo.system.controller;
 
+import com.wkrepo.system.dto.AttendanceAnomaly;
 import com.wkrepo.system.entity.Attendance;
 import com.wkrepo.system.entity.DefaultAttendanceSetting;
 import com.wkrepo.system.entity.User;
@@ -112,11 +113,13 @@ public class AttendanceController {
 
         AttendanceService.MonthlyStatistics statistics =
                 attendanceService.calculateMonthlyStatistics(attendances, yearMonth);
+        List<AttendanceAnomaly> anomalies = attendanceService.findMonthlyAnomalies(user, attendances);
         
         model.addAttribute("calendarDays", calendarDays);
         model.addAttribute("totalWorkDays", statistics.workDays());
         model.addAttribute("totalWorkHours", statistics.workHours());
         model.addAttribute("totalOvertimeHours", statistics.overtimeHours());
+        model.addAttribute("attendanceAnomalies", anomalies);
         model.addAttribute("currentYear", currentYear);
         model.addAttribute("currentMonth", currentMonth);
         model.addAttribute("user", user);

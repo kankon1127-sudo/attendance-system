@@ -1,5 +1,6 @@
 package com.wkrepo.system.service;
 
+import com.wkrepo.system.dto.AttendanceAnomaly;
 import com.wkrepo.system.entity.Attendance;
 import com.wkrepo.system.entity.DefaultAttendanceSetting;
 import com.wkrepo.system.entity.User;
@@ -15,6 +16,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -152,6 +154,57 @@ public class AttendanceService {
             }
         }
         return new MonthlyStatistics(totalWorkHours, totalOvertimeHours, totalWorkDays);
+    }
+
+    public List<AttendanceAnomaly> findMonthlyAnomalies(User user, List<Attendance> attendances) {
+        List<AttendanceAnomaly> anomalies = new ArrayList<>();
+        for (Attendance attendance : attendances) {
+            LocalDate date = attendance.getDate();
+            if (date == null) {
+                continue;
+            }
+
+            String status = attendance.getAgreement36Status();
+            boolean hasTime = attendance.getStartTime() != null || attendance.getEndTime() != null;
+            boolean hasRecordedHours = attendance.getWorkHours() != null
+                    && attendance.getWorkHours().compareTo(BigDecimal.ZERO) > 0;
+            if ((status == null || status.isBlank() || "-".equals(status))
+                    && (hasTime || hasRecordedHours)) {
+                anomalies.add(new AttendanceAnomaly(date, "attendance.anomaly.missingStatus"));
+                continue;
+            }
+
+            if ("出社".equals(status) || "在宅".equals(status)) {
+                if (attendance.getStartTime() == null || attendance.getEndTime() == null) {
+                    anomalies.add(new AttendanceAnomaly(date, "attendance.anomaly.missingTime"));
+                } else if (attendance.getBreakTime() != null) {
+                    long shiftMinutes = ChronoUnit.MINUTES.between(
+                            attendance.getStartTime(), attendance.getEndTime());
+                    if (shiftMinutes < 0) {
+                        shiftMinutes += 24 * 60;
+                    }
+                    long breakMinutes = attendance.getBreakTime().toSecondOfDay() / 60;
+                    if (breakMinutes > shiftMinutes) {
+                        anomalies.add(new AttendanceAnomaly(date, "attendance.anomaly.breakExceedsShift"));
+                    }
+                }
+            }
+
+            if (isPaidLeaveStatus(status)) {
+                if (hasTime || hasRecordedHours) {
+                    anomalies.add(new AttendanceAnomaly(date, "attendance.anomaly.paidLeaveHasWork"));
+                }
+                if (!paidLeaveService.isPaidLeaveApproved(user, date)) {
+                    String messageKey = paidLeaveService.hasPendingPaidLeave(user, date)
+                            ? "attendance.anomaly.paidLeavePending"
+                            : "attendance.anomaly.paidLeaveMissing";
+                    anomalies.add(new AttendanceAnomaly(date, messageKey));
+                }
+            } else if ("欠勤".equals(status) && (hasTime || hasRecordedHours)) {
+                anomalies.add(new AttendanceAnomaly(date, "attendance.anomaly.absenceHasWork"));
+            }
+        }
+        return anomalies;
     }
     
     public YearMonth getFirstAttendanceYearMonth(User user) {
