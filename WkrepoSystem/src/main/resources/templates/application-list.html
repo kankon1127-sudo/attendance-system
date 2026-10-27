@@ -527,7 +527,13 @@
                                   th:classappend="${app.applicationType == 'TRAVEL' ? ' type-travel' : (app.applicationType == 'GENERAL' ? ' type-general' : (app.applicationType == 'PAID_LEAVE' ? ' type-paidleave' : ' type-monthly'))}"
                                   th:text="${#messages.msg('application.type.' + app.applicationType)}">交通費</span>
                         </td>
-                        <td style="text-align: center;" th:text="${#temporals.format(app.applicationDate, 'yyyy/MM/dd HH:mm')}">2024/01/15 10:30</td>
+                        <td style="text-align: center;">
+                            <div th:text="${#temporals.format(app.applicationDate, 'yyyy/MM/dd HH:mm')}">2024/01/15 10:30</div>
+                            <span th:if="${app.canApprove and app.overdue}" class="badge text-bg-danger mt-1"
+                                  th:text="#{application.overdueDays(${app.waitingDays})}">已等待超过7天</span>
+                            <span th:if="${app.canApprove and !app.overdue}" class="badge text-bg-light text-dark mt-1"
+                                  th:text="#{application.waitingDays(${app.waitingDays})}">等待1天</span>
+                        </td>
                         <td style="text-align: right; font-weight: 700;"
                             th:with="isYen=${app.applicationType == 'TRAVEL' or app.applicationType == 'GENERAL'}"
                             th:styleappend="${isYen} ? 'color: #2563eb;' : 'color: #1e3a5f;'"
