@@ -69,6 +69,20 @@
         <span th:text="#{attendance.leaveNotice}">区分で「有給」を選択した日は、年休申請を行い、リーダー承認後に月報を提出できます。</span>
     </div>
 
+    <div class="alert alert-warning mb-4" th:if="${!attendanceAnomalies.empty}">
+        <div class="fw-bold mb-2">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            <span th:text="#{attendance.anomaly.title}">考勤异常检查</span>
+            <span class="badge text-bg-warning ms-1" th:text="${attendanceAnomalies.size()}">0</span>
+        </div>
+        <ul class="mb-0 ps-3">
+            <li th:each="anomaly : ${attendanceAnomalies}">
+                <strong th:text="${#temporals.format(anomaly.date, 'yyyy/MM/dd')}">2026/10/01</strong>
+                <span th:text="${#messages.msg(anomaly.messageKey)}">请检查这条考勤记录。</span>
+            </li>
+        </ul>
+    </div>
+
     <!-- 月份切换与工具栏：独立カードレイアウト，確保上下並べ -->
     <div class="attendance-header-card p-3 mb-4">
         <div class="row align-items-center">
