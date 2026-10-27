@@ -44,6 +44,7 @@ public class ApplicationDetailDTO {
     private String approverName;
     private MonthlySummaryDTO monthlySummary;
     private List<AttendanceDailyItem> attendanceList;
+    private List<ApprovalHistoryEntry> approvalHistory;
 
     public static class AttendanceDailyItem {
         private String date;
@@ -354,5 +355,13 @@ public class ApplicationDetailDTO {
 
     public void setAttendanceList(List<AttendanceDailyItem> attendanceList) {
         this.attendanceList = attendanceList;
+    }
+
+    public List<ApprovalHistoryEntry> getApprovalHistory() {
+        return approvalHistory;
+    }
+
+    public void setApprovalHistory(List<ApprovalHistoryEntry> approvalHistory) {
+        this.approvalHistory = approvalHistory;
     }
 }

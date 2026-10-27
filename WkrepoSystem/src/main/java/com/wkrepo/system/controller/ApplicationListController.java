@@ -6,10 +6,8 @@ import com.wkrepo.system.entity.MonthlyReport;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.enums.ApplicationStatus;
 import com.wkrepo.system.service.ApplicationListService;
-import com.wkrepo.system.service.GeneralExpenseService;
+import com.wkrepo.system.service.ApprovalHistoryService;
 import com.wkrepo.system.service.MonthlyReportService;
-import com.wkrepo.system.service.PaidLeaveService;
-import com.wkrepo.system.service.TravelExpenseService;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,16 +35,10 @@ public class ApplicationListController {
     private ApplicationListService applicationListService;
 
     @Autowired
-    private TravelExpenseService travelExpenseService;
-
-    @Autowired
-    private GeneralExpenseService generalExpenseService;
-
-    @Autowired
-    private PaidLeaveService paidLeaveService;
-
-    @Autowired
     private MonthlyReportService monthlyReportService;
+
+    @Autowired
+    private ApprovalHistoryService approvalHistoryService;
 
     @GetMapping("/list")
     public String getApplicationList(HttpSession session, Model model,
@@ -84,26 +76,7 @@ public class ApplicationListController {
             return "redirect:/application/list";
         }
 
-        switch (type) {
-            case "TRAVEL":
-                travelExpenseService.updateStatus(id, ApplicationStatus.APPROVED);
-                break;
-            case "GENERAL":
-                generalExpenseService.updateStatus(id, ApplicationStatus.APPROVED);
-                break;
-            case "PAID_LEAVE":
-                paidLeaveService.updateStatus(id, ApplicationStatus.APPROVED);
-                break;
-            case "MONTHLY_REPORT":
-                MonthlyReport report = monthlyReportService.findById(id);
-                if (report != null && ApplicationStatus.MANAGER_APPROVED.equals(report.getStatus())
-                        && ("SOUMU".equals(user.getRole()) || "ADMIN".equals(user.getRole()))) {
-                    monthlyReportService.updateStatus(id, ApplicationStatus.FINALIZED);
-                } else {
-                    monthlyReportService.updateStatus(id, ApplicationStatus.MANAGER_APPROVED);
-                }
-                break;
-        }
+        approvalHistoryService.transition(type, id, approvedStatus(type, id, user), user);
 
         return "redirect:/application/list";
     }
@@ -122,20 +95,7 @@ public class ApplicationListController {
             return "redirect:/application/list";
         }
 
-        switch (type) {
-            case "TRAVEL":
-                travelExpenseService.updateStatus(id, ApplicationStatus.REJECTED);
-                break;
-            case "GENERAL":
-                generalExpenseService.updateStatus(id, ApplicationStatus.REJECTED);
-                break;
-            case "PAID_LEAVE":
-                paidLeaveService.updateStatus(id, ApplicationStatus.REJECTED);
-                break;
-            case "MONTHLY_REPORT":
-                monthlyReportService.updateStatus(id, ApplicationStatus.REJECTED);
-                break;
-        }
+        approvalHistoryService.transition(type, id, ApplicationStatus.REJECTED, user);
 
         return "redirect:/application/list";
     }
@@ -154,6 +114,7 @@ public class ApplicationListController {
         }
         try {
             ApplicationDetailDTO detail = applicationListService.getApplicationDetail(id, type, user);
+            detail.setApprovalHistory(approvalHistoryService.getHistory(type, id));
             return ResponseEntity.ok(detail);
         } catch (SecurityException e) {
             log.warn("[ApplicationListController] 権限なし id={}, type={}, userId={}", id, type, user.getId(), e);
@@ -196,28 +157,7 @@ public class ApplicationListController {
             return ResponseEntity.status(403).body(err);
         }
         try {
-            switch (type) {
-                case "TRAVEL":
-                    travelExpenseService.updateStatus(id, ApplicationStatus.APPROVED);
-                    break;
-                case "GENERAL":
-                    generalExpenseService.updateStatus(id, ApplicationStatus.APPROVED);
-                    break;
-                case "PAID_LEAVE":
-                    paidLeaveService.updateStatus(id, ApplicationStatus.APPROVED);
-                    break;
-                case "MONTHLY_REPORT":
-                    MonthlyReport report = monthlyReportService.findById(id);
-                    if (report != null && ApplicationStatus.MANAGER_APPROVED.equals(report.getStatus())
-                            && ("SOUMU".equals(user.getRole()) || "ADMIN".equals(user.getRole()))) {
-                        monthlyReportService.updateStatus(id, ApplicationStatus.FINALIZED);
-                    } else {
-                        monthlyReportService.updateStatus(id, ApplicationStatus.MANAGER_APPROVED);
-                    }
-                    break;
-                default:
-                    throw new IllegalArgumentException("Unknown type: " + type);
-            }
+            approvalHistoryService.transition(type, id, approvedStatus(type, id, user), user);
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", "承認しました");
@@ -252,22 +192,7 @@ public class ApplicationListController {
             return ResponseEntity.status(403).body(err);
         }
         try {
-            switch (type) {
-                case "TRAVEL":
-                    travelExpenseService.updateStatus(id, ApplicationStatus.REJECTED);
-                    break;
-                case "GENERAL":
-                    generalExpenseService.updateStatus(id, ApplicationStatus.REJECTED);
-                    break;
-                case "PAID_LEAVE":
-                    paidLeaveService.updateStatus(id, ApplicationStatus.REJECTED);
-                    break;
-                case "MONTHLY_REPORT":
-                    monthlyReportService.updateStatus(id, ApplicationStatus.REJECTED);
-                    break;
-                default:
-                    throw new IllegalArgumentException("Unknown type: " + type);
-            }
+            approvalHistoryService.transition(type, id, ApplicationStatus.REJECTED, user);
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", "拒否しました");
@@ -279,5 +204,17 @@ public class ApplicationListController {
             err.put("message", "拒否に失敗しました: " + e.getMessage());
             return ResponseEntity.status(500).body(err);
         }
+    }
+
+    private ApplicationStatus approvedStatus(String type, Long id, User user) {
+        if ("MONTHLY_REPORT".equals(type)) {
+            MonthlyReport report = monthlyReportService.findById(id);
+            if (report != null && ApplicationStatus.MANAGER_APPROVED.equals(report.getStatus())
+                    && ("SOUMU".equals(user.getRole()) || "ADMIN".equals(user.getRole()))) {
+                return ApplicationStatus.FINALIZED;
+            }
+            return ApplicationStatus.MANAGER_APPROVED;
+        }
+        return ApplicationStatus.APPROVED;
     }
 }
