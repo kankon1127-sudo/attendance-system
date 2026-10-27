@@ -2,7 +2,9 @@ package com.wkrepo.system.dto;
 
 import com.wkrepo.system.enums.ApplicationStatus;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 public class ApplicationItem {
     
@@ -65,6 +67,17 @@ public class ApplicationItem {
 
     public void setApplicationDate(LocalDateTime applicationDate) {
         this.applicationDate = applicationDate;
+    }
+
+    public long getWaitingDays() {
+        if (!canApprove || applicationDate == null) {
+            return 0;
+        }
+        return Math.max(0, ChronoUnit.DAYS.between(applicationDate.toLocalDate(), LocalDate.now()));
+    }
+
+    public boolean isOverdue() {
+        return canApprove && getWaitingDays() >= 7;
     }
 
     public BigDecimal getAmount() {

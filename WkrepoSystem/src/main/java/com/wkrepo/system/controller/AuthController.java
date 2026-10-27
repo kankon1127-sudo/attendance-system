@@ -16,8 +16,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import jakarta.servlet.http.HttpSession;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.Comparator;
 import java.util.List;
 
 @Controller
@@ -78,19 +80,41 @@ public class AuthController {
         model.addAttribute("currentPage", "home");
         List<ApplicationItem> pendingApprovals = applicationListService.getPendingApprovalsForUser(user);
         model.addAttribute("pendingApprovalCount", pendingApprovals.size());
-        model.addAttribute("pendingApprovals", pendingApprovals.stream().limit(5).toList());
+        model.addAttribute("overdueApprovalCount",
+                pendingApprovals.stream().filter(ApplicationItem::isOverdue).count());
+        model.addAttribute("pendingApprovals", pendingApprovals.stream()
+                .sorted(Comparator.comparing(
+                        ApplicationItem::getApplicationDate,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .limit(5)
+                .toList());
 
         LocalDate today = LocalDate.now();
         YearMonth currentMonth = YearMonth.from(today);
+        YearMonth firstTrendMonth = currentMonth.minusMonths(5);
         List<Attendance> attendances = attendanceService.getAttendancesByUserAndDateRange(
-                user, currentMonth.atDay(1), currentMonth.atEndOfMonth());
-        AttendanceService.MonthlyStatistics statistics =
-                attendanceService.calculateMonthlyStatistics(attendances, currentMonth);
+                user, firstTrendMonth.atDay(1), currentMonth.atEndOfMonth());
+        List<AttendanceService.MonthlyTrend> monthlyTrend =
+                attendanceService.calculateMonthlyTrend(attendances, firstTrendMonth, 6);
+        AttendanceService.MonthlyTrend statistics = monthlyTrend.get(monthlyTrend.size() - 1);
+        BigDecimal overtimeLimit = new BigDecimal("45.0");
+        BigDecimal overtimeWarningThreshold = new BigDecimal("40.0");
+        BigDecimal overtimePercent = statistics.overtimeHours()
+                .multiply(BigDecimal.valueOf(100))
+                .divide(overtimeLimit, 0, RoundingMode.HALF_UP)
+                .min(BigDecimal.valueOf(100));
         model.addAttribute("homeWorkHours", statistics.workHours());
         model.addAttribute("homeOvertimeHours", statistics.overtimeHours());
         model.addAttribute("homeWorkDays", statistics.workDays());
         model.addAttribute("homeRemainingLeave",
                 paidLeaveService.getBalance(user, today.getYear()).remainingDays());
+        model.addAttribute("homeMonthlyTrend", monthlyTrend);
+        model.addAttribute("homeOvertimePercent", overtimePercent);
+        model.addAttribute("homeOvertimeLimit", overtimeLimit);
+        model.addAttribute("homeOvertimeRemaining",
+                overtimeLimit.subtract(statistics.overtimeHours()).max(BigDecimal.ZERO));
+        model.addAttribute("homeOvertimeWarningReached",
+                statistics.overtimeHours().compareTo(overtimeWarningThreshold) >= 0);
         return "home";
     }
 }

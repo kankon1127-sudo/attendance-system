@@ -18,6 +18,9 @@ import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -154,6 +157,53 @@ public class AttendanceService {
             }
         }
         return new MonthlyStatistics(totalWorkHours, totalOvertimeHours, totalWorkDays);
+    }
+
+    public List<MonthlyTrend> calculateMonthlyTrend(
+            List<Attendance> attendances, YearMonth firstMonth, int monthCount) {
+        Map<YearMonth, List<Attendance>> attendanceByMonth = new HashMap<>();
+        for (int i = 0; i < monthCount; i++) {
+            attendanceByMonth.put(firstMonth.plusMonths(i), new ArrayList<>());
+        }
+        for (Attendance attendance : attendances) {
+            if (attendance.getDate() == null) {
+                continue;
+            }
+            YearMonth month = YearMonth.from(attendance.getDate());
+            List<Attendance> monthAttendances = attendanceByMonth.get(month);
+            if (monthAttendances != null) {
+                monthAttendances.add(attendance);
+            }
+        }
+
+        List<MonthlyStatistics> statistics = new ArrayList<>();
+        BigDecimal maxHours = BigDecimal.ZERO;
+        for (YearMonth month : attendanceByMonth.keySet().stream().sorted().toList()) {
+            MonthlyStatistics monthly = calculateMonthlyStatistics(attendanceByMonth.get(month), month);
+            statistics.add(monthly);
+            maxHours = maxHours.max(monthly.workHours()).max(monthly.overtimeHours());
+        }
+
+        BigDecimal scale = maxHours.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ONE : maxHours;
+        List<MonthlyTrend> trend = new ArrayList<>();
+        for (int i = 0; i < statistics.size(); i++) {
+            MonthlyStatistics monthly = statistics.get(i);
+            YearMonth month = firstMonth.plusMonths(i);
+            trend.add(new MonthlyTrend(
+                    month.toString(),
+                    monthly.workHours(),
+                    monthly.overtimeHours(),
+                    monthly.workDays(),
+                    barPercent(monthly.workHours(), scale),
+                    barPercent(monthly.overtimeHours(), scale)));
+        }
+        return trend;
+    }
+
+    private int barPercent(BigDecimal value, BigDecimal scale) {
+        return value.multiply(BigDecimal.valueOf(100))
+                .divide(scale, 0, RoundingMode.HALF_UP)
+                .intValue();
     }
 
     public List<AttendanceAnomaly> findMonthlyAnomalies(User user, List<Attendance> attendances) {
@@ -432,5 +482,14 @@ public class AttendanceService {
             BigDecimal workHours,
             BigDecimal overtimeHours,
             int workDays) {
+    }
+
+    public record MonthlyTrend(
+            String label,
+            BigDecimal workHours,
+            BigDecimal overtimeHours,
+            int workDays,
+            int workHoursPercent,
+            int overtimeHoursPercent) {
     }
 }
