@@ -116,24 +116,24 @@
             <div class="col-md-12 mt-2" th:if="${defaultSetting != null}">
                 <div class="card bg-light border-0">
                     <div class="card-body py-2 px-3">
-                        <div class="d-flex align-items-center gap-4 text-muted small">
-                            <div>
+                        <div class="attendance-default-values text-muted small">
+                            <div class="attendance-default-values-title">
                                 <i class="bi bi-info-circle me-1"></i>
                                 <strong th:text="#{attendance.loggedInDefaults}">ログインデフォルト値:</strong>
                             </div>
-                            <div>
+                            <div class="attendance-default-values-item">
                                 <span class="fw-bold" th:text="#{attendance.clockIn} + ':'">出勤:</span>
                                 <span th:text="${defaultSetting.defaultStartTime ?: '-'}">09:00</span>
                             </div>
-                            <div>
+                            <div class="attendance-default-values-item">
                                 <span class="fw-bold" th:text="#{attendance.clockOut} + ':'">退勤:</span>
                                 <span th:text="${defaultSetting.defaultEndTime ?: '-'}">18:00</span>
                             </div>
-                            <div>
+                            <div class="attendance-default-values-item">
                                 <span class="fw-bold" th:text="#{attendance.break} + ':'">休憩:</span>
                                 <span th:text="${defaultSetting.defaultBreakMinutes != null ? (defaultSetting.defaultBreakMinutes / 60 + ':' + #numbers.formatInteger(defaultSetting.defaultBreakMinutes % 60, 2)) : '-'}">01:00</span>
                             </div>
-                            <div>
+                            <div class="attendance-default-values-item">
                                 <span class="fw-bold">区分:</span>
                                 <span th:text="${defaultSetting.defaultAgreement36Status ?: '-'}">出社</span>
                             </div>

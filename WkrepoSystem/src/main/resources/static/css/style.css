@@ -1,0 +1,276 @@
+:root {
+    --color-primary: #2563eb;
+    --color-primary-hover: #1d4ed8;
+    --color-secondary: #f8fafc;
+    --color-border: #e2e8f0;
+    --color-text: #1e293b;
+    --color-muted: #64748b;
+    --color-success: #15803d;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+        'Hiragino Sans', 'Noto Sans JP', sans-serif;
+    --radius-card: 12px;
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+html,
+body,
+button,
+input,
+select,
+textarea {
+    font-family: var(--font-sans);
+}
+
+body {
+    color: var(--color-text);
+}
+
+.table > :not(caption) > * > * {
+    border-bottom-color: var(--color-border);
+}
+
+.table thead th {
+    color: #475569;
+    font-weight: 600;
+}
+
+.card,
+.stat-card,
+.attendance-header-card,
+.attendance-table-card,
+.table-card,
+.header-card,
+.leave-form-card,
+.history-card,
+.login-container,
+.expense-section,
+.content-wrapper {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+}
+
+.card {
+    background-color: #fff;
+}
+
+.stat-card {
+    padding: 20px;
+    background-color: #fff;
+}
+
+.stat-card h4 {
+    color: var(--color-muted);
+}
+
+.stat-card .stat-value,
+.stat-value {
+    display: inline-block;
+    color: var(--color-text);
+    font-size: 1.75rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    line-height: 1.2;
+    vertical-align: baseline;
+}
+
+.stat-card .stat-unit,
+.stat-unit {
+    display: inline-block;
+    margin-left: 4px;
+    color: var(--color-muted);
+    font-size: 0.875rem;
+    font-weight: 500;
+    vertical-align: baseline;
+}
+
+.attendance-stat-cards .h2 {
+    font-size: 1.75rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+.attendance-stat-cards .fs-6 {
+    font-size: 0.875rem !important;
+    vertical-align: baseline;
+}
+
+.btn-primary,
+.btn-primary:focus {
+    --bs-btn-bg: var(--color-primary);
+    --bs-btn-border-color: var(--color-primary);
+    --bs-btn-hover-bg: var(--color-primary-hover);
+    --bs-btn-hover-border-color: var(--color-primary-hover);
+    --bs-btn-active-bg: var(--color-primary-hover);
+    --bs-btn-active-border-color: var(--color-primary-hover);
+    --bs-btn-disabled-bg: var(--color-primary);
+    --bs-btn-disabled-border-color: var(--color-primary);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--color-primary);
+    --bs-btn-border-color: var(--color-primary);
+    --bs-btn-hover-bg: var(--color-primary);
+    --bs-btn-hover-border-color: var(--color-primary);
+}
+
+.btn-outline-secondary,
+.attendance-header-card .btn-white {
+    --bs-btn-color: #475569;
+    --bs-btn-border-color: #cbd5e1;
+    --bs-btn-hover-color: #334155;
+    --bs-btn-hover-bg: #f1f5f9;
+    --bs-btn-hover-border-color: #94a3b8;
+    background-color: var(--color-secondary);
+}
+
+.btn-success {
+    --bs-btn-bg: var(--color-success);
+    --bs-btn-border-color: var(--color-success);
+    --bs-btn-hover-bg: #166534;
+    --bs-btn-hover-border-color: #166534;
+}
+
+.btn-add,
+.btn-save,
+.btn-submit,
+.filter-btn,
+.btn-approve {
+    border: 1px solid var(--color-primary);
+    background-color: var(--color-primary);
+    color: #fff;
+}
+
+.btn-add:hover,
+.btn-save:hover,
+.btn-submit:hover,
+.filter-btn:hover,
+.btn-approve:hover {
+    border-color: var(--color-primary-hover);
+    background-color: var(--color-primary-hover);
+    color: #fff;
+}
+
+.btn-clear,
+.filter-btn-reset {
+    border: 1px solid #cbd5e1;
+    background-color: var(--color-secondary);
+    color: #475569;
+}
+
+.btn-delete,
+.btn-reject {
+    border: 1px solid #dc2626;
+    background-color: #dc2626;
+    color: #fff;
+}
+
+.btn-add,
+.btn-save,
+.btn-clear,
+.btn-submit,
+.btn-save-draft,
+.btn-delete,
+.btn-approve,
+.btn-reject,
+.btn-table,
+.btn-detail,
+.filter-btn,
+.filter-btn-reset,
+.btn-primary,
+.btn-secondary,
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-success,
+.btn-danger {
+    min-height: 40px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-family: var(--font-sans);
+    font-weight: 600;
+}
+
+.form-control,
+.form-select,
+input[type="date"],
+input[type="time"],
+input[type="number"],
+input[type="text"],
+textarea {
+    min-height: 42px;
+    border-color: #cbd5e1;
+    border-radius: 8px;
+}
+
+.form-control:focus,
+.form-select:focus,
+input:focus,
+textarea:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.15);
+}
+
+.attendance-header-card .card.bg-light {
+    background-color: var(--color-secondary) !important;
+}
+
+.attendance-default-values {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 24px;
+}
+
+.attendance-default-values-title {
+    flex: 1 0 100%;
+    white-space: nowrap;
+}
+
+.attendance-default-values-item {
+    white-space: nowrap;
+}
+
+@media (max-width: 767.98px) {
+    .card,
+    .stat-card,
+    .attendance-header-card,
+    .attendance-table-card,
+    .table-card,
+    .header-card,
+    .leave-form-card,
+    .history-card,
+    .login-container,
+    .expense-section,
+    .content-wrapper {
+        border-radius: var(--radius-card);
+    }
+
+    .btn-add,
+    .btn-save,
+    .btn-submit,
+    .btn-save-draft,
+    .btn-delete,
+    .btn-approve,
+    .btn-reject,
+    .btn-table,
+    .btn-detail,
+    .filter-btn,
+    .filter-btn-reset,
+    .btn-primary,
+    .btn-secondary,
+    .btn-outline-primary,
+    .btn-outline-secondary,
+    .btn-success,
+    .btn-danger {
+        min-height: 44px;
+    }
+
+    .attendance-default-values {
+        gap: 8px 16px;
+    }
+
+    .attendance-default-values-title {
+        flex-basis: 100%;
+        white-space: nowrap;
+    }
+}
