@@ -423,4 +423,101 @@
     .content-area .table-responsive > table {
         min-width: 640px;
     }
+
+    .content-area .table-responsive > table.js-mobile-card-table {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .content-area .js-mobile-card-table thead {
+        display: none;
+    }
+
+    .content-area .js-mobile-card-table tbody {
+        display: grid;
+        gap: 12px;
+    }
+
+    .content-area .js-mobile-card-table tbody tr:not(.no-data-row) {
+        display: block;
+        overflow: hidden;
+        padding: 8px 14px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, .06);
+        cursor: pointer;
+    }
+
+    .content-area .js-mobile-card-table tbody tr:not(.no-data-row) > td {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        width: 100%;
+        padding: 8px 0;
+        border: 0;
+        border-bottom: 1px solid #f1f5f9;
+        text-align: right !important;
+        overflow-wrap: anywhere;
+    }
+
+    .content-area .js-mobile-card-table tbody tr:not(.no-data-row) > td::before {
+        flex: 0 0 38%;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: left;
+        content: attr(data-label);
+    }
+
+    .content-area .js-mobile-card-table tbody tr:not(.no-data-row) > td.mobile-action-cell {
+        display: none;
+    }
+
+    .content-area .js-mobile-card-table.js-mobile-user-table tbody tr:not(.no-data-row) > td.mobile-action-cell {
+        display: flex;
+        justify-content: flex-end;
+        border-bottom: 0;
+    }
+
+    .content-area .js-mobile-card-table tbody tr:not(.no-data-row) > td:last-child {
+        border-bottom: 0;
+    }
+
+    .content-area .js-mobile-card-table tbody tr.no-data-row {
+        display: table-row;
+    }
+
+    .mobile-record-field {
+        padding: 10px 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .mobile-record-field:last-child {
+        border-bottom: 0;
+    }
+
+    .mobile-record-label {
+        margin-bottom: 4px;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .mobile-record-value {
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+    }
+
+    #mobileRecordModal .modal-footer form {
+        margin: 0;
+    }
+
+    #mobileRecordModal .modal-footer form button {
+        min-height: 42px;
+    }
 }

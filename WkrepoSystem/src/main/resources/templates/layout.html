@@ -482,6 +482,21 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="mobileRecordModal" tabindex="-1" aria-labelledby="mobileRecordModalTitle" aria-hidden="true"
+         th:attr="data-close-label=#{common.close}">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mobileRecordModalTitle"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            th:attr="aria-label=#{common.close}"></button>
+                </div>
+                <div class="modal-body" id="mobileRecordModalBody"></div>
+                <div class="modal-footer" id="mobileRecordModalActions"></div>
+            </div>
+        </div>
+    </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -506,6 +521,256 @@
             }
         });
         window.matchMedia('(min-width: 768px)').addEventListener('change', () => setSidebarOpen(false));
+    </script>
+    <script>
+        (function () {
+            var modalElement = document.getElementById('mobileRecordModal');
+            if (!modalElement || !window.bootstrap) return;
+            var modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+            var title = document.getElementById('mobileRecordModalTitle');
+            var body = document.getElementById('mobileRecordModalBody');
+            var actions = document.getElementById('mobileRecordModalActions');
+
+            document.querySelectorAll('.js-mobile-card-table').forEach(function (table) {
+                var headers = Array.from(table.querySelectorAll('thead th'));
+                table.querySelectorAll('tbody tr').forEach(function (row) {
+                    var cells = Array.from(row.querySelectorAll(':scope > td'));
+                    if (cells.length === 1 && cells[0].hasAttribute('colspan')) {
+                        row.classList.add('no-data-row');
+                        return;
+                    }
+                    row.classList.add('js-mobile-record-row');
+                    if (window.matchMedia('(max-width: 767.98px)').matches) {
+                        row.setAttribute('tabindex', '0');
+                        row.setAttribute('aria-haspopup', 'dialog');
+                    }
+                    if (table.classList.contains('js-mobile-attendance-table')) {
+                        row.classList.add('js-mobile-attendance-row');
+                    }
+                    if (table.classList.contains('js-mobile-application-table')) {
+                        row.classList.add('js-mobile-application-row');
+                    }
+                    if (table.classList.contains('js-mobile-user-table')) {
+                        row.classList.add('js-mobile-user-row');
+                    }
+                    cells.forEach(function (cell, index) {
+                        if (headers[index]) {
+                            cell.setAttribute('data-label', headers[index].textContent.trim());
+                            if (/operation|操作/.test(headers[index].textContent.trim())
+                                    || (table.classList.contains('js-mobile-attendance-table') && index === cells.length - 1)) {
+                                cell.classList.add('mobile-action-cell');
+                            }
+                        }
+                    });
+                });
+            });
+
+            document.addEventListener('click', function (event) {
+                if (window.matchMedia('(min-width: 768px)').matches) return;
+                var row = event.target.closest('.js-mobile-attendance-row');
+                if (row && event.target.closest('button')) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    openAttendanceEditor(row);
+                }
+            }, true);
+
+            function openRecord(row) {
+                var table = row.closest('table');
+                var headers = Array.from(table.querySelectorAll('thead th'));
+                var cells = Array.from(row.querySelectorAll(':scope > td'));
+                title.textContent = cells[0] ? cells[0].textContent.trim() : '';
+                body.replaceChildren();
+                actions.replaceChildren();
+
+                cells.forEach(function (cell, index) {
+                    if (cell.classList.contains('mobile-action-cell')) return;
+                    var value = cell.textContent.trim();
+                    if (!value) return;
+                    var item = document.createElement('div');
+                    item.className = 'mobile-record-field';
+                    var label = document.createElement('div');
+                    label.className = 'mobile-record-label';
+                    label.textContent = headers[index] ? headers[index].textContent.trim() : '';
+                    var content = document.createElement('div');
+                    content.className = 'mobile-record-value';
+                    content.textContent = value;
+                    item.append(label, content);
+                    body.appendChild(item);
+                });
+
+                var actionCell = row.querySelector('.mobile-action-cell');
+                if (actionCell) {
+                    Array.from(actionCell.children).forEach(function (element) {
+                        actions.appendChild(element.cloneNode(true));
+                    });
+                }
+                var close = document.createElement('button');
+                close.type = 'button';
+                close.className = 'btn btn-secondary';
+                close.setAttribute('data-bs-dismiss', 'modal');
+                close.textContent = modalElement.getAttribute('data-close-label') || 'Close';
+                actions.appendChild(close);
+                modal.show();
+            }
+
+            document.addEventListener('click', function (event) {
+                if (window.matchMedia('(min-width: 768px)').matches) return;
+                var row = event.target.closest('.js-mobile-record-row');
+                if (!row || event.target.closest('button, a, input, select, textarea, form, label')) return;
+
+                if (row.classList.contains('js-mobile-attendance-row')) {
+                    openAttendanceEditor(row);
+                    return;
+                }
+                if (row.classList.contains('js-mobile-user-row')) {
+                    var editButton = row.querySelector('.js-edit-user');
+                    if (editButton) {
+                        editButton.click();
+                        return;
+                    }
+                }
+                if (row.classList.contains('js-mobile-application-row')) {
+                    var detailButton = row.querySelector('.btn-detail');
+                    if (detailButton) {
+                        detailButton.click();
+                        return;
+                    }
+                }
+                openRecord(row);
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (window.matchMedia('(min-width: 768px)').matches
+                        || (event.key !== 'Enter' && event.key !== ' ')) return;
+                var row = event.target.closest('.js-mobile-record-row');
+                if (!row || event.target !== row) return;
+                event.preventDefault();
+                row.click();
+            });
+
+            function openAttendanceEditor(row) {
+                var day = row.id.substring('row-'.length);
+                var date = row.getAttribute('data-date');
+                var form = document.createElement('form');
+                form.method = 'post';
+                form.action = '/attendance/saveInline';
+                form.className = 'mobile-attendance-form';
+                form.innerHTML =
+                    '<input type="hidden" name="date">' +
+                    '<input type="hidden" name="year">' +
+                    '<input type="hidden" name="month">' +
+                    '<input type="hidden" name="workHours">' +
+                    '<input type="hidden" name="overtimeHours">';
+                form.elements.namedItem('date').value = date;
+                form.elements.namedItem('year').value = document.getElementById('currentYear').value;
+                form.elements.namedItem('month').value = document.getElementById('currentMonth').value;
+                var sourceStatus = document.getElementById('status-' + day);
+                var fields = [
+                    ['startTime', 'startTime-' + day, 'time'],
+                    ['endTime', 'endTime-' + day, 'time'],
+                    ['breakTime', 'breakTime-' + day, 'time']
+                ];
+
+                function field(labelText, control) {
+                    var wrapper = document.createElement('div');
+                    wrapper.className = 'mb-3';
+                    var label = document.createElement('label');
+                    label.className = 'form-label';
+                    label.textContent = labelText;
+                    wrapper.append(label, control);
+                    form.appendChild(wrapper);
+                }
+
+                var status = sourceStatus.cloneNode(true);
+                status.className = 'form-select';
+                status.name = 'agreement36Status';
+                status.id = 'mobileAttendanceStatus';
+                status.value = sourceStatus.value;
+                field(row.closest('table').querySelector('thead th:nth-child(8)').textContent.trim(), status);
+
+                fields.forEach(function (definition, index) {
+                    var input = document.createElement('input');
+                    input.type = definition[2];
+                    input.name = definition[0];
+                    input.className = 'form-control';
+                    input.value = document.getElementById(definition[1]).value;
+                    input.id = 'mobile-' + definition[0];
+                    field(row.closest('table').querySelector('thead th:nth-child(' + (index + 3) + ')').textContent.trim(), input);
+                });
+
+                var remarks = document.createElement('textarea');
+                remarks.name = 'remarks';
+                remarks.className = 'form-control';
+                remarks.rows = 2;
+                remarks.value = document.getElementById('remarks-' + day).value;
+                field(row.closest('table').querySelector('thead th:nth-child(9)').textContent.trim(), remarks);
+
+                var hourValues = [];
+                [5, 6].forEach(function (columnIndex) {
+                    var wrapper = document.createElement('div');
+                    wrapper.className = 'mb-3';
+                    var label = document.createElement('div');
+                    label.className = 'form-label';
+                    label.textContent = row.closest('table')
+                            .querySelector('thead th:nth-child(' + (columnIndex + 1) + ')').textContent.trim();
+                    var output = document.createElement('output');
+                    output.className = 'form-control-plaintext fw-semibold';
+                    output.textContent = row.querySelector('td:nth-child(' + (columnIndex + 1) + ')').textContent.trim();
+                    wrapper.append(label, output);
+                    form.appendChild(wrapper);
+                    hourValues.push(output);
+                });
+
+                var save = document.createElement('button');
+                save.type = 'submit';
+                save.className = 'btn btn-primary';
+                save.textContent = row.closest('table').getAttribute('data-save-label');
+                actions.replaceChildren(save);
+                body.replaceChildren(form);
+                title.textContent = date;
+
+                function calculatedWorkHours() {
+                    var selectedStatus = status.value;
+                    var start = form.elements.namedItem('startTime').value;
+                    var end = form.elements.namedItem('endTime').value;
+                    var pause = form.elements.namedItem('breakTime').value || '00:00';
+                    if ((selectedStatus !== '出社' && selectedStatus !== '在宅') || !start || !end) return 0;
+                    var startDate = new Date('1970-01-01T' + start);
+                    var endDate = new Date('1970-01-01T' + end);
+                    if (endDate < startDate) endDate.setDate(endDate.getDate() + 1);
+                    var pauseParts = pause.split(':');
+                    var pauseMinutes = Number(pauseParts[0]) * 60 + Number(pauseParts[1] || 0);
+                    return Math.max(0, (endDate - startDate) / 3600000 - pauseMinutes / 60);
+                }
+
+                function updateHourPreview() {
+                    var hours = calculatedWorkHours();
+                    hourValues[0].textContent = hours.toFixed(2);
+                    hourValues[1].textContent = Math.max(0, hours - 8).toFixed(2);
+                }
+
+                form.addEventListener('input', updateHourPreview);
+                form.addEventListener('change', updateHourPreview);
+
+                form.addEventListener('submit', function (event) {
+                    var selectedStatus = status.value;
+                    var start = form.elements.namedItem('startTime').value;
+                    var end = form.elements.namedItem('endTime').value;
+                    if (selectedStatus === '出社' || selectedStatus === '在宅') {
+                        if (!start || !end) {
+                            event.preventDefault();
+                            alert(row.closest('table').getAttribute('data-required-time-message'));
+                            return;
+                        }
+                    }
+                    var workHours = calculatedWorkHours();
+                    form.elements.namedItem('workHours').value = workHours.toFixed(2);
+                    form.elements.namedItem('overtimeHours').value = Math.max(0, workHours - 8).toFixed(2);
+                });
+                modal.show();
+            }
+        }());
     </script>
 </body>
 </html>

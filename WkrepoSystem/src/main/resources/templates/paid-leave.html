@@ -305,7 +305,7 @@
         <div class="history-title" th:text="#{leave.entitlementManagement}">年休付与日数の設定</div>
         <p class="text-muted" th:text="#{leave.entitlementHelp}">社員ごとに対象年の年休付与日数を設定してください。</p>
         <div class="table-responsive">
-            <table class="history-table">
+            <table class="history-table js-mobile-card-table">
                 <thead>
                     <tr>
                         <th th:text="#{user.employeeId}">社員番号</th>
@@ -394,7 +394,7 @@
             <span th:text="#{leave.emptyHistory}">年休申請はまだありません</span>
         </div>
         <div class="table-responsive">
-            <table th:if="${!leaves.empty}" class="history-table">
+            <table th:if="${!leaves.empty}" class="history-table js-mobile-card-table">
             <thead>
                 <tr>
                     <th th:text="#{leave.startDate}">取得開始日</th>

@@ -146,7 +146,9 @@
 
     <div class="attendance-table-card">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0 text-center" style="font-size: 0.9rem;">
+            <table class="table table-hover align-middle mb-0 text-center js-mobile-card-table js-mobile-attendance-table"
+                   style="font-size: 0.9rem;"
+                   th:attr="data-save-label=#{attendance.inlineSave}, data-required-time-message=#{attendance.anomaly.missingTime}">
                 <thead style="background-color: #1a252f; color: white;">
                     <tr>
                         <th style="width: 80px;" th:text="#{attendance.date}">日付</th>
