@@ -85,7 +85,7 @@ public class AttendanceService {
 
     public void ensureMonthEditable(User user, LocalDate date) {
         if (user != null && date != null && isMonthLocked(user, date.getYear(), date.getMonthValue())) {
-            throw new IllegalStateException("この月の勤怠は提出済みのため変更できません。申請一覧から月報を撤回してください。");
+            throw new IllegalStateException("月報提出済みのデータは変更できません。申請一覧より撤回を行ってください。");
         }
     }
 

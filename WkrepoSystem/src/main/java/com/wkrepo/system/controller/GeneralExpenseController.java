@@ -2,6 +2,7 @@ package com.wkrepo.system.controller;
 
 import com.wkrepo.system.entity.GeneralExpense;
 import com.wkrepo.system.entity.User;
+import com.wkrepo.system.service.AttendanceService;
 import com.wkrepo.system.service.GeneralExpenseService;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -24,6 +26,9 @@ public class GeneralExpenseController {
     
     @Autowired
     private GeneralExpenseService generalExpenseService;
+
+    @Autowired
+    private AttendanceService attendanceService;
     
     @GetMapping
     public String showGeneralExpense(
@@ -60,6 +65,7 @@ public class GeneralExpenseController {
         model.addAttribute("currentYear", currentYear);
         model.addAttribute("currentMonth", currentMonth);
         model.addAttribute("user", user);
+        model.addAttribute("expenseLocked", attendanceService.isMonthLocked(user, currentYear, currentMonth));
         
         model.addAttribute("newExpense", new GeneralExpense());
         
@@ -86,7 +92,8 @@ public class GeneralExpenseController {
             @RequestParam("year") int year,
             @RequestParam("month") int month,
             GeneralExpense expense,
-            HttpSession session) {
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
         
         logger.info("Entering saveGeneralExpense - type: {}, date: {}, amount: {}", 
                    expense.getExpenseType(), expense.getDate(), expense.getAmount());
@@ -111,7 +118,8 @@ public class GeneralExpenseController {
             return "redirect:" + redirectUrl;
         } catch (Exception e) {
             logger.error("Error saving general expense", e);
-            return "redirect:/general-expense";
+            redirectAttributes.addFlashAttribute("expenseErrorMessage", e.getMessage());
+            return "redirect:/general-expense?year=" + year + "&month=" + month;
         }
     }
     
@@ -119,14 +127,21 @@ public class GeneralExpenseController {
     public String deleteGeneralExpense(
             @PathVariable Long id,
             @RequestParam("year") int year,
-            @RequestParam("month") int month) {
+            @RequestParam("month") int month,
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
         logger.info("Deleting general expense with ID: {}", id);
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return "redirect:/login";
+        }
         
         try {
-            generalExpenseService.deleteGeneralExpense(id);
+            generalExpenseService.deleteGeneralExpense(id, user);
             logger.info("Successfully deleted general expense with ID: {}", id);
         } catch (Exception e) {
             logger.error("Error deleting general expense with ID: {}", id, e);
+            redirectAttributes.addFlashAttribute("expenseErrorMessage", e.getMessage());
         }
         
         return "redirect:/general-expense?year=" + year + "&month=" + month;

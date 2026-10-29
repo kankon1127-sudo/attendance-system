@@ -3,6 +3,7 @@ package com.wkrepo.system.controller;
 import com.wkrepo.system.entity.TravelExpense;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.service.ApplicationNotificationService;
+import com.wkrepo.system.service.AttendanceService;
 import com.wkrepo.system.service.TravelExpenseService;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
@@ -32,6 +33,9 @@ public class TravelExpenseController {
 
     @Autowired
     private ApplicationNotificationService applicationNotificationService;
+
+    @Autowired
+    private AttendanceService attendanceService;
     
     @GetMapping
     public String showTravelExpense(
@@ -81,6 +85,7 @@ public class TravelExpenseController {
         model.addAttribute("currentYear", currentYear);
         model.addAttribute("currentMonth", currentMonth);
         model.addAttribute("user", user);
+        model.addAttribute("expenseLocked", attendanceService.isMonthLocked(user, currentYear, currentMonth));
         
         TravelExpense newNonTaxableExpense = new TravelExpense();
         newNonTaxableExpense.setType(TYPE_NON_TAXABLE);
@@ -129,7 +134,10 @@ public class TravelExpenseController {
             logger.warn("Invalid travel expense type: {}", expense.getType());
             return "redirect:/travel-expense";
         }
-        
+
+        LocalDate requestedDate = expense.getExpenseDate();
+        int redirectYear = requestedDate != null ? requestedDate.getYear() : LocalDate.now().getYear();
+        int redirectMonth = requestedDate != null ? requestedDate.getMonthValue() : LocalDate.now().getMonthValue();
         try {
             expense.setUser(user);
             TravelExpense savedExpense = travelExpenseService.saveTravelExpense(expense);
@@ -146,12 +154,7 @@ public class TravelExpenseController {
             logger.debug("Saved expense with ID: {}, date: {}, amount: {}", 
                         savedExpense.getId(), savedExpense.getExpenseDate(), savedExpense.getAmount());
             
-            // 确保expenseDate存在，否则使用当前日期
             LocalDate effectiveDate = savedExpense.getExpenseDate();
-            if (effectiveDate == null) {
-                effectiveDate = LocalDate.now();
-                logger.warn("Expense date was null, using current date: {}", effectiveDate);
-            }
             
             Integer year = effectiveDate.getYear();
             Integer month = effectiveDate.getMonthValue();
@@ -164,24 +167,31 @@ public class TravelExpenseController {
             return "redirect:" + redirectUrl;
         } catch (Exception e) {
             logger.error("Error saving travel expense", e);
-            return "redirect:/travel-expense";
+            redirectAttributes.addFlashAttribute("expenseErrorMessage", e.getMessage());
+            return "redirect:/travel-expense?year=" + redirectYear + "&month=" + redirectMonth;
         }
     }
     
     @PostMapping("/delete/{id}")
-    public String deleteTravelExpense(@PathVariable Long id, HttpSession session) {
+    public String deleteTravelExpense(@PathVariable Long id, HttpSession session,
+                                      RedirectAttributes redirectAttributes) {
         logger.info("Deleting travel expense with ID: {}", id);
-        
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return "redirect:/login";
+        }
+
         LocalDate effectiveDate = LocalDate.now();
         try {
             TravelExpense expense = travelExpenseService.findById(id);
             if (expense != null && expense.getExpenseDate() != null) {
                 effectiveDate = expense.getExpenseDate();
             }
-            travelExpenseService.deleteTravelExpense(id);
+            travelExpenseService.deleteTravelExpense(id, user);
             logger.info("Successfully deleted travel expense with ID: {}", id);
         } catch (Exception e) {
             logger.error("Error deleting travel expense with ID: {}", id, e);
+            redirectAttributes.addFlashAttribute("expenseErrorMessage", e.getMessage());
         }
         
         Integer year = effectiveDate.getYear();

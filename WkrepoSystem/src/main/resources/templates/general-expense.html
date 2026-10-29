@@ -105,6 +105,10 @@
 </head>
 <body>
 <th:block th:fragment="main-content">
+    <div class="alert alert-warning mb-3" th:if="${expenseLocked}" th:text="#{expense.monthLocked}">
+        ※ 当月の月報は提出済みのため、交通費・諸経費の編集はロックされています。
+    </div>
+    <div class="alert alert-danger mb-3" th:if="${expenseErrorMessage}" th:text="${expenseErrorMessage}"></div>
     <div class="card">
         <h3 class="mb-4" th:text="#{page.general-expense}">諸費用登録</h3>
         
@@ -138,6 +142,7 @@
             <form method="POST" action="/general-expense/save" th:object="${newExpense}">
                 <input type="hidden" name="year" th:value="${currentYear}">
                 <input type="hidden" name="month" th:value="${currentMonth}">
+                <fieldset class="border-0 p-0 m-0" th:disabled="${expenseLocked}">
                 
                 <div class="form-row">
                     <div class="form-group">
@@ -184,6 +189,7 @@
                         <i class="bi bi-eraser"></i> <span th:text="#{common.clear}">クリア</span>
                     </button>
                 </div>
+                </fieldset>
             </form>
         </div>
         
@@ -216,7 +222,7 @@
                                 <form th:action="@{/general-expense/delete/{id}(id=${expense.id})}" method="post" style="display: inline;">
                                     <input type="hidden" name="year" th:value="${currentYear}">
                                     <input type="hidden" name="month" th:value="${currentMonth}">
-                                    <button type="submit" class="btn-delete" onclick="return confirm('削除してもよろしいですか？');">
+                                    <button type="submit" class="btn-delete" th:disabled="${expenseLocked}" onclick="return confirm('削除してもよろしいですか？');">
                                         <span th:text="#{common.delete}">削除</span>
                                     </button>
                                 </form>

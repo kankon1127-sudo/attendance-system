@@ -110,6 +110,10 @@
          th:text="${#messages.msg('notification.' + #strings.toLowerCase(notificationStatus))}"></div>
     <div class="alert alert-warning" th:if="${notificationStatus != null and notificationStatus != 'SENT' and notificationStatus != 'NOT_APPLICABLE'}"
          th:text="${#messages.msg('notification.' + #strings.toLowerCase(notificationStatus))}"></div>
+    <div class="alert alert-warning mb-3" th:if="${expenseLocked}" th:text="#{expense.monthLocked}">
+        ※ 当月の月報は提出済みのため、交通費・諸経費の編集はロックされています。
+    </div>
+    <div class="alert alert-danger mb-3" th:if="${expenseErrorMessage}" th:text="${expenseErrorMessage}"></div>
     <div class="card">
         <h3 class="mb-4" th:text="#{page.travel-expense}">交通費入力</h3>
         
@@ -147,6 +151,7 @@
                 <p class="text-muted small mb-3" th:text="#{travel.nonTaxableHelp}">通勤等、非課税対象の交通費を入力してください。</p>
                 <form method="POST" action="/travel-expense/save" th:object="${newNonTaxableExpense}">
                     <input type="hidden" th:field="*{type}">
+                    <fieldset class="border-0 p-0 m-0" th:disabled="${expenseLocked}">
                     <div class="form-row">
                         <div class="form-group">
                             <label for="nonTaxableDate" th:text="#{travel.date}">日付</label>
@@ -172,6 +177,7 @@
                         </div>
                     </div>
                     <button type="submit" class="btn-add" th:text="#{travel.save}">追加</button>
+                    </fieldset>
                 </form>
 
                 <div class="table-responsive">
@@ -198,7 +204,7 @@
                                 <td th:text="|${#numbers.formatInteger(#objects.nullSafe(expense.amount, 0), 0, 'COMMA')}円|">1,000円</td>
                                 <td>
                                     <form th:action="@{/travel-expense/delete/{id}(id=${expense.id})}" method="post" style="display:inline;" onsubmit="return confirm('削除してもよろしいですか？');">
-                                        <button type="submit" class="btn-delete" th:text="#{common.delete}">削除</button>
+                                        <button type="submit" class="btn-delete" th:text="#{common.delete}" th:disabled="${expenseLocked}">削除</button>
                                     </form>
                                 </td>
                             </tr>
@@ -218,6 +224,7 @@
                 <p class="text-muted small mb-3" th:text="#{travel.travelHelp}">出張・外勤等、旅費として精算する交通費を入力してください。</p>
                 <form method="POST" action="/travel-expense/save" th:object="${newTravelExpense}">
                     <input type="hidden" th:field="*{type}">
+                    <fieldset class="border-0 p-0 m-0" th:disabled="${expenseLocked}">
                     <div class="form-row">
                         <div class="form-group">
                             <label for="travelDate" th:text="#{travel.date}">日付</label>
@@ -243,6 +250,7 @@
                         </div>
                     </div>
                     <button type="submit" class="btn-add" th:text="#{travel.save}">追加</button>
+                    </fieldset>
                 </form>
 
                 <div class="table-responsive">
@@ -269,7 +277,7 @@
                                 <td th:text="|${#numbers.formatInteger(#objects.nullSafe(expense.amount, 0), 0, 'COMMA')}円|">1,000円</td>
                                 <td>
                                     <form th:action="@{/travel-expense/delete/{id}(id=${expense.id})}" method="post" style="display:inline;" onsubmit="return confirm('削除してもよろしいですか？');">
-                                        <button type="submit" class="btn-delete" th:text="#{common.delete}">削除</button>
+                                        <button type="submit" class="btn-delete" th:text="#{common.delete}" th:disabled="${expenseLocked}">削除</button>
                                     </form>
                                 </td>
                             </tr>
