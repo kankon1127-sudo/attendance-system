@@ -16,6 +16,7 @@ public class ApplicationDetailDTO {
     private String statusDisplayName;
     private LocalDateTime applicationDate;
     private boolean canApprove;
+    private boolean canWithdraw;
     private String approveButtonLabel;
 
     private LocalDate expenseDate;
@@ -163,6 +164,14 @@ public class ApplicationDetailDTO {
 
     public void setCanApprove(boolean canApprove) {
         this.canApprove = canApprove;
+    }
+
+    public boolean isCanWithdraw() {
+        return canWithdraw;
+    }
+
+    public void setCanWithdraw(boolean canWithdraw) {
+        this.canWithdraw = canWithdraw;
     }
 
     public String getApproveButtonLabel() {

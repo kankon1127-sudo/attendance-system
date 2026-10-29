@@ -548,6 +548,9 @@ public class ApplicationListService {
         if (applyDate == null) applyDate = LocalDateTime.now();
         dto.setApplicationDate(applyDate);
         dto.setCanApprove(canApprove(currentUser, applicant, status, mr.getApproverId(), "MONTHLY_REPORT"));
+        dto.setCanWithdraw(currentUser != null && currentUser.getId() != null
+                && applicant != null && currentUser.getId().equals(applicant.getId())
+                && status == ApplicationStatus.SUBMITTED);
 
         if (ApplicationStatus.MANAGER_APPROVED.equals(status)
                 && ("SOUMU".equals(currentUser.getRole()) || "ADMIN".equals(currentUser.getRole()))) {

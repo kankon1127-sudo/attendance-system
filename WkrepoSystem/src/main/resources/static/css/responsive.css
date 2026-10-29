@@ -488,8 +488,61 @@
         border-bottom: 0;
     }
 
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(1),
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(2),
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(3),
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(6) {
+        display: none;
+    }
+
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(4),
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(5),
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(7) {
+        align-items: center;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(5) > div {
+        text-align: right;
+    }
+
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(7) {
+        border-bottom: 0;
+    }
+
     .content-area .js-mobile-card-table tbody tr.no-data-row {
         display: table-row;
+    }
+
+    #applicationDetailModal .modal-dialog {
+        margin: 0.5rem;
+    }
+
+    #applicationDetailModal .modal-content {
+        max-height: calc(100dvh - 1rem);
+    }
+
+    #applicationDetailModal .detail-modal-body {
+        overflow-y: auto;
+    }
+
+    #applicationDetailModal .modal-footer {
+        position: sticky;
+        bottom: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+        padding: 12px;
+    }
+
+    #applicationDetailModal .modal-footer > * {
+        margin: 0;
+    }
+
+    #applicationDetailModal .modal-footer button,
+    #applicationDetailModal .modal-footer form {
+        min-height: 44px;
     }
 
     .mobile-record-field {

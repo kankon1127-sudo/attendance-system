@@ -520,6 +520,7 @@
                         </td>
                     </tr>
                     <tr th:each="app, iterStat : ${applications}"
+                        th:attr="data-application-id=${app.id},data-application-type=${app.applicationType}"
                         th:with="stName=${app.status != null ? #strings.toLowerCase(app.status.name()) : 'pending'},
                                  isPending=${stName == 'pending' or stName == 'submitted' or stName == 'draft' or stName == 'manager_approved'}">
                         <td style="text-align: center;" th:text="'#' + ${iterStat.index + 1}">#1</td>
@@ -614,6 +615,8 @@
     <script th:inline="javascript">
         const applicationMessages = {
             close: /*[[#{common.close}]]*/ '閉じる',
+            withdraw: /*[[#{monthly.withdraw}]]*/ '撤回',
+            withdrawConfirm: /*[[#{monthly.withdrawConfirm}]]*/ '月報を撤回してもよろしいですか？',
             type: /*[[#{application.type}]]*/ '申請種別',
             status: /*[[#{application.status}]]*/ 'ステータス',
             loading: /*[[#{application.loading}]]*/ '読み込み中...',
@@ -1095,6 +1098,13 @@
             } else {
                 footer.innerHTML =
                     '<button type="button" class="btn-detail" style="background: #64748b;" data-bs-dismiss="modal">' + applicationMessages.close + '</button>';
+            }
+            if (d.canWithdraw) {
+                footer.insertAdjacentHTML('beforeend',
+                    '<form method="POST" action="/application/withdraw" class="d-inline" onsubmit="return confirm(applicationMessages.withdrawConfirm)">' +
+                    '<input type="hidden" name="id" value="' + escapeHtml(d.id) + '">' +
+                    '<button type="submit" class="btn btn-outline-secondary btn-withdraw-modal">' +
+                    '<i class="bi bi-arrow-counterclockwise"></i> ' + applicationMessages.withdraw + '</button></form>');
             }
         }
 
