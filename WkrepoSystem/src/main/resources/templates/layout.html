@@ -655,7 +655,8 @@
                 var date = row.getAttribute('data-date');
                 var form = document.createElement('form');
                 form.method = 'post';
-                form.action = '/attendance/saveInline';
+                form.id = 'mobileAttendanceForm';
+                form.action = row.closest('table').getAttribute('data-save-url');
                 form.className = 'mobile-attendance-form';
                 form.innerHTML =
                     '<input type="hidden" name="date">' +
@@ -726,6 +727,7 @@
                 var save = document.createElement('button');
                 save.type = 'submit';
                 save.className = 'btn btn-primary';
+                save.setAttribute('form', form.id);
                 save.textContent = row.closest('table').getAttribute('data-save-label');
                 actions.replaceChildren(save);
                 body.replaceChildren(form);
@@ -755,6 +757,7 @@
                 form.addEventListener('change', updateHourPreview);
 
                 form.addEventListener('submit', function (event) {
+                    event.preventDefault();
                     var selectedStatus = status.value;
                     var start = form.elements.namedItem('startTime').value;
                     var end = form.elements.namedItem('endTime').value;
@@ -768,6 +771,32 @@
                     var workHours = calculatedWorkHours();
                     form.elements.namedItem('workHours').value = workHours.toFixed(2);
                     form.elements.namedItem('overtimeHours').value = Math.max(0, workHours - 8).toFixed(2);
+
+                    save.disabled = true;
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: new FormData(form),
+                        credentials: 'same-origin'
+                    }).then(function (response) {
+                        if (!response.ok || response.url.indexOf('/login') !== -1) {
+                            throw new Error('HTTP ' + response.status);
+                        }
+                        modal.hide();
+                        window.location.reload();
+                    }).catch(function (error) {
+                        console.error('Mobile attendance save failed', {
+                            date: date,
+                            endpoint: form.action,
+                            error: error
+                        });
+                        save.disabled = false;
+                        var isNetworkError = error instanceof TypeError;
+                        var message = isNetworkError
+                                ? row.closest('table').getAttribute('data-network-error-message')
+                                : row.closest('table').getAttribute('data-save-failed-message')
+                                    + ' (' + error.message + ')';
+                        alert(message);
+                    });
                 });
                 modal.show();
             }

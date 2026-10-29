@@ -41,7 +41,7 @@
     <input type="hidden" id="currentMonth" th:value="${currentMonth}">
 
     <!-- 终极修复：高颜值 Flex 横排数据卡片 -->
-    <div class="attendance-stat-cards d-flex flex-row gap-3 mb-4 w-100" style="justify-content: space-between;">
+    <div class="attendance-stat-cards d-flex gap-3 mb-4 w-100" style="justify-content: space-between;">
         <!-- 稼働日数 -->
         <div class="flex-fill bg-white shadow-sm border rounded-3 p-3 text-center">
             <div class="text-secondary small fw-bold mb-2" th:text="#{attendance.daysWorked}">稼働日数</div>
@@ -148,7 +148,11 @@
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0 text-center js-mobile-card-table js-mobile-attendance-table"
                    style="font-size: 0.9rem;"
-                   th:attr="data-save-label=#{attendance.inlineSave}, data-required-time-message=#{attendance.anomaly.missingTime}">
+                   th:attr="data-save-url=@{/attendance/saveInline},
+                            data-save-label=#{attendance.inlineSave},
+                            data-required-time-message=#{attendance.anomaly.missingTime},
+                            data-save-failed-message=#{attendance.saveFailed},
+                            data-network-error-message=#{common.networkError}">
                 <thead style="background-color: #1a252f; color: white;">
                     <tr>
                         <th style="width: 80px;" th:text="#{attendance.date}">日付</th>
