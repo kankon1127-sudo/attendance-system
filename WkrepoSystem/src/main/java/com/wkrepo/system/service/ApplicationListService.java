@@ -344,6 +344,9 @@ public class ApplicationListService {
         item.setStatus(status);
         // 月报的审批权限判断：需要传入 approverId
         item.setCanApprove(canApprove(currentUser, mr.getUser(), status, mr.getApproverId(), "MONTHLY_REPORT"));
+        item.setCanWithdraw(currentUser != null && currentUser.getId() != null
+                && mr.getUser() != null && currentUser.getId().equals(mr.getUser().getId())
+                && status == ApplicationStatus.SUBMITTED);
         return item;
     }
 

@@ -226,6 +226,9 @@
                 <div class="card">
                     <h4 class="mb-4" th:text="#{page.attendance}">勤怠編集</h4>
                     <p th:text="#{attendance.dateLabel} + ' ' + ${date}">日付</p>
+                    <div class="alert alert-warning" th:if="${attendanceLocked}" th:text="#{attendance.locked}">
+                        月報提出後のため、この月の勤怠はロックされています。変更する場合は申請一覧で月報を撤回してください。
+                    </div>
                     
                     <form action="/attendance/edit" method="post">
                         <input type="hidden" name="date" th:value="${date}">
@@ -234,11 +237,13 @@
                             <div class="col-md-6">
                                 <label class="form-label" th:text="#{attendance.startTime}">出勤時間</label>
                                 <input type="time" class="form-control" name="startTime" 
+                                       th:disabled="${attendanceLocked}"
                                        th:value="${attendance != null && attendance.startTime != null ? attendance.startTime : (defaultSetting != null and defaultSetting.defaultStartTime != null ? #temporals.format(defaultSetting.defaultStartTime, 'HH:mm') : '08:30')}">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" th:text="#{attendance.endTime}">退勤時間</label>
                                 <input type="time" class="form-control" name="endTime" 
+                                       th:disabled="${attendanceLocked}"
                                        th:value="${attendance != null && attendance.endTime != null ? attendance.endTime : (defaultSetting != null and defaultSetting.defaultEndTime != null ? #temporals.format(defaultSetting.defaultEndTime, 'HH:mm') : '18:00')}">
                             </div>
                         </div>
@@ -247,6 +252,7 @@
                             <div class="col-md-6">
                                 <label class="form-label" th:text="#{attendance.breakTime}">休憩時間</label>
                                 <input type="time" class="form-control" name="breakTime" 
+                                       th:disabled="${attendanceLocked}"
                                        th:value="${attendance != null && attendance.breakTime != null ? attendance.breakTime : (defaultSetting != null and defaultSetting.defaultBreakMinutes != null ? #temporals.format(#temporals.createLocalTime(0, defaultSetting.defaultBreakMinutes, 0), 'HH:mm') : '01:00')}">
                             </div>
                         </div>
@@ -254,11 +260,12 @@
                         <div class="mb-3">
                             <label class="form-label" th:text="#{attendance.remarks}">備考</label>
                             <textarea class="form-control" name="remarks" rows="3" 
+                                      th:disabled="${attendanceLocked}"
                                       th:text="${attendance != null && attendance.remarks != null ? attendance.remarks : ''}"></textarea>
                         </div>
                         
                         <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary" th:text="#{action.save}">保存</button>
+                            <button type="submit" class="btn btn-primary" th:text="#{action.save}" th:disabled="${attendanceLocked}">保存</button>
                             <a href="/attendance" class="btn btn-secondary" th:text="#{action.cancel}">キャンセル</a>
                         </div>
                     </form>

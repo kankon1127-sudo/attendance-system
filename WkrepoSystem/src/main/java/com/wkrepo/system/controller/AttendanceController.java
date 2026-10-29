@@ -123,6 +123,7 @@ public class AttendanceController {
         model.addAttribute("currentYear", currentYear);
         model.addAttribute("currentMonth", currentMonth);
         model.addAttribute("user", user);
+        model.addAttribute("attendanceLocked", attendanceService.isMonthLocked(user, currentYear, currentMonth));
 
         // 分页按钮逻辑
         YearMonth prev = yearMonth.minusMonths(1);
@@ -238,6 +239,9 @@ public class AttendanceController {
         }
 
         LocalDate date = LocalDate.parse(dateStr);
+        if (attendanceService.isMonthLocked(user, date.getYear(), date.getMonthValue())) {
+            return "redirect:/attendance?year=" + date.getYear() + "&month=" + date.getMonthValue() + "&locked=true";
+        }
         Attendance attendance = attendanceService.getAttendanceByUserAndDate(user, date);
         if (attendance == null) {
             attendance = new Attendance(user, date);
@@ -280,6 +284,7 @@ public class AttendanceController {
         model.addAttribute("attendance", attendance);
         model.addAttribute("defaultSetting", defaultSetting);
         model.addAttribute("user", user);
+        model.addAttribute("attendanceLocked", attendanceService.isMonthLocked(user, date.getYear(), date.getMonthValue()));
 
         return "attendance-edit";
     }
@@ -302,6 +307,9 @@ public class AttendanceController {
         }
 
         LocalDate date = LocalDate.parse(dateStr);
+        if (attendanceService.isMonthLocked(user, date.getYear(), date.getMonthValue())) {
+            return "redirect:/attendance?year=" + date.getYear() + "&month=" + date.getMonthValue() + "&locked=true";
+        }
         Attendance attendance = attendanceService.getAttendanceByUserAndDate(user, date);
         if (attendance == null) {
             attendance = new Attendance(user, date);
@@ -350,6 +358,11 @@ public class AttendanceController {
         }
 
         try {
+            if (attendanceService.isMonthLocked(user, year, month)) {
+                response.put("success", false);
+                response.put("message", "この月の勤怠は提出済みのため変更できません。申請一覧から月報を撤回してください。");
+                return response;
+            }
             DefaultAttendanceSetting setting = defaultAttendanceSettingService.getOrCreateDefaultSetting(user);
             attendanceService.bulkApplyDefaults(user, year, month, setting);
             response.put("success", true);

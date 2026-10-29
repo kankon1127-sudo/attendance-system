@@ -481,6 +481,9 @@
                 window.location.href = '/application/list';
             }
         </script>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${#messages.msg(successMessage)}"></div>
+        <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
         
         <div class="table-card">
             <div class="table-responsive">
@@ -563,6 +566,12 @@
                                         <button type="submit" class="btn-reject" onclick="return confirm('拒否してもよろしいですか？')">拒否</button>
                                     </form>
                                 </th:block>
+                                <form th:if="${app.canWithdraw}" method="POST" action="/application/withdraw" style="display: inline;">
+                                    <input type="hidden" name="id" th:value="${app.id}">
+                                    <button type="submit" class="btn btn-outline-secondary"
+                                            th:text="#{monthly.withdraw}"
+                                            onclick="return confirm(this.textContent + 'してもよろしいですか？')">撤回</button>
+                                </form>
                             </div>
                         </td>
                     </tr>

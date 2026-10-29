@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.HashMap;
 import java.util.List;
@@ -92,6 +93,27 @@ public class ApplicationListController {
         if (!applicationListService.canApproveApplication(id, type, user)) {
             log.warn("[ApplicationListController] 権限なしの拒否要求 id={}, type={}, userId={}",
                     id, type, user.getId());
+            return "redirect:/application/list";
+        }
+
+        @PostMapping("/withdraw")
+        public String withdrawMonthlyReport(@RequestParam("id") Long id, HttpSession session,
+                                            RedirectAttributes redirectAttributes) {
+            User user = (User) session.getAttribute("user");
+            if (user == null) {
+                return "redirect:/login";
+            }
+
+            try {
+                MonthlyReport report = monthlyReportService.withdrawReport(id, user);
+                redirectAttributes.addFlashAttribute("successMessage", "monthly.withdrawSuccess");
+                return "redirect:/monthly-summary?year=" + report.getYear() + "&month=" + report.getMonth();
+            } catch (SecurityException e) {
+                log.warn("[ApplicationListController] 権限なしの月報撤回要求 id={}, userId={}", id, user.getId(), e);
+                redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            } catch (IllegalArgumentException | IllegalStateException e) {
+                redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            }
             return "redirect:/application/list";
         }
 

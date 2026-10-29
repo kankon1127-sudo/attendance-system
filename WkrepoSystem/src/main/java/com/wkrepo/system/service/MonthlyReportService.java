@@ -27,6 +27,9 @@ public class MonthlyReportService {
     @Autowired
     private AttendanceService attendanceService;
 
+    @Autowired
+    private ApprovalHistoryService approvalHistoryService;
+
     public MonthlyReport findOrCreateReport(User user, int year, int month) {
         Long userId = user.getId();
         log.info("[MonthlyReportService] findOrCreateReport userId={}, year={}, month={}", userId, year, month);
@@ -73,9 +76,14 @@ public class MonthlyReportService {
         log.info("[MonthlyReportService] saveDraft開始 userId={}, year={}, month={}", user.getId(), year, month);
         try {
             MonthlyReport report = findOrCreateReport(user, year, month);
+            if (report.getStatus() != ApplicationStatus.DRAFT
+                    && report.getStatus() != ApplicationStatus.REJECTED) {
+                throw new IllegalStateException("提出済みまたは承認中の月報は編集できません。");
+            }
             if (workContent != null) {
                 report.setWorkContent(workContent);
             }
+            report.setStatus(ApplicationStatus.DRAFT);
             MonthlyReport saved = monthlyReportRepository.save(report);
             log.info("[MonthlyReportService] saveDraft完了 reportId={}, status={}", saved.getId(), saved.getStatus());
             return saved;
@@ -90,17 +98,22 @@ public class MonthlyReportService {
         log.info("[MonthlyReportService] submitReport開始 userId={}, year={}, month={}, approverId={}",
                 user.getId(), year, month, approverId);
         try {
-            attendanceService.validatePaidLeaveApprovedForMonthlySubmit(user, year, month);
             MonthlyReport report = findOrCreateReport(user, year, month);
             log.info("[MonthlyReportService] 変更前 status={}", report.getStatus());
+            if (report.getStatus() != ApplicationStatus.DRAFT
+                    && report.getStatus() != ApplicationStatus.REJECTED) {
+                throw new IllegalStateException("提出済みまたは承認中の月報は再提出できません。");
+            }
+            attendanceService.validatePaidLeaveApprovedForMonthlySubmit(user, year, month);
             if (workContent != null) {
                 report.setWorkContent(workContent);
             }
             if (approverId != null) {
                 report.setApproverId(approverId);
             }
-            report.setStatus(ApplicationStatus.SUBMITTED);
             MonthlyReport saved = monthlyReportRepository.save(report);
+            approvalHistoryService.transition("MONTHLY_REPORT", saved.getId(), ApplicationStatus.SUBMITTED, user);
+            saved.setStatus(ApplicationStatus.SUBMITTED);
             log.info("[MonthlyReportService] submitReport完了 reportId={}, status={}", saved.getId(), saved.getStatus());
             return saved;
         } catch (Exception e) {
@@ -134,6 +147,25 @@ public class MonthlyReportService {
 
     public MonthlyReport findById(Long id) {
         return monthlyReportRepository.findById(id).orElse(null);
+    }
+
+    @Transactional
+    public MonthlyReport withdrawReport(Long id, User user) {
+        if (user == null || user.getId() == null) {
+            throw new SecurityException("ログインが必要です。");
+        }
+        MonthlyReport report = monthlyReportRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("月報が見つかりません。"));
+        if (report.getUser() == null || !user.getId().equals(report.getUser().getId())) {
+            throw new SecurityException("自分の月報のみ撤回できます。");
+        }
+        if (report.getStatus() != ApplicationStatus.SUBMITTED) {
+            throw new IllegalStateException("提出済みの月報のみ撤回できます。");
+        }
+
+        approvalHistoryService.transition("MONTHLY_REPORT", id, ApplicationStatus.DRAFT, user);
+        return monthlyReportRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("月報が見つかりません。"));
     }
 
     @Transactional

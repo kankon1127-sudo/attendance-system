@@ -145,21 +145,24 @@ public class MonthlySummaryController {
             @RequestParam("year") int year,
             @RequestParam("month") int month,
             @RequestParam("workContent") String workContent,
-            HttpSession session) {
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
 
         User user = (User) session.getAttribute("user");
-        if (user != null) {
-            try {
-                log.info("[月報サマリー] 下書き保存開始 userId={}, year={}, month={}, workContentLength={}",
-                        user.getId(), year, month, workContent == null ? 0 : workContent.length());
-                MonthlyReport saved = monthlyReportService.saveDraft(user, year, month, workContent);
-                session.setAttribute("monthlyStep_" + user.getId() + "_" + year + "_" + month, 1);
-                log.info("[月報サマリー] 下書き保存成功 reportId={}, status={}", saved.getId(), saved.getStatus());
-            } catch (Exception e) {
-                log.error("[月報サマリー] 下書き保存失敗 userId={}, year={}, month={}",
-                        user.getId(), year, month, e);
-                e.printStackTrace();
-            }
+        if (user == null) {
+            return "redirect:/login";
+        }
+        try {
+            log.info("[月報サマリー] 下書き保存開始 userId={}, year={}, month={}, workContentLength={}",
+                    user.getId(), year, month, workContent == null ? 0 : workContent.length());
+            MonthlyReport saved = monthlyReportService.saveDraft(user, year, month, workContent);
+            session.setAttribute("monthlyStep_" + user.getId() + "_" + year + "_" + month, 1);
+            log.info("[月報サマリー] 下書き保存成功 reportId={}, status={}", saved.getId(), saved.getStatus());
+        } catch (Exception e) {
+            log.error("[月報サマリー] 下書き保存失敗 userId={}, year={}, month={}",
+                    user.getId(), year, month, e);
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    e.getMessage() != null ? e.getMessage() : "月報の下書き保存に失敗しました。");
         }
         return "redirect:/monthly-summary?year=" + year + "&month=" + month;
     }

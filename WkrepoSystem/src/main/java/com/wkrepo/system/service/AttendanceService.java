@@ -3,8 +3,11 @@ package com.wkrepo.system.service;
 import com.wkrepo.system.dto.AttendanceAnomaly;
 import com.wkrepo.system.entity.Attendance;
 import com.wkrepo.system.entity.DefaultAttendanceSetting;
+import com.wkrepo.system.entity.MonthlyReport;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.repository.AttendanceRepository;
+import com.wkrepo.system.repository.MonthlyReportRepository;
+import com.wkrepo.system.enums.ApplicationStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +32,9 @@ public class AttendanceService {
     
     @Autowired
     private AttendanceRepository attendanceRepository;
+
+    @Autowired
+    private MonthlyReportRepository monthlyReportRepository;
     
     @Autowired
     private HolidayService holidayService;
@@ -42,6 +48,7 @@ public class AttendanceService {
     private static final BigDecimal OVERTIME_THRESHOLD = new BigDecimal("8.0");
     
     public Attendance createAttendance(Attendance attendance) {
+        ensureMonthEditable(attendance.getUser(), attendance.getDate());
         validateAttendance(attendance);
         calculateWorkHours(attendance);
         determineAgreement36Status(attendance);
@@ -49,6 +56,7 @@ public class AttendanceService {
     }
     
     public Attendance updateAttendance(Attendance attendance) {
+        ensureMonthEditable(attendance.getUser(), attendance.getDate());
         // 核心修复：如果 ID 为空但该日期已有记录，自动关联 ID 确保是“更新”而非“新增”
         if (attendance.getId() == null && attendance.getUser() != null && attendance.getDate() != null) {
             attendanceRepository.findByUserAndDate(attendance.getUser(), attendance.getDate())
@@ -63,6 +71,22 @@ public class AttendanceService {
 
     public static boolean isPaidLeaveStatus(String status) {
         return "有給".equals(status) || "有休".equals(status);
+    }
+
+    public boolean isMonthLocked(User user, int year, int month) {
+        if (user == null || user.getId() == null) {
+            return false;
+        }
+        return monthlyReportRepository.findByUserIdAndYearAndMonth(user.getId(), year, month)
+                .map(MonthlyReport::getStatus)
+                .map(status -> status != ApplicationStatus.DRAFT && status != ApplicationStatus.REJECTED)
+                .orElse(false);
+    }
+
+    public void ensureMonthEditable(User user, LocalDate date) {
+        if (user != null && date != null && isMonthLocked(user, date.getYear(), date.getMonthValue())) {
+            throw new IllegalStateException("この月の勤怠は提出済みのため変更できません。申請一覧から月報を撤回してください。");
+        }
     }
 
     /**
@@ -273,6 +297,9 @@ public class AttendanceService {
      * 一括デフォルト入力逻辑
      */
     public void bulkApplyDefaults(User user, int year, int month, DefaultAttendanceSetting setting) {
+        if (isMonthLocked(user, year, month)) {
+            throw new IllegalStateException("この月の勤怠は提出済みのため変更できません。申請一覧から月報を撤回してください。");
+        }
         if (setting == null) {
             throw new RuntimeException("デフォルト設定が見つかりません。");
         }

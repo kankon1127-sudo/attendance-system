@@ -330,6 +330,7 @@
         </div>
 
         <div class="error-banner" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${#messages.msg(successMessage)}"></div>
         
         <div class="approval-flow-card">
             <div class="form-title" th:text="#{monthly.approvalFlow}">承認フロー</div>

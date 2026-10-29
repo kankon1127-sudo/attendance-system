@@ -18,6 +18,7 @@ public class ApplicationItem {
     private String amountLabel;
     private ApplicationStatus status;
     private boolean canApprove;
+    private boolean canWithdraw;
 
     public ApplicationItem() {}
 
@@ -110,5 +111,13 @@ public class ApplicationItem {
 
     public void setCanApprove(boolean canApprove) {
         this.canApprove = canApprove;
+    }
+
+    public boolean isCanWithdraw() {
+        return canWithdraw;
+    }
+
+    public void setCanWithdraw(boolean canWithdraw) {
+        this.canWithdraw = canWithdraw;
     }
 }
