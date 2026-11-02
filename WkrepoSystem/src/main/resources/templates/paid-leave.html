@@ -415,7 +415,8 @@
                     <td th:text="${#messages.msg('application.status.' + (leave.status != null ? leave.status.name() : 'PENDING'))}">申請中</td>
                     <td th:text="${leave.remarks}">理由</td>
                     <td>
-                        <form th:action="@{/paid-leave/delete/{id}(id=${leave.id})}" method="post" style="display: inline;">
+                        <form th:if="${leave.status == null or leave.status.name() == 'PENDING' or leave.status.name() == 'REJECTED'}"
+                              th:action="@{/paid-leave/delete/{id}(id=${leave.id})}" method="post" style="display: inline;">
                             <button type="submit" class="btn-delete" onclick="return confirm('削除してもよろしいですか？');">
                                 <span th:text="#{common.delete}">削除</span>
                             </button>

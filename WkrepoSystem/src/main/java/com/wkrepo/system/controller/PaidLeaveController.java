@@ -167,16 +167,25 @@ public class PaidLeaveController {
     }
     
     @PostMapping("/delete/{id}")
-    public String deletePaidLeave(@PathVariable Long id) {
+    public String deletePaidLeave(@PathVariable Long id, HttpSession session, RedirectAttributes redirectAttributes) {
         logger.info("Deleting paid leave with ID: {}", id);
-        
-        try {
-            paidLeaveService.deletePaidLeave(id);
-            logger.info("Successfully deleted paid leave with ID: {}", id);
-        } catch (Exception e) {
-            logger.error("Error deleting paid leave with ID: {}", id, e);
+
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return "redirect:/login";
         }
-        
+
+        try {
+            paidLeaveService.deletePaidLeave(id, user);
+            logger.info("Successfully deleted paid leave with ID: {}", id);
+        } catch (IllegalArgumentException | IllegalStateException | SecurityException e) {
+            logger.warn("Rejected deleting paid leave ID: {} by user: {} ({})", id, user.getId(), e.getMessage());
+            redirectAttributes.addFlashAttribute("leaveError", e.getMessage());
+        } catch (RuntimeException e) {
+            logger.error("Error deleting paid leave with ID: {}", id, e);
+            redirectAttributes.addFlashAttribute("leaveError", "leave.application.deleteFailed");
+        }
+
         return "redirect:/paid-leave";
     }
 }

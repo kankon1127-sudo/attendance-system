@@ -424,7 +424,7 @@
                     <tr th:each="u : ${users}"
                         th:with="isSelf=${user.id == u.id},
                                  st=${u.status == null or u.status == '' or u.status == 'ACTIVE' ? 'ACTIVE' : u.status},
-                                 canEditAll=${isAdmin or isSoumu or (isManager and user.department == u.department)}">
+                                 canEditAll=${isAdmin or (u.role != 'ADMIN' and (isSoumu or (isManager and user.department == u.department)))}">
                         <td style="text-align:center; font-family: Consolas, monospace; font-weight:700; color:#1e3a5f;"
                             th:text="${u.employeeId}">EMP001</td>
                         <td style="text-align:left;">

@@ -59,8 +59,27 @@ public class PaidLeaveService {
         return paidLeaveRepository.save(paidLeave);
     }
     
-    public void deletePaidLeave(Long id) {
-        paidLeaveRepository.deleteById(id);
+    /**
+     * 只有本人可以删除，且只能删除申請中或被拒否的申请（已批准的会影响余额和勤怠的有給检查）。
+     * 异常消息为 messages*.properties 的 key。
+     */
+    public void deletePaidLeave(Long id, User currentUser) {
+        PaidLeave existing = paidLeaveRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("leave.application.notFound"));
+        User owner = existing.getUser();
+        if (owner == null || currentUser == null || !Objects.equals(owner.getId(), currentUser.getId())) {
+            throw new SecurityException("leave.application.deleteNotOwner");
+        }
+        if (!isDeletable(existing)) {
+            throw new IllegalStateException("leave.application.deleteNotAllowed");
+        }
+        paidLeaveRepository.delete(existing);
+    }
+
+    // paid-leave.html 的删除按钮使用相同的判断
+    private boolean isDeletable(PaidLeave leave) {
+        ApplicationStatus status = leave.getStatus();
+        return status == null || status == ApplicationStatus.PENDING || status == ApplicationStatus.REJECTED;
     }
     
     public List<PaidLeave> getPaidLeavesByUser(User user) {

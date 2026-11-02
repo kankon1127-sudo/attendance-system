@@ -219,6 +219,11 @@ public class UserManagementController {
             return buildListRedirect(searchName, searchDepartment);
         }
 
+        if (!isAdmin && "ADMIN".equals(targetUser.getRole())) {
+            redirectAttributes.addFlashAttribute("errorMessage", "管理者アカウントは管理者のみ変更できます。");
+            return buildListRedirect(searchName, searchDepartment);
+        }
+
         String finalDept = (department != null && !department.trim().isEmpty()) ? department : targetUser.getDepartment();
         String finalRole = (role != null && !role.trim().isEmpty()) ? role : targetUser.getRole();
 
@@ -306,6 +311,10 @@ public class UserManagementController {
             return buildListRedirect(searchName, searchDepartment);
         }
 
+        if (!isAdmin && "ADMIN".equals(targetUser.getRole())) {
+            redirectAttributes.addFlashAttribute("errorMessage", "管理者アカウントは管理者のみ変更できます。");
+            return buildListRedirect(searchName, searchDepartment);
+        }
         if (isManager) {
             String currentUserDept = currentUser.getDepartment();
             if (currentUserDept == null || !currentUserDept.equals(targetUser.getDepartment())) {
