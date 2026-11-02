@@ -44,6 +44,12 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- 密码哈希（只用 BCrypt，不引入 Spring Security 的认证机制） -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+
         <!-- H2 Database -->
         <dependency>
             <groupId>com.h2database</groupId>

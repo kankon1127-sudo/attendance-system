@@ -3,6 +3,7 @@ package com.wkrepo.system.service;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,10 +13,54 @@ import java.util.Optional;
 @Service
 @Transactional
 public class UserService {
-    
+
+    private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder();
+
     @Autowired
     private UserRepository userRepository;
-    
+
+    /** 密码一律以 BCrypt 哈希保存。所有设置密码的地方都要经过这里 */
+    public static String encodePassword(String rawPassword) {
+        return PASSWORD_ENCODER.encode(rawPassword);
+    }
+
+    public static boolean isEncoded(String storedPassword) {
+        return storedPassword != null && storedPassword.matches("^\\$2[aby]?\\$\\d{2}\\$.{53}$");
+    }
+
+    /**
+     * 把库中残留的明文密码转换为哈希（启动时执行；恢复旧备份后再次启动也会处理）。返回转换的件数。
+     */
+    public int encodePlainTextPasswords() {
+        int converted = 0;
+        for (User user : userRepository.findAll()) {
+            String stored = user.getPassword();
+            if (stored != null && !stored.isEmpty() && !isEncoded(stored)) {
+                user.setPassword(encodePassword(stored));
+                userRepository.save(user);
+                converted++;
+            }
+        }
+        return converted;
+    }
+
+    private boolean passwordMatches(User user, String rawPassword) {
+        String stored = user.getPassword();
+        if (rawPassword == null || stored == null) {
+            return false;
+        }
+        if (isEncoded(stored)) {
+            return PASSWORD_ENCODER.matches(rawPassword, stored);
+        }
+        // 运行中恢复了含明文密码的旧备份时：验证一次后立即转换为哈希
+        if (stored.equals(rawPassword)) {
+            user.setPassword(encodePassword(rawPassword));
+            userRepository.save(user);
+            return true;
+        }
+        return false;
+    }
+
     public User login(String username, String password) {
         Optional<User> userOpt = userRepository.findByUsername(username);
         if (userOpt.isEmpty()) {
@@ -26,7 +71,7 @@ public class UserService {
         if ("INACTIVE".equals(user.getStatus())) {
             throw new RuntimeException("このアカウントは無効化されています。管理者に連絡してください。");
         }
-        if (!user.getPassword().equals(password)) {
+        if (!passwordMatches(user, password)) {
             throw new RuntimeException("パスワードが正しくありません。");
         }
         
@@ -66,6 +111,7 @@ public class UserService {
         if (user.getStatus() == null || user.getStatus().isBlank()) {
             user.setStatus("ACTIVE");
         }
+        user.setPassword(encodePassword(user.getPassword()));
         return userRepository.save(user);
     }
     
@@ -104,7 +150,7 @@ public class UserService {
         }
         User u = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("ユーザーが存在しません ID=" + userId));
-        u.setPassword(newPassword);
+        u.setPassword(encodePassword(newPassword));
         userRepository.save(u);
     }
 }

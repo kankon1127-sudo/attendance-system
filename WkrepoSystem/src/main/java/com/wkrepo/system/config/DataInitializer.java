@@ -4,6 +4,7 @@ import com.wkrepo.system.entity.User;
 import com.wkrepo.system.entity.DefaultAttendanceSetting;
 import com.wkrepo.system.repository.UserRepository;
 import com.wkrepo.system.service.DefaultAttendanceSettingService;
+import com.wkrepo.system.service.UserService;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,7 @@ import java.util.Optional;
  * - 管理员：数据库里没有任何 ADMIN 时才创建。dev 模式下密码为 123456，
  *   否则使用环境变量 APP_ADMIN_INITIAL_PASSWORD（未设置则不创建）。
  * - 测试账号（manager / employee1 / employee2 / soumu）：只在 dev 模式下创建。
+ * - 库中残留的明文密码转换为 BCrypt 哈希。
  */
 @Component
 public class DataInitializer {
@@ -37,9 +39,18 @@ public class DataInitializer {
     @Autowired
     private Environment environment;
 
+    @Autowired
+    private UserService userService;
+
     @PostConstruct
     public void init() {
         boolean devMode = environment.acceptsProfiles(Profiles.of("dev"));
+
+        // 0. 明文密码转换为哈希（旧版本的数据）
+        int converted = userService.encodePlainTextPasswords();
+        if (converted > 0) {
+            logger.info("已将 {} 个账号的明文密码转换为哈希", converted);
+        }
 
         // 为现有的 admin 补全字段
         Optional<User> adminOpt = userRepository.findByUsername("admin");
@@ -79,7 +90,7 @@ public class DataInitializer {
 
         User admin = new User();
         admin.setUsername("admin");
-        admin.setPassword(password.trim());
+        admin.setPassword(UserService.encodePassword(password.trim()));
         admin.setName("系统管理员");
         admin.setEmployeeId("EMP001");
         admin.setDepartment("管理部");
@@ -123,7 +134,7 @@ public class DataInitializer {
         }
         User user = new User();
         user.setUsername(username);
-        user.setPassword(DEV_PASSWORD);
+        user.setPassword(UserService.encodePassword(DEV_PASSWORD));
         user.setName(name);
         user.setEmployeeId(employeeId);
         user.setDepartment(department);
