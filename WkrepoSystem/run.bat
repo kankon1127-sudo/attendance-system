@@ -11,7 +11,7 @@ echo ====================================================
 
 :: 【手动配置区】
 :: 如果你的 JAVA_HOME 报错，请取消下面这一行的注释(去掉开头的 ::)，并将路径修改为你电脑上 JDK 的实际安装位置
-set "JAVA_HOME=C:\Program Files\Microsoft\jdk-17.0.11.9-hotspot"
+if "%JAVA_HOME%"=="" set "JAVA_HOME=C:\Program Files\Microsoft\jdk-17.0.21.21-hotspot"
 
 echo [1/3] 正在检查环境并清理旧进程...
 taskkill /F /IM java.exe /T > nul 2>&1 || echo 无正在运行的Java进程。

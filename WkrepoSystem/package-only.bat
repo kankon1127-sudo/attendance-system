@@ -6,7 +6,7 @@ echo ====================================================
 echo   Wkrepo System - Package Only
 echo ====================================================
 
-set "JAVA_HOME=C:\Program Files\Microsoft\jdk-17.0.11.9-hotspot"
+if "%JAVA_HOME%"=="" set "JAVA_HOME=C:\Program Files\Microsoft\jdk-17.0.21.21-hotspot"
 
 if "%JAVA_HOME%" == "" goto err_no_java
 if not exist "%JAVA_HOME%\bin\java.exe" goto err_invalid_java
