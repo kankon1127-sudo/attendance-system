@@ -235,6 +235,11 @@ public class UserManagementController {
             if (!currentUserDept.equals(finalDept) || "ADMIN".equals(finalRole) || "SOUMU".equals(finalRole)) {
                 return buildListRedirect(searchName, searchDepartment);
             }
+            // 部長只能编辑本部门的一般员工和自己，不能修改其他部長（包括密码）
+            if (!currentUser.getId().equals(targetUser.getId()) && !"GENERAL".equals(targetUser.getRole())) {
+                redirectAttributes.addFlashAttribute("errorMessage", "部長は一般社員と自分自身のみ変更できます。");
+                return buildListRedirect(searchName, searchDepartment);
+            }
         }
         if (isSoumu && "ADMIN".equals(finalRole) && !"ADMIN".equals(targetUser.getRole())) {
             redirectAttributes.addFlashAttribute("errorMessage", "総務は管理者ロールを付与できません。");
@@ -318,6 +323,10 @@ public class UserManagementController {
         if (isManager) {
             String currentUserDept = currentUser.getDepartment();
             if (currentUserDept == null || !currentUserDept.equals(targetUser.getDepartment())) {
+                return buildListRedirect(searchName, searchDepartment);
+            }
+            if (!"GENERAL".equals(targetUser.getRole()) && !currentUser.getId().equals(targetUser.getId())) {
+                redirectAttributes.addFlashAttribute("errorMessage", "部長は一般社員のみ有効/無効を切り替えられます。");
                 return buildListRedirect(searchName, searchDepartment);
             }
         }

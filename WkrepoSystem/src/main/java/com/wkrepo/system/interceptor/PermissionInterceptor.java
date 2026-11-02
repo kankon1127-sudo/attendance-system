@@ -1,9 +1,11 @@
 package com.wkrepo.system.interceptor;
 
 import com.wkrepo.system.entity.User;
+import com.wkrepo.system.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -12,20 +14,23 @@ import java.util.List;
 
 @Component
 public class PermissionInterceptor implements HandlerInterceptor {
-    
+
     private static final String SESSION_USER = "user";
-    
+
     // 需要管理员权限的路径
     private static final List<String> ADMIN_PATHS = Arrays.asList(
         "/default-attendance-setting",
         "/admin/database-backup"
     );
-    
-    // 需要主管或管理员权限的路径
+
+    // 需要部長・総務・管理员权限的路径（Controller 内还会按部门和角色做细分检查）
     private static final List<String> MANAGER_PATHS = Arrays.asList(
-        // 审批相关路径后续添加
+        "/user-management"
     );
-    
+
+    @Autowired
+    private UserRepository userRepository;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         HttpSession session = request.getSession(false);
@@ -33,13 +38,23 @@ public class PermissionInterceptor implements HandlerInterceptor {
             response.sendRedirect("/login");
             return false;
         }
-        
-        User user = (User) session.getAttribute(SESSION_USER);
-        if (user == null) {
+
+        User sessionUser = (User) session.getAttribute(SESSION_USER);
+        if (sessionUser == null) {
             response.sendRedirect("/login");
             return false;
         }
-        
+
+        // 每次请求都从数据库重新读取：被停用或删除的账号立即失效，角色和部门的变更立即生效
+        User user = sessionUser.getId() == null ? null
+                : userRepository.findById(sessionUser.getId()).orElse(null);
+        if (user == null || "INACTIVE".equals(user.getStatus())) {
+            session.invalidate();
+            response.sendRedirect("/login");
+            return false;
+        }
+        session.setAttribute(SESSION_USER, user);
+
         String requestURI = request.getRequestURI();
         
         // 检查是否需要管理员权限
@@ -50,9 +65,10 @@ public class PermissionInterceptor implements HandlerInterceptor {
             }
         }
         
-        // 检查是否需要主管权限
+        // 检查是否需要部長・総務・管理员权限
         if (requiresManagerPermission(requestURI)) {
-            if (!"MANAGER".equals(user.getRole()) && !"ADMIN".equals(user.getRole())) {
+            if (!"MANAGER".equals(user.getRole()) && !"SOUMU".equals(user.getRole())
+                    && !"ADMIN".equals(user.getRole())) {
                 response.sendRedirect("/home?error=permission");
                 return false;
             }
