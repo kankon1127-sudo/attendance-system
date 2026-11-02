@@ -5,138 +5,133 @@ import com.wkrepo.system.entity.DefaultAttendanceSetting;
 import com.wkrepo.system.repository.UserRepository;
 import com.wkrepo.system.service.DefaultAttendanceSettingService;
 import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 
+/**
+ * 启动时的账号初始化。
+ * - 管理员：数据库里没有任何 ADMIN 时才创建。dev 模式下密码为 123456，
+ *   否则使用环境变量 APP_ADMIN_INITIAL_PASSWORD（未设置则不创建）。
+ * - 测试账号（manager / employee1 / employee2 / soumu）：只在 dev 模式下创建。
+ */
 @Component
 public class DataInitializer {
-    
+
+    private static final Logger logger = LoggerFactory.getLogger(DataInitializer.class);
+
+    private static final String ADMIN_PASSWORD_ENV = "APP_ADMIN_INITIAL_PASSWORD";
+    private static final String DEV_PASSWORD = "123456";
+
     @Autowired
     private UserRepository userRepository;
-    
+
     @Autowired
     private DefaultAttendanceSettingService defaultAttendanceSettingService;
-    
+
+    @Autowired
+    private Environment environment;
+
     @PostConstruct
     public void init() {
-        User savedAdmin = null;
-        User savedManager = null;
-        
-        // 1. 检查并创建管理员
+        boolean devMode = environment.acceptsProfiles(Profiles.of("dev"));
+
+        // 为现有的 admin 补全字段
         Optional<User> adminOpt = userRepository.findByUsername("admin");
-        if (adminOpt.isEmpty()) {
-            User admin = new User();
-            admin.setUsername("admin");
-            admin.setPassword("123456");
-            admin.setName("系统管理员");
-            admin.setEmployeeId("EMP001");
-            admin.setDepartment("管理部");
-            admin.setRole("ADMIN");
-            savedAdmin = userRepository.save(admin);
-            defaultAttendanceSettingService.save(new DefaultAttendanceSetting(savedAdmin));
-            System.out.println("【创建】管理员账号: admin");
-        } else {
-            savedAdmin = adminOpt.get();
-            // 为现有的 admin 补全字段
-            if (savedAdmin.getRole() == null || savedAdmin.getRole().trim().isEmpty()) {
-                savedAdmin.setRole("ADMIN");
+        if (adminOpt.isPresent()) {
+            User admin = adminOpt.get();
+            if (admin.getRole() == null || admin.getRole().trim().isEmpty()) {
+                admin.setRole("ADMIN");
             }
-            if (savedAdmin.getDepartment() == null || savedAdmin.getDepartment().trim().isEmpty()) {
-                savedAdmin.setDepartment("管理部");
+            if (admin.getDepartment() == null || admin.getDepartment().trim().isEmpty()) {
+                admin.setDepartment("管理部");
             }
-            userRepository.save(savedAdmin);
+            userRepository.save(admin);
         }
-        
-        // 2. 检查并创建部门主管
+
+        // 1. 没有任何管理员时创建 admin
+        if (!userRepository.existsByRole("ADMIN")) {
+            createInitialAdmin(devMode);
+        }
+
+        // 2. 测试账号只在 dev 模式下创建
+        if (devMode) {
+            createTestAccounts();
+        }
+    }
+
+    private void createInitialAdmin(boolean devMode) {
+        String password = devMode ? DEV_PASSWORD : environment.getProperty(ADMIN_PASSWORD_ENV);
+        if (password == null || password.trim().length() < 4) {
+            logger.warn("数据库中没有管理员账号，且未设置有效的环境变量 {}（至少 4 个字符），未创建管理员。"
+                    + "请设置该环境变量后重新启动。", ADMIN_PASSWORD_ENV);
+            return;
+        }
+        if (userRepository.existsByUsername("admin") || userRepository.existsByEmployeeId("EMP001")) {
+            logger.warn("数据库中没有管理员账号，但用户名 admin 或社员番号 EMP001 已被其他账号使用，未创建管理员。");
+            return;
+        }
+
+        User admin = new User();
+        admin.setUsername("admin");
+        admin.setPassword(password.trim());
+        admin.setName("系统管理员");
+        admin.setEmployeeId("EMP001");
+        admin.setDepartment("管理部");
+        admin.setRole("ADMIN");
+        User savedAdmin = userRepository.save(admin);
+        defaultAttendanceSettingService.save(new DefaultAttendanceSetting(savedAdmin));
+        logger.info("【创建】管理员账号: admin");
+    }
+
+    private void createTestAccounts() {
+        Long adminId = userRepository.findByUsername("admin").map(User::getId).orElse(null);
+
+        // 部门主管
         Optional<User> managerOpt = userRepository.findByUsername("manager");
+        Long managerId;
         if (managerOpt.isEmpty()) {
-            User manager = new User();
-            manager.setUsername("manager");
-            manager.setPassword("123456");
-            manager.setName("佐藤部长");
-            manager.setEmployeeId("EMP002");
-            manager.setDepartment("开发部");
-            manager.setRole("MANAGER");
-            manager.setManagerId(savedAdmin.getId());
-            savedManager = userRepository.save(manager);
-            defaultAttendanceSettingService.save(new DefaultAttendanceSetting(savedManager));
-            System.out.println("【创建】部门主管账号: manager");
+            managerId = createTestUser("manager", "佐藤部长", "EMP002", "开发部", "MANAGER", adminId);
         } else {
-            savedManager = managerOpt.get();
-        }
-        
-        // 3. 检查并创建普通员工1
-        Optional<User> employee1Opt = userRepository.findByUsername("employee1");
-        if (employee1Opt.isEmpty()) {
-            User employee1 = new User();
-            employee1.setUsername("employee1");
-            employee1.setPassword("123456");
-            employee1.setName("山田太郎");
-            employee1.setEmployeeId("EMP003");
-            employee1.setDepartment("开发部");
-            employee1.setRole("GENERAL");
-            employee1.setManagerId(savedManager.getId());
-            User savedEmployee1 = userRepository.save(employee1);
-            defaultAttendanceSettingService.save(new DefaultAttendanceSetting(savedEmployee1));
-            System.out.println("【创建】普通员工1账号: employee1");
-        }
-        
-        // 4. 检查并创建普通员工2
-        Optional<User> employee2Opt = userRepository.findByUsername("employee2");
-        if (employee2Opt.isEmpty()) {
-            User employee2 = new User();
-            employee2.setUsername("employee2");
-            employee2.setPassword("123456");
-            employee2.setName("田中花子");
-            employee2.setEmployeeId("EMP004");
-            employee2.setDepartment("开发部");
-            employee2.setRole("GENERAL");
-            employee2.setManagerId(savedManager.getId());
-            User savedEmployee2 = userRepository.save(employee2);
-            defaultAttendanceSettingService.save(new DefaultAttendanceSetting(savedEmployee2));
-            System.out.println("【创建】普通员工2账号: employee2");
+            managerId = managerOpt.get().getId();
         }
 
-        // 5. 総務（月報最終承認）
-        Optional<User> soumuOpt = userRepository.findByUsername("soumu");
-        if (soumuOpt.isEmpty()) {
-            User soumu = new User();
-            soumu.setUsername("soumu");
-            soumu.setPassword("123456");
-            soumu.setName("鈴木総務");
-            soumu.setEmployeeId("EMP005");
-            soumu.setDepartment("総務部");
-            soumu.setRole("SOUMU");
-            soumu.setManagerId(savedAdmin.getId());
-            User savedSoumu = userRepository.save(soumu);
-            defaultAttendanceSettingService.save(new DefaultAttendanceSetting(savedSoumu));
-            System.out.println("【创建】総務账号: soumu");
+        // 普通员工
+        if (!userRepository.existsByUsername("employee1")) {
+            createTestUser("employee1", "山田太郎", "EMP003", "开发部", "GENERAL", managerId);
+        }
+        if (!userRepository.existsByUsername("employee2")) {
+            createTestUser("employee2", "田中花子", "EMP004", "开发部", "GENERAL", managerId);
         }
 
-        System.out.println("========================================");
-        System.out.println("所有测试账号就绪:");
-        System.out.println("----------------------------------------");
-        System.out.println("【管理员】");
-        System.out.println("用户名: admin / 密码: 123456");
-        System.out.println("员工ID: EMP001 / 部门: 管理部");
-        System.out.println("----------------------------------------");
-        System.out.println("【部门主管】");
-        System.out.println("用户名: manager / 密码: 123456");
-        System.out.println("员工ID: EMP002 / 部门: 开发部");
-        System.out.println("----------------------------------------");
-        System.out.println("【普通员工1】");
-        System.out.println("用户名: employee1 / 密码: 123456");
-        System.out.println("员工ID: EMP003 / 部门: 开发部");
-        System.out.println("----------------------------------------");
-        System.out.println("【普通员工2】");
-        System.out.println("用户名: employee2 / 密码: 123456");
-        System.out.println("员工ID: EMP004 / 部门: 开发部");
-        System.out.println("----------------------------------------");
-        System.out.println("【総務】");
-        System.out.println("用户名: soumu / 密码: 123456");
-        System.out.println("员工ID: EMP005 / 部门: 総務部");
-        System.out.println("========================================");
+        // 総務（月報最終承認）
+        if (!userRepository.existsByUsername("soumu")) {
+            createTestUser("soumu", "鈴木総務", "EMP005", "総務部", "SOUMU", adminId);
+        }
+    }
+
+    private Long createTestUser(String username, String name, String employeeId,
+                                String department, String role, Long managerId) {
+        if (userRepository.existsByEmployeeId(employeeId)) {
+            logger.warn("社员番号 {} 已被其他账号使用，跳过测试账号 {}", employeeId, username);
+            return null;
+        }
+        User user = new User();
+        user.setUsername(username);
+        user.setPassword(DEV_PASSWORD);
+        user.setName(name);
+        user.setEmployeeId(employeeId);
+        user.setDepartment(department);
+        user.setRole(role);
+        user.setManagerId(managerId);
+        User saved = userRepository.save(user);
+        defaultAttendanceSettingService.save(new DefaultAttendanceSetting(saved));
+        logger.info("【创建】测试账号: {}", username);
+        return saved.getId();
     }
 }

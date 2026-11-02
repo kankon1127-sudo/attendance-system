@@ -31,7 +31,8 @@ if ERRORLEVEL 1 goto :end
 
 echo [3/3] 编译成功！正在启动服务器并打开浏览器: http://localhost:8080/login
 start "" "http://localhost:8080/login"
-call mvnw spring-boot:run "-Dfile.encoding=UTF-8"
+:: dev 模式：数据库为空时自动创建测试账号（密码 123456）
+call mvnw spring-boot:run "-Dfile.encoding=UTF-8" "-Dspring-boot.run.profiles=dev"
 goto :end
 
 :err_no_java

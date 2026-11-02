@@ -21,7 +21,7 @@ if not exist "target\wkrepo-system-1.0.0.jar" (
 
 echo Starting server...
 start "" "http://localhost:8080/login"
-java -jar target\wkrepo-system-1.0.0.jar
+java -jar target\wkrepo-system-1.0.0.jar --spring.profiles.active=dev
 goto end
 
 :err_no_java
