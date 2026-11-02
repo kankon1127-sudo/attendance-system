@@ -661,9 +661,7 @@
                 form.innerHTML =
                     '<input type="hidden" name="date">' +
                     '<input type="hidden" name="year">' +
-                    '<input type="hidden" name="month">' +
-                    '<input type="hidden" name="workHours">' +
-                    '<input type="hidden" name="overtimeHours">';
+                    '<input type="hidden" name="month">';
                 form.elements.namedItem('date').value = date;
                 form.elements.namedItem('year').value = document.getElementById('currentYear').value;
                 form.elements.namedItem('month').value = document.getElementById('currentMonth').value;
@@ -747,10 +745,12 @@
                     return Math.max(0, (endDate - startDate) / 3600000 - pauseMinutes / 60);
                 }
 
+                // 预览用，规则与服务端 AttendanceService.calculateWorkHours 相同（保存后以服务端结果为准）
+                var isRestDay = row.getAttribute('data-rest-day') === 'true';
                 function updateHourPreview() {
                     var hours = calculatedWorkHours();
                     hourValues[0].textContent = hours.toFixed(2);
-                    hourValues[1].textContent = Math.max(0, hours - 8).toFixed(2);
+                    hourValues[1].textContent = (isRestDay ? hours : Math.max(0, hours - 8)).toFixed(2);
                 }
 
                 form.addEventListener('input', updateHourPreview);
@@ -768,10 +768,6 @@
                             return;
                         }
                     }
-                    var workHours = calculatedWorkHours();
-                    form.elements.namedItem('workHours').value = workHours.toFixed(2);
-                    form.elements.namedItem('overtimeHours').value = Math.max(0, workHours - 8).toFixed(2);
-
                     save.disabled = true;
                     fetch(form.action, {
                         method: 'POST',

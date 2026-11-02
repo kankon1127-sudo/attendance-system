@@ -348,11 +348,7 @@ public class AttendanceService {
                 attendance.setBreakTime(LocalTime.of(1, 0));
             }
 
-            // 规则5：保持现有工時計算ロジック (調用 updateAttendance 会自動トリガ calculateWorkHours)
-            // 清除工時フィールド以強制再計算
-            attendance.setWorkHours(null);
-            attendance.setOvertimeHours(null);
-            
+            // 规则5：工时和加班由 updateAttendance → calculateWorkHours 统一计算
             updateAttendance(attendance);
         }
     }
@@ -371,50 +367,72 @@ public class AttendanceService {
         }
     }
     
+    /**
+     * 工时和加班一律在服务端根据上下班时间和休息时间计算，不使用前端传来的值。
+     * 実働 = 退勤 − 出勤（跨零点加 24 小时）− 休憩；残業 = 休息日为全部実働，平日为超过 8 小时的部分。
+     * 前端的预览（attendance.html、layout.html 的手机端编辑）使用相同的规则。
+     */
     private void calculateWorkHours(Attendance attendance) {
-        // 【斩草除根铁律】：只要 Controller 已经传入了工时或加班时间，后端绝对禁止重新计算！
-        // 但有一个例外：如果状态是"-"，无论其他字段如何，都应将工时设为0
         String status = attendance.getAgreement36Status();
-        if (status != null && "-".equals(status)) {
+        if ("-".equals(status) || "欠勤".equals(status) || isPaidLeaveStatus(status)
+                || attendance.getStartTime() == null || attendance.getEndTime() == null) {
             attendance.setWorkHours(BigDecimal.ZERO);
             attendance.setOvertimeHours(BigDecimal.ZERO);
-            return; // 直接返回，不再进行任何计算
-        }
-        
-        // 正常流程：分别判断，防止其中一个为 null 导致另一个被意外覆盖
-        boolean hasWorkHours = attendance.getWorkHours() != null;
-        boolean hasOvertimeHours = attendance.getOvertimeHours() != null;
-
-        if (hasWorkHours && hasOvertimeHours) {
             return;
         }
 
-        // 只有在字段确实缺失的情况下，才基于打卡时间进行"补漏"计算
-        if (attendance.getStartTime() != null && attendance.getEndTime() != null) {
-            long minutes = ChronoUnit.MINUTES.between(attendance.getStartTime(), attendance.getEndTime());
-            if (minutes < 0) minutes += 1440;
-            
-            BigDecimal hours = new BigDecimal(minutes)
-                    .divide(new BigDecimal("60"), 2, RoundingMode.HALF_UP);
-            
-            // 仅在字段为 null 时填充，绝不覆盖已有值（哪怕是 0）
-            if (!hasWorkHours) {
-                attendance.setWorkHours(hours);
-            }
-            
-            if (!hasOvertimeHours) {
-                if (holidayService.isRestDay(attendance.getDate())) {
-                    attendance.setOvertimeHours(hours);
-                } else {
-                    BigDecimal overtime = hours.subtract(STANDARD_WORK_HOURS);
-                    attendance.setOvertimeHours(overtime.compareTo(BigDecimal.ZERO) > 0 ? overtime : BigDecimal.ZERO);
-                }
-            }
-        } else {
-            // 如果既没有传入工时，又没有打卡时间，才兜底填充 0，防止数据库报错
-            if (!hasWorkHours) attendance.setWorkHours(BigDecimal.ZERO);
-            if (!hasOvertimeHours) attendance.setOvertimeHours(BigDecimal.ZERO);
+        long minutes = ChronoUnit.MINUTES.between(attendance.getStartTime(), attendance.getEndTime());
+        if (minutes < 0) minutes += 1440;
+        if (attendance.getBreakTime() != null) {
+            minutes -= attendance.getBreakTime().toSecondOfDay() / 60;
         }
+        if (minutes < 0) minutes = 0;
+
+        BigDecimal hours = new BigDecimal(minutes)
+                .divide(new BigDecimal("60"), 2, RoundingMode.HALF_UP);
+        attendance.setWorkHours(hours);
+
+        if (holidayService.isRestDay(attendance.getDate())) {
+            attendance.setOvertimeHours(hours);
+        } else {
+            BigDecimal overtime = hours.subtract(STANDARD_WORK_HOURS);
+            attendance.setOvertimeHours(overtime.compareTo(BigDecimal.ZERO) > 0 ? overtime : BigDecimal.ZERO);
+        }
+    }
+
+    /**
+     * 按当前规则重算所有未锁定月份（月报未提交或被拒否）的工时和加班。
+     * 已提交、已承认的月份保持原样，避免审批过的数字发生变化。返回有变化的记录数。
+     */
+    public int recalculateUnlockedAttendances() {
+        Map<String, Boolean> lockedMonths = new HashMap<>();
+        int changed = 0;
+        for (Attendance attendance : attendanceRepository.findAll()) {
+            User user = attendance.getUser();
+            LocalDate date = attendance.getDate();
+            if (user == null || date == null) {
+                continue;
+            }
+            boolean locked = lockedMonths.computeIfAbsent(user.getId() + ":" + YearMonth.from(date),
+                    key -> isMonthLocked(user, date.getYear(), date.getMonthValue()));
+            if (locked) {
+                continue;
+            }
+
+            BigDecimal oldWorkHours = attendance.getWorkHours();
+            BigDecimal oldOvertimeHours = attendance.getOvertimeHours();
+            calculateWorkHours(attendance);
+            if (!sameHours(oldWorkHours, attendance.getWorkHours())
+                    || !sameHours(oldOvertimeHours, attendance.getOvertimeHours())) {
+                attendanceRepository.save(attendance);
+                changed++;
+            }
+        }
+        return changed;
+    }
+
+    private boolean sameHours(BigDecimal a, BigDecimal b) {
+        return a != null && b != null && a.compareTo(b) == 0;
     }
     
     private void determineAgreement36Status(Attendance attendance) {

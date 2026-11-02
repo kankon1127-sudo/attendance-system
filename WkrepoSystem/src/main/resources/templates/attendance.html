@@ -172,7 +172,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="day : ${calendarDays}" th:id="'row-' + ${day.day}" th:attr="data-date=${day.date}"
+                    <tr th:each="day : ${calendarDays}" th:id="'row-' + ${day.day}" th:attr="data-date=${day.date},data-rest-day=${day.holiday}"
                         th:with="attendanceStatus=${day.attendance?.agreement36Status},
                                  isNoInput=${attendanceStatus == null or #strings.isEmpty(attendanceStatus) or attendanceStatus == '-'}">
                         <td th:class="${day.sunday || day.holiday ? 'text-danger' : (day.saturday ? 'text-primary' : 'text-muted')}" th:text="${day.dateString}">05-01</td>
@@ -330,8 +330,10 @@
 
                 const bParts = breakTime.split(':');
                 const bMs = (parseInt(bParts[0]) * 60 + (parseInt(bParts[1]) || 0)) * 60000;
+                // 预览用，规则与服务端 AttendanceService.calculateWorkHours 相同（保存后以服务端结果为准）
                 const workH = Math.max(0, (d2 - d1 - bMs) / 3600000);
-                const overH = Math.max(0, workH - 8.0);
+                const isRestDay = document.getElementById('row-' + day).getAttribute('data-rest-day') === 'true';
+                const overH = isRestDay ? workH : Math.max(0, workH - 8.0);
 
                 workHoursCell.innerText = workH.toFixed(2);
                 overtimeHoursCell.innerText = overH.toFixed(2);
@@ -402,20 +404,15 @@
             formData.append('year', document.getElementById('currentYear')?.value || '');
             formData.append('month', document.getElementById('currentMonth')?.value || '');
 
-            // 【保存期物理抹除】：如果区分是非出勤状态，不仅时间传空，工時も必須強制伝 '0.00'，徹底洗浄後端データベース！
+            // 非出勤状态时清空时间。工时和加班由服务端计算，不提交
             if (!status || status === '-' || status === '欠勤' || status === '有給') {
                 formData.append('startTime', '');
                 formData.append('endTime', '');
                 formData.append('breakTime', '');
-                formData.append('workHours', '0.00');       // 核心补丁：强行传0
-                formData.append('overtimeHours', '0.00');   // 核心补丁：强行传0
             } else {
                 formData.append('startTime', document.getElementById('startTime-' + day).value);
                 formData.append('endTime', document.getElementById('endTime-' + day).value);
                 formData.append('breakTime', document.getElementById('breakTime-' + day).value);
-                // 正常状态下，把页面計算好的実働と残業时间传过去
-                formData.append('workHours', document.getElementById('workHours-' + day).innerText || '0.00');
-                formData.append('overtimeHours', document.getElementById('overtimeHours-' + day).innerText || '0.00');
             }
             
             fetch('/attendance/saveInline', {

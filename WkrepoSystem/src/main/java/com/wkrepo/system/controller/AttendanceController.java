@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -227,8 +226,6 @@ public class AttendanceController {
             @RequestParam(value = "breakTime", required = false) String breakTime,
             @RequestParam(value = "agreement36Status", required = false) String status,
             @RequestParam(value = "remarks", required = false) String remarks,
-            @RequestParam(value = "workHours", required = false) BigDecimal workHours,
-            @RequestParam(value = "overtimeHours", required = false) BigDecimal overtimeHours,
             @RequestParam(value = "year", required = false) Integer year,
             @RequestParam(value = "month", required = false) Integer month,
             HttpSession session) {
@@ -253,8 +250,7 @@ public class AttendanceController {
         attendance.setBreakTime(breakTime != null && !breakTime.isEmpty() ? LocalTime.parse(breakTime) : null);
         attendance.setAgreement36Status(status);
         attendance.setRemarks(remarks);
-        attendance.setWorkHours(workHours);
-        attendance.setOvertimeHours(overtimeHours);
+        // 工时和加班由服务端计算，不接收前端的值
 
         attendanceService.updateAttendance(attendance);
 
