@@ -13,8 +13,9 @@ public class MonthlySummaryDTO {
     private BigDecimal nonTaxableTransportExpense; // 非課税交通費
     private BigDecimal travelExpense; // 旅費交通費
     private BigDecimal generalExpense; // 諸経費
-    private BigDecimal totalExpense; // 合計
-    
+    private BigDecimal totalExpense; // 合計（承認済のみ）
+    private BigDecimal pendingExpense; // 申請中（合計に含まない）
+
     public MonthlySummaryDTO() {
         this.workDays = 0;
         this.totalWorkHours = BigDecimal.ZERO;
@@ -23,6 +24,7 @@ public class MonthlySummaryDTO {
         this.travelExpense = BigDecimal.ZERO;
         this.generalExpense = BigDecimal.ZERO;
         this.totalExpense = BigDecimal.ZERO;
+        this.pendingExpense = BigDecimal.ZERO;
     }
     
     // Getters and Setters
@@ -80,5 +82,13 @@ public class MonthlySummaryDTO {
     
     public void setTotalExpense(BigDecimal totalExpense) {
         this.totalExpense = totalExpense;
+    }
+
+    public BigDecimal getPendingExpense() {
+        return pendingExpense;
+    }
+
+    public void setPendingExpense(BigDecimal pendingExpense) {
+        this.pendingExpense = pendingExpense;
     }
 }

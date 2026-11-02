@@ -5,6 +5,7 @@ import com.wkrepo.system.entity.Attendance;
 import com.wkrepo.system.entity.GeneralExpense;
 import com.wkrepo.system.entity.TravelExpense;
 import com.wkrepo.system.entity.User;
+import com.wkrepo.system.enums.ApplicationStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -43,42 +44,33 @@ public class MonthlySummaryService {
     
     private void calculateAttendance(MonthlySummaryDTO summary, User user, LocalDate startDate, LocalDate endDate) {
         List<Attendance> attendances = attendanceService.getAttendancesByUserAndDateRange(user, startDate, endDate);
-        
-        int workDays = 0;
-        BigDecimal totalWorkHours = BigDecimal.ZERO;
-        BigDecimal totalOvertimeHours = BigDecimal.ZERO;
-        
-        for (Attendance attendance : attendances) {
-            // 稼働日数：只有非休日、非未出勤的才算
-            String status = attendance.getAgreement36Status();
-            if (status != null && !status.equals("休日") && !status.equals("未出勤") && !status.equals("-")) {
-                workDays++;
-            }
-            
-            // 累計實働時間
-            if (attendance.getWorkHours() != null) {
-                totalWorkHours = totalWorkHours.add(attendance.getWorkHours());
-            }
-            
-            // 累計残業時間
-            if (attendance.getOvertimeHours() != null) {
-                totalOvertimeHours = totalOvertimeHours.add(attendance.getOvertimeHours());
-            }
-        }
-        
-        summary.setWorkDays(workDays);
-        summary.setTotalWorkHours(totalWorkHours);
-        summary.setTotalOvertimeHours(totalOvertimeHours);
+        // 与勤怠页面、首页、Excel 使用同一个统计方法
+        AttendanceService.MonthlyStatistics statistics =
+                attendanceService.calculateMonthlyStatistics(attendances, YearMonth.from(startDate));
+
+        summary.setWorkDays(statistics.workDays());
+        summary.setTotalWorkHours(statistics.workHours());
+        summary.setTotalOvertimeHours(statistics.overtimeHours());
     }
-    
+
+    /**
+     * 经费合计只计入承認済（与 Excel 导出一致）；申請中的金额另外合计，供参考。
+     */
     private void calculateExpenses(MonthlySummaryDTO summary, User user, LocalDate startDate, LocalDate endDate) {
-        // 統計旅費交通費
-        List<TravelExpense> travelExpenses = travelExpenseService.getTravelExpensesByUserAndDateRange(user, startDate, endDate);
         BigDecimal travelExpenseTotal = BigDecimal.ZERO;
         BigDecimal nonTaxableTotal = BigDecimal.ZERO;
-        
+        BigDecimal generalExpenseTotal = BigDecimal.ZERO;
+        BigDecimal pendingTotal = BigDecimal.ZERO;
+
+        // 統計旅費交通費
+        List<TravelExpense> travelExpenses = travelExpenseService.getTravelExpensesByUserAndDateRange(user, startDate, endDate);
         for (TravelExpense expense : travelExpenses) {
-            if (expense.getAmount() != null) {
+            if (expense.getAmount() == null) {
+                continue;
+            }
+            if (expense.getStatus() == ApplicationStatus.PENDING) {
+                pendingTotal = pendingTotal.add(expense.getAmount());
+            } else if (expense.getStatus() == ApplicationStatus.APPROVED) {
                 if ("非課税交通費".equals(expense.getType())) {
                     nonTaxableTotal = nonTaxableTotal.add(expense.getAmount());
                 } else {
@@ -86,20 +78,24 @@ public class MonthlySummaryService {
                 }
             }
         }
-        
+
         // 統計諸経費
         List<GeneralExpense> generalExpenses = generalExpenseService.getGeneralExpensesByUserAndDateRange(user, startDate, endDate);
-        BigDecimal generalExpenseTotal = BigDecimal.ZERO;
-        
         for (GeneralExpense expense : generalExpenses) {
-            if (expense.getAmount() != null) {
+            if (expense.getAmount() == null) {
+                continue;
+            }
+            if (expense.getStatus() == ApplicationStatus.PENDING) {
+                pendingTotal = pendingTotal.add(expense.getAmount());
+            } else if (expense.getStatus() == ApplicationStatus.APPROVED) {
                 generalExpenseTotal = generalExpenseTotal.add(expense.getAmount());
             }
         }
-        
+
         summary.setNonTaxableTransportExpense(nonTaxableTotal);
         summary.setTravelExpense(travelExpenseTotal);
         summary.setGeneralExpense(generalExpenseTotal);
         summary.setTotalExpense(nonTaxableTotal.add(travelExpenseTotal).add(generalExpenseTotal));
+        summary.setPendingExpense(pendingTotal);
     }
 }

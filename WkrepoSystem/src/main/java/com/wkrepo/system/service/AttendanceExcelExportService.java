@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 
 /**
  * 月度勤怠・経費集計の Excel 出力。
- * - 勤怠集計：每人一行（勤怠合计 + 承認済经费合计）
+ * - 勤怠集計：每人一行（勤怠合计用 AttendanceService.calculateMonthlyStatistics + 承認済经费合计）
  * - 交通費明細 / 諸経費明細：逐笔列出所有状态的经费，表尾为承認済合计
  */
 @Service
@@ -45,6 +45,12 @@ public class AttendanceExcelExportService {
     private static final String NON_TAXABLE_TRAVEL = "非課税交通費";
     private static final String APPROVED_TOTAL_LABEL = "承認済合計";
     private static final int HEADER_ROW = 2;
+
+    private final AttendanceService attendanceService;
+
+    public AttendanceExcelExportService(AttendanceService attendanceService) {
+        this.attendanceService = attendanceService;
+    }
 
     public byte[] exportMonthlyAttendance(List<User> users, List<Attendance> attendances,
                                           List<TravelExpense> travelExpenses, List<GeneralExpense> generalExpenses,
@@ -104,13 +110,14 @@ public class AttendanceExcelExportService {
                 .toList();
         int rowNumber = HEADER_ROW + 1;
         for (User user : orderedUsers) {
-            EmployeeTotals totals = calculateTotals(attendanceByUser.getOrDefault(user.getId(), List.of()));
+            AttendanceService.MonthlyStatistics totals = attendanceService.calculateMonthlyStatistics(
+                    attendanceByUser.getOrDefault(user.getId(), List.of()), yearMonth);
             ExpenseTotals expenses = expenseByUser.getOrDefault(user.getId(), new ExpenseTotals());
             Row row = sheet.createRow(rowNumber++);
             row.createCell(0).setCellValue(textOf(user.getEmployeeId()));
             row.createCell(1).setCellValue(textOf(user.getName()));
             row.createCell(2).setCellValue(textOf(user.getDepartment()));
-            row.createCell(3).setCellValue(totals.attendanceDays());
+            row.createCell(3).setCellValue(totals.workDays());
             setNumber(row, 4, totals.workHours(), styles.hours);
             setNumber(row, 5, totals.overtimeHours(), styles.hours);
             setNumber(row, 6, expenses.nonTaxableTravel, styles.amount);
@@ -172,33 +179,6 @@ public class AttendanceExcelExportService {
         int dataEnd = rowNumber;
         writeApprovedTotal(sheet, styles, rowNumber + 1, 5, approvedTotal);
         finishSheet(sheet, GENERAL_HEADERS.size(), dataEnd);
-    }
-
-    /**
-     * 勤怠合计。工时和加班直接使用每天的值（服务端已按规则计算，休息日的加班已包含当天全部工时），
-     * 不再在这里额外调整，与勤怠页面的月度统计一致。
-     */
-    private EmployeeTotals calculateTotals(List<Attendance> attendances) {
-        BigDecimal workHours = BigDecimal.ZERO;
-        BigDecimal overtimeHours = BigDecimal.ZERO;
-        int attendanceDays = 0;
-
-        for (Attendance attendance : attendances) {
-            String status = attendance.getAgreement36Status();
-            if (status == null || status.isBlank() || "-".equals(status)
-                    || "欠勤".equals(status) || "有給".equals(status)) {
-                continue;
-            }
-
-            workHours = workHours.add(valueOrZero(attendance.getWorkHours()));
-            overtimeHours = overtimeHours.add(valueOrZero(attendance.getOvertimeHours()));
-
-            if ("出社".equals(status) || "在宅".equals(status)) {
-                attendanceDays++;
-            }
-        }
-
-        return new EmployeeTotals(attendanceDays, workHours, overtimeHours);
     }
 
     private void writeTitle(Sheet sheet, YearMonth yearMonth, String title) {
@@ -328,6 +308,4 @@ public class AttendanceExcelExportService {
             return nonTaxableTravel.add(travel).add(general);
         }
     }
-
-    private record EmployeeTotals(int attendanceDays, BigDecimal workHours, BigDecimal overtimeHours) {}
 }

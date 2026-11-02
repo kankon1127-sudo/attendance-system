@@ -153,6 +153,10 @@ public class AttendanceService {
         return attendanceRepository.findByUserAndDateBetweenOrderByDateAsc(user, startDate, endDate);
     }
 
+    /**
+     * 月度勤怠统计的唯一实现。勤怠页面、首页、月报、Excel 导出都使用这里的结果。
+     * 跳过 -/欠勤/有給/空 的记录；出勤天数只统计工时 > 0 的 出社/在宅。
+     */
     public MonthlyStatistics calculateMonthlyStatistics(List<Attendance> attendances, YearMonth yearMonth) {
         BigDecimal totalWorkHours = BigDecimal.ZERO;
         BigDecimal totalOvertimeHours = BigDecimal.ZERO;
@@ -163,7 +167,7 @@ public class AttendanceService {
                 continue;
             }
             String status = attendance.getAgreement36Status();
-            boolean excludedStatus = "-".equals(status) || "欠勤".equals(status) || "有給".equals(status);
+            boolean excludedStatus = "-".equals(status) || "欠勤".equals(status) || isPaidLeaveStatus(status);
             if (excludedStatus || status == null || status.isBlank()) {
                 continue;
             }

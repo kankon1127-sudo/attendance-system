@@ -399,6 +399,10 @@
                         <span class="info-label" th:text="#{monthly.total}">合計</span>
                         <span class="info-value total" th:text="${summary.totalExpense} + '円'">0円</span>
                     </div>
+                    <div class="info-item" th:if="${summary.pendingExpense != null and summary.pendingExpense.signum() > 0}">
+                        <span class="info-label" th:text="#{monthly.pendingExpense}">申請中（合計に含まない）</span>
+                        <span class="info-value" th:text="${summary.pendingExpense} + '円'">0円</span>
+                    </div>
                 </div>
             </div>
         </div>
