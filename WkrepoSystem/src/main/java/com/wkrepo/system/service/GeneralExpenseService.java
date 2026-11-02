@@ -41,6 +41,10 @@ public class GeneralExpenseService {
     public List<GeneralExpense> getGeneralExpensesByUserAndDateRange(User user, LocalDate startDate, LocalDate endDate) {
         return generalExpenseRepository.findByUserAndDateBetweenOrderByDateAsc(user, startDate, endDate);
     }
+
+    public List<GeneralExpense> getAllGeneralExpensesByDateRange(LocalDate startDate, LocalDate endDate) {
+        return generalExpenseRepository.findByDateBetweenOrderByDateAsc(startDate, endDate);
+    }
     
     public GeneralExpense getGeneralExpenseById(Long id) {
         return generalExpenseRepository.findById(id).orElse(null);

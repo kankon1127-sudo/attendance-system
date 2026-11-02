@@ -26,6 +26,10 @@ public class TravelExpenseService {
         return travelExpenseRepository.findByUserAndExpenseDateBetweenOrderByExpenseDateAsc(user, startDate, endDate);
     }
     
+    public List<TravelExpense> getAllTravelExpensesByDateRange(LocalDate startDate, LocalDate endDate) {
+        return travelExpenseRepository.findByExpenseDateBetweenOrderByExpenseDateAsc(startDate, endDate);
+    }
+
     public List<TravelExpense> getAllTravelExpensesByUser(User user) {
         return travelExpenseRepository.findByUserOrderByExpenseDateDesc(user);
     }

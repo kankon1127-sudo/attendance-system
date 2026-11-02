@@ -3,12 +3,16 @@ package com.wkrepo.system.controller;
 import com.wkrepo.system.dto.AttendanceAnomaly;
 import com.wkrepo.system.entity.Attendance;
 import com.wkrepo.system.entity.DefaultAttendanceSetting;
+import com.wkrepo.system.entity.GeneralExpense;
+import com.wkrepo.system.entity.TravelExpense;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.repository.UserRepository;
 import com.wkrepo.system.service.AttendanceService;
 import com.wkrepo.system.service.AttendanceExcelExportService;
 import com.wkrepo.system.service.DefaultAttendanceSettingService;
+import com.wkrepo.system.service.GeneralExpenseService;
 import com.wkrepo.system.service.HolidayService;
+import com.wkrepo.system.service.TravelExpenseService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ContentDisposition;
@@ -53,6 +57,12 @@ public class AttendanceController {
 
     @Autowired
     private AttendanceExcelExportService attendanceExcelExportService;
+
+    @Autowired
+    private TravelExpenseService travelExpenseService;
+
+    @Autowired
+    private GeneralExpenseService generalExpenseService;
 
     /**
      * 1. 勤怠入力 画面表示逻辑
@@ -187,9 +197,13 @@ public class AttendanceController {
                 .filter(user -> canViewAttendance(currentUser, user))
                 .toList();
         List<Attendance> attendances = attendanceService.getAllAttendancesByDateRange(startDate, endDate);
+        List<TravelExpense> travelExpenses = travelExpenseService.getAllTravelExpensesByDateRange(startDate, endDate);
+        List<GeneralExpense> generalExpenses = generalExpenseService.getAllGeneralExpensesByDateRange(startDate, endDate);
 
         try {
-            byte[] workbook = attendanceExcelExportService.exportMonthlyAttendance(visibleUsers, attendances, yearMonth);
+            // 经费按 visibleUsers 过滤，可见范围与勤怠相同
+            byte[] workbook = attendanceExcelExportService.exportMonthlyAttendance(
+                    visibleUsers, attendances, travelExpenses, generalExpenses, yearMonth);
             String filename = "attendance-" + yearMonth + ".xlsx";
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType(
