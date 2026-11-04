@@ -471,7 +471,7 @@
                 </div>
                 <div class="filter-spacer"></div>
                 <div class="filter-count">
-                    <span th:text="#{application.resultCount}">該当件数：</span><strong th:text="${#lists.size(applications)}">0</strong>
+                    <span th:text="#{application.resultCount}">該当件数：</span><strong th:text="${totalCount}">0</strong>
                 </div>
             </form>
         </div>
@@ -523,7 +523,7 @@
                         th:attr="data-application-id=${app.id},data-application-type=${app.applicationType}"
                         th:with="stName=${app.status != null ? #strings.toLowerCase(app.status.name()) : 'pending'},
                                  isPending=${stName == 'pending' or stName == 'submitted' or stName == 'draft' or stName == 'manager_approved'}">
-                        <td style="text-align: center;" th:text="'#' + ${iterStat.index + 1}">#1</td>
+                        <td style="text-align: center;" th:text="'#' + ${pageOffset + iterStat.index + 1}">#1</td>
                         <td style="text-align: left;" th:text="${app.applicantName}">山田太郎</td>
                         <td style="text-align: left;" th:text="${app.applicantDepartment}">開発部</td>
                         <td style="text-align: center;">
@@ -558,20 +558,24 @@
                                         <input type="hidden" name="id" th:value="${app.id}">
                                         <input type="hidden" name="type" th:value="${app.applicationType}">
                                         <button type="submit" class="btn-approve"
-                                                th:text="${app.applicationType == 'MONTHLY_REPORT' and app.status != null and app.status.name() == 'MANAGER_APPROVED' ? '最終承認' : '承認'}"
-                                                onclick="return confirm('承認してもよろしいですか？')">承認</button>
+                                                th:text="${app.applicationType == 'MONTHLY_REPORT' and app.status != null and app.status.name() == 'MANAGER_APPROVED' ? #messages.msg('application.finalApproval') : #messages.msg('application.approve')}"
+                                                th:data-confirm="#{application.approveConfirm}"
+                                                onclick="return confirm(this.dataset.confirm)">承認</button>
                                     </form>
                                     <form method="POST" action="/application/reject" style="display: inline;">
                                         <input type="hidden" name="id" th:value="${app.id}">
                                         <input type="hidden" name="type" th:value="${app.applicationType}">
-                                        <button type="submit" class="btn-reject" onclick="return confirm('拒否してもよろしいですか？')">拒否</button>
+                                        <button type="submit" class="btn-reject" th:text="#{application.reject}"
+                                                th:data-confirm="#{application.rejectConfirm}"
+                                                onclick="return confirm(this.dataset.confirm)">拒否</button>
                                     </form>
                                 </th:block>
                                 <form th:if="${app.canWithdraw}" method="POST" action="/application/withdraw" style="display: inline;">
                                     <input type="hidden" name="id" th:value="${app.id}">
                                     <button type="submit" class="btn btn-outline-secondary"
                                             th:text="#{monthly.withdraw}"
-                                            onclick="return confirm(this.textContent + 'してもよろしいですか？')">撤回</button>
+                                            th:data-confirm="#{monthly.withdrawConfirm}"
+                                            onclick="return confirm(this.dataset.confirm)">撤回</button>
                                 </form>
                             </div>
                         </td>
@@ -580,6 +584,26 @@
                 </table>
             </div>
         </div>
+
+        <!-- ページ切り替え（絞り込み条件を保持） -->
+        <nav class="d-flex justify-content-center mt-3" th:if="${totalPages > 1}" th:attr="aria-label=#{application.pagination}">
+            <ul class="pagination mb-0">
+                <li class="page-item" th:classappend="${page <= 1} ? ' disabled'">
+                    <a class="page-link" th:href="@{/application/list(filterType=${filterType},filterStatus=${filterStatus},page=${page - 1})}"
+                       th:attr="aria-label=#{application.pagePrev}">&lsaquo;</a>
+                </li>
+                <li class="page-item" th:each="p : ${#numbers.sequence(pageWindowStart, pageWindowEnd)}"
+                    th:classappend="${p == page} ? ' active'">
+                    <a class="page-link" th:href="@{/application/list(filterType=${filterType},filterStatus=${filterStatus},page=${p})}"
+                       th:text="${p}">1</a>
+                </li>
+                <li class="page-item" th:classappend="${page >= totalPages} ? ' disabled'">
+                    <a class="page-link" th:href="@{/application/list(filterType=${filterType},filterStatus=${filterStatus},page=${page + 1})}"
+                       th:attr="aria-label=#{application.pageNext}">&rsaquo;</a>
+                </li>
+            </ul>
+            <span class="ms-3 align-self-center text-muted small" th:text="${page} + ' / ' + ${totalPages}">1 / 3</span>
+        </nav>
     </div>
 
     <div class="modal fade" id="applicationDetailModal" tabindex="-1" aria-labelledby="applicationDetailModalLabel" aria-hidden="true">
@@ -868,7 +892,7 @@
                     '</div>' +
                     '<div class="detail-info-item">' +
                         '<div class="detail-info-label">' + applicationMessages.amount + '</div>' +
-                        '<span class="detail-info-value" style="color: #2563eb;">' + (d.travelAmount || 0) + ' 円</span>' +
+                        '<span class="detail-info-value" style="color: #2563eb;">' + (d.travelAmount || 0) + ' ' + applicationMessages.yenUnit + '</span>' +
                     '</div>' +
                     '<div class="detail-info-item full">' +
                         '<div class="detail-info-label">' + applicationMessages.route + '</div>' +
@@ -896,7 +920,7 @@
                     '</div>' +
                     '<div class="detail-info-item">' +
                         '<div class="detail-info-label">' + applicationMessages.amount + '</div>' +
-                        '<span class="detail-info-value" style="color: #2563eb;">' + (d.generalAmount || 0) + ' 円</span>' +
+                        '<span class="detail-info-value" style="color: #2563eb;">' + (d.generalAmount || 0) + ' ' + applicationMessages.yenUnit + '</span>' +
                     '</div>' +
                     '<div class="detail-info-item full">' +
                         '<div class="detail-info-label">' + applicationMessages.summary + '</div>' +

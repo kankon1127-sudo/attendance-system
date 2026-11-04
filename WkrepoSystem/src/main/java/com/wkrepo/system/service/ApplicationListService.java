@@ -107,45 +107,34 @@ public class ApplicationListService {
         boolean includePaidLeave = (filterType == null || filterType.isEmpty() || "PAID_LEAVE".equals(filterType));
         boolean includeMonthly = (filterType == null || filterType.isEmpty() || "MONTHLY_REPORT".equals(filterType));
 
-        // ========== 1. 交通费 ==========
+        // ========== 1. 交通費 ==========
         if (includeTravel) try {
             List<TravelExpense> travelExpenses;
             if (canViewAll) {
-                travelExpenses = travelExpenseRepository.findAll();
+                travelExpenses = travelExpenseRepository.findAllWithUser();
             } else if (isManager) {
-                travelExpenses = travelExpenseRepository.findAll().stream()
-                        .filter(te -> {
-                            if (te == null || te.getUser() == null) return false;
-                            if (te.getUser().getId().equals(currentUserId)) return true;
-                            return currentUser.getDepartment() != null &&
-                                    currentUser.getDepartment().equals(te.getUser().getDepartment());
-                        })
-                        .collect(Collectors.toList());
+                // 自分の分 + 自部署の分（DB で絞り込み）
+                travelExpenses = travelExpenseRepository.findByUserIdOrDepartment(
+                        currentUserId, currentUser.getDepartment());
             } else {
                 travelExpenses = travelExpenseRepository.findByUserId(currentUserId);
             }
-            log.info("[ApplicationListService] 交通费取得完了 count={}", travelExpenses.size());
+            log.info("[ApplicationListService] 交通費取得完了 count={}", travelExpenses.size());
             for (TravelExpense te : travelExpenses) {
                 items.add(convertToApplicationItem(te, currentUser));
             }
         } catch (Exception e) {
-            log.error("[ApplicationListService] 交通费取得でエラー", e);
+            log.error("[ApplicationListService] 交通費取得でエラー", e);
         }
 
-        // ========== 2. 诸费用 ==========
+        // ========== 2. 諸経費 ==========
         if (includeGeneral) try {
             List<GeneralExpense> generalExpenses;
             if (canViewAll) {
-                generalExpenses = generalExpenseRepository.findAll();
+                generalExpenses = generalExpenseRepository.findAllWithUser();
             } else if (isManager) {
-                generalExpenses = generalExpenseRepository.findAll().stream()
-                        .filter(ge -> {
-                            if (ge == null || ge.getUser() == null) return false;
-                            if (ge.getUser().getId().equals(currentUserId)) return true;
-                            return currentUser.getDepartment() != null &&
-                                    currentUser.getDepartment().equals(ge.getUser().getDepartment());
-                        })
-                        .collect(Collectors.toList());
+                generalExpenses = generalExpenseRepository.findByUserIdOrDepartment(
+                        currentUserId, currentUser.getDepartment());
             } else {
                 generalExpenses = generalExpenseRepository.findByUserId(currentUserId);
             }
@@ -157,20 +146,14 @@ public class ApplicationListService {
             log.error("[ApplicationListService] 諸経費取得でエラー", e);
         }
 
-        // ========== 3. 年假 ==========
+        // ========== 3. 年休 ==========
         if (includePaidLeave) try {
             List<PaidLeave> paidLeaves;
             if (canViewAll) {
-                paidLeaves = paidLeaveRepository.findAll();
+                paidLeaves = paidLeaveRepository.findAllWithUser();
             } else if (isManager) {
-                paidLeaves = paidLeaveRepository.findAll().stream()
-                        .filter(pl -> {
-                            if (pl == null || pl.getUser() == null) return false;
-                            if (pl.getUser().getId().equals(currentUserId)) return true;
-                            return currentUser.getDepartment() != null &&
-                                    currentUser.getDepartment().equals(pl.getUser().getDepartment());
-                        })
-                        .collect(Collectors.toList());
+                paidLeaves = paidLeaveRepository.findByUserIdOrDepartment(
+                        currentUserId, currentUser.getDepartment());
             } else {
                 paidLeaves = paidLeaveRepository.findByUserId(currentUserId);
             }
@@ -182,27 +165,14 @@ public class ApplicationListService {
             log.error("[ApplicationListService] 年休取得でエラー", e);
         }
 
-        // ========== 4. 月报（核心追加！） ==========
+        // ========== 4. 月報 ==========
         if (includeMonthly) try {
             List<MonthlyReport> monthlyReports;
             if (canViewAll) {
-                monthlyReports = monthlyReportRepository.findAll();
+                monthlyReports = monthlyReportRepository.findAllWithUser();
             } else if (isManager) {
-                monthlyReports = monthlyReportRepository.findAll().stream()
-                        .filter(mr -> {
-                            if (mr == null || mr.getUser() == null) return false;
-                            Long applicantId = mr.getUser().getId();
-                            // 自己的月报都显示
-                            if (applicantId.equals(currentUserId)) return true;
-                            // approverId 是自己的 + 状态是待审批(SUBMITTED)
-                            if (currentUserId.equals(mr.getApproverId()) && ApplicationStatus.SUBMITTED.equals(mr.getStatus())) {
-                                return true;
-                            }
-                            // 显示本部门所有成员的月报
-                            return currentUser.getDepartment() != null &&
-                                   currentUser.getDepartment().equals(mr.getUser().getDepartment());
-                        })
-                        .collect(Collectors.toList());
+                // 自分の分、自部署の分、および自分が承認者に指定された承認待ち（SUBMITTED）のもの
+                monthlyReports = monthlyReportRepository.findForManager(currentUserId, currentUser.getDepartment());
             } else {
                 monthlyReports = monthlyReportRepository.findByUserId(currentUserId);
             }
@@ -221,7 +191,7 @@ public class ApplicationListService {
                     .collect(Collectors.toList());
         }
 
-        // 按申请日期降序排序
+        // 申請日の降順で並べ替え
         try {
             items.sort(Comparator.comparing(ApplicationItem::getApplicationDate).reversed());
         } catch (Exception e) {
@@ -229,6 +199,11 @@ public class ApplicationListService {
         }
         log.info("[ApplicationListService] getApplicationsForUser 完了 合計count={}", items.size());
         return items;
+    }
+
+    /** 画面の言語で文言を取得する（申請一覧の表示用ラベル） */
+    private String label(String key, Object... args) {
+        return messageSource.getMessage(key, args, key, LocaleContextHolder.getLocale());
     }
 
     private static final DecimalFormat YEN_FORMAT;
@@ -283,14 +258,14 @@ public class ApplicationListService {
         }
     }
 
-    // ===== 交通费转换 =====
+    // ===== 交通費の変換 =====
     private ApplicationItem convertToApplicationItem(TravelExpense te, User currentUser) {
         ApplicationItem item = new ApplicationItem();
         item.setId(te.getId());
         item.setApplicantName(te.getUser().getName());
         item.setApplicantDepartment(te.getUser().getDepartment());
         item.setApplicationType("TRAVEL");
-        item.setApplicationTypeLabel("交通費");
+        item.setApplicationTypeLabel(label("application.type.TRAVEL"));
         item.setApplicationDate(te.getCreatedAt() != null ? te.getCreatedAt() : LocalDateTime.now());
         item.setAmount(te.getAmount());
         item.setAmountLabel(formatYen(te.getAmount()));
@@ -299,14 +274,14 @@ public class ApplicationListService {
         return item;
     }
 
-    // ===== 诸费用转换 =====
+    // ===== 諸経費の変換 =====
     private ApplicationItem convertToApplicationItem(GeneralExpense ge, User currentUser) {
         ApplicationItem item = new ApplicationItem();
         item.setId(ge.getId());
         item.setApplicantName(ge.getUser().getName());
         item.setApplicantDepartment(ge.getUser().getDepartment());
         item.setApplicationType("GENERAL");
-        item.setApplicationTypeLabel("諸経費");
+        item.setApplicationTypeLabel(label("application.type.GENERAL"));
         item.setApplicationDate(ge.getCreatedAt() != null ? ge.getCreatedAt() : LocalDateTime.now());
         item.setAmount(ge.getAmount());
         item.setAmountLabel(formatYen(ge.getAmount()));
@@ -315,42 +290,42 @@ public class ApplicationListService {
         return item;
     }
 
-    // ===== 年假转换 =====
+    // ===== 年休の変換 =====
     private ApplicationItem convertToApplicationItem(PaidLeave pl, User currentUser) {
         ApplicationItem item = new ApplicationItem();
         item.setId(pl.getId());
         item.setApplicantName(pl.getUser().getName());
         item.setApplicantDepartment(pl.getUser().getDepartment());
         item.setApplicationType("PAID_LEAVE");
-        item.setApplicationTypeLabel("年休");
+        item.setApplicationTypeLabel(label("application.type.PAID_LEAVE"));
         item.setApplicationDate(pl.getCreatedAt() != null ? pl.getCreatedAt() : LocalDateTime.now());
         BigDecimal days = pl.getLeaveDays() != null ? pl.getLeaveDays() : BigDecimal.ZERO;
         item.setAmount(days);
-        item.setAmountLabel(pl.getLeaveDays() != null ? pl.getLeaveDays() + " 日" : "0 日");
+        item.setAmountLabel(label("application.amount.days", days.toPlainString()));
         item.setStatus(pl.getStatus() != null ? pl.getStatus() : ApplicationStatus.PENDING);
         item.setCanApprove(canApprove(currentUser, pl.getUser(), item.getStatus(), null, "PAID_LEAVE"));
         return item;
     }
 
-    // ===== 月报转换（新！） =====
+    // ===== 月報の変換 =====
     private ApplicationItem convertToApplicationItem(MonthlyReport mr, User currentUser) {
         ApplicationItem item = new ApplicationItem();
         item.setId(mr.getId());
         item.setApplicantName(mr.getUser() != null ? mr.getUser().getName() : "");
         item.setApplicantDepartment(mr.getUser() != null ? mr.getUser().getDepartment() : "");
         item.setApplicationType("MONTHLY_REPORT");
-        item.setApplicationTypeLabel("月報");
-        // 申请日期：月报的 updatedAt 或者 createdAt 作为申请日
+        item.setApplicationTypeLabel(label("application.type.MONTHLY_REPORT"));
+        // 申請日：月報の updatedAt または createdAt を申請日とする
         LocalDateTime applyDate = mr.getUpdatedAt() != null ? mr.getUpdatedAt() : mr.getCreatedAt();
         if (applyDate == null) applyDate = LocalDateTime.now();
         item.setApplicationDate(applyDate);
-        // 月报不设金额，设0
+        // 月報は金額がないため 0 を設定
         item.setAmount(BigDecimal.ZERO);
-        item.setAmountLabel(mr.getYear() + "年" + mr.getMonth() + "月");
-        // 状态：月报DRAFT也视为PENDING展示
+        item.setAmountLabel(label("application.amount.month", String.valueOf(mr.getYear()), String.valueOf(mr.getMonth())));
+        // ステータス：月報の DRAFT も PENDING として表示
         ApplicationStatus status = mr.getStatus() != null ? mr.getStatus() : ApplicationStatus.DRAFT;
         item.setStatus(status);
-        // 月报的审批权限判断：需要传入 approverId
+        // 月報の承認権限判定：approverId を渡す必要がある
         item.setCanApprove(canApprove(currentUser, mr.getUser(), status, mr.getApproverId(), "MONTHLY_REPORT"));
         item.setCanWithdraw(currentUser != null && currentUser.getId() != null
                 && mr.getUser() != null && currentUser.getId().equals(mr.getUser().getId())
@@ -359,7 +334,7 @@ public class ApplicationListService {
     }
 
     /**
-     * 是否可以审批
+     * 承認できるかどうか
      */
     private boolean canApprove(User currentUser, User applicant, ApplicationStatus status, Long approverId, String applicationType) {
         if (applicant == null || currentUser == null || status == null) return false;
@@ -422,7 +397,7 @@ public class ApplicationListService {
         log.info("[ApplicationListService] getApplicationDetail 開始 id={}, type={}, userId={}",
                 id, type, currentUser != null ? currentUser.getId() : null);
         if (id == null || type == null) {
-            throw new IllegalArgumentException("id and type must not be null");
+            throw new IllegalArgumentException("application.error.invalidRequest");
         }
 
         ApplicationDetailDTO dto = new ApplicationDetailDTO();
@@ -443,7 +418,7 @@ public class ApplicationListService {
                 fillMonthlyReportDetail(dto, id, currentUser);
                 break;
             default:
-                throw new IllegalArgumentException("Unknown application type: " + type);
+                throw new IllegalArgumentException("application.error.invalidRequest");
         }
 
         log.info("[ApplicationListService] getApplicationDetail 完了 id={}, type={}", id, type);
@@ -461,7 +436,7 @@ public class ApplicationListService {
             throw new SecurityException("Permission denied: cannot view this application");
         }
 
-        dto.setApplicationTypeLabel("交通費");
+        dto.setApplicationTypeLabel(label("application.type.TRAVEL"));
         dto.setApplicantName(applicant != null ? applicant.getName() : "");
         dto.setApplicantDepartment(applicant != null ? applicant.getDepartment() : "");
         ApplicationStatus status = te.getStatus() != null ? te.getStatus() : ApplicationStatus.PENDING;
@@ -490,7 +465,7 @@ public class ApplicationListService {
             throw new SecurityException("Permission denied: cannot view this application");
         }
 
-        dto.setApplicationTypeLabel("諸経費");
+        dto.setApplicationTypeLabel(label("application.type.GENERAL"));
         dto.setApplicantName(applicant != null ? applicant.getName() : "");
         dto.setApplicantDepartment(applicant != null ? applicant.getDepartment() : "");
         ApplicationStatus status = ge.getStatus() != null ? ge.getStatus() : ApplicationStatus.PENDING;
@@ -518,7 +493,7 @@ public class ApplicationListService {
             throw new SecurityException("Permission denied: cannot view this application");
         }
 
-        dto.setApplicationTypeLabel("年休");
+        dto.setApplicationTypeLabel(label("application.type.PAID_LEAVE"));
         dto.setApplicantName(applicant != null ? applicant.getName() : "");
         dto.setApplicantDepartment(applicant != null ? applicant.getDepartment() : "");
         ApplicationStatus status = pl.getStatus() != null ? pl.getStatus() : ApplicationStatus.PENDING;
@@ -546,7 +521,7 @@ public class ApplicationListService {
             throw new SecurityException("Permission denied: cannot view this application");
         }
 
-        dto.setApplicationTypeLabel("月報");
+        dto.setApplicationTypeLabel(label("application.type.MONTHLY_REPORT"));
         dto.setApplicantName(applicant != null ? applicant.getName() : "");
         dto.setApplicantDepartment(applicant != null ? applicant.getDepartment() : "");
         ApplicationStatus status = mr.getStatus() != null ? mr.getStatus() : ApplicationStatus.DRAFT;
@@ -609,7 +584,7 @@ public class ApplicationListService {
         LocalDate end = ym.atEndOfMonth();
         DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         DateTimeFormatter labelFmt = DateTimeFormatter.ofPattern("MM-dd");
-        String[] dowNames = {"日", "月", "火", "水", "木", "金", "土"};
+        Locale locale = LocaleContextHolder.getLocale();
 
         List<Attendance> records = attendanceService.getAttendancesByUserAndDateRange(user, start, end);
         Map<LocalDate, Attendance> recordMap = new HashMap<>();
@@ -626,7 +601,7 @@ public class ApplicationListService {
             item.setDate(d.format(dateFmt));
             item.setDateLabel(d.format(labelFmt));
             DayOfWeek dow = d.getDayOfWeek();
-            item.setDayOfWeek(dowNames[dow.getValue() % 7]);
+            item.setDayOfWeek(dow.getDisplayName(java.time.format.TextStyle.SHORT, locale));
             item.setSaturday(dow == DayOfWeek.SATURDAY);
             item.setSunday(dow == DayOfWeek.SUNDAY);
             try {

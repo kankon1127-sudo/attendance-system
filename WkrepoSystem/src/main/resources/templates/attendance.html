@@ -40,13 +40,13 @@
     <input type="hidden" id="currentYear" th:value="${currentYear}">
     <input type="hidden" id="currentMonth" th:value="${currentMonth}">
 
-    <!-- 终极修复：高颜值 Flex 横排数据卡片 -->
+    <!-- Flex で横並びにした統計カード -->
     <div class="attendance-stat-cards d-flex gap-3 mb-4 w-100" style="justify-content: space-between;">
         <!-- 稼働日数 -->
         <div class="flex-fill bg-white shadow-sm border rounded-3 p-3 text-center">
             <div class="text-secondary small fw-bold mb-2" th:text="#{attendance.daysWorked}">稼働日数</div>
             <div class="h2 fw-bold mb-0 text-primary">
-                <span id="totalWorkDays" th:text="${totalWorkDays}">0</span><span class="fs-6 fw-normal text-muted ms-1">日</span>
+                <span id="totalWorkDays" th:text="${totalWorkDays}">0</span><span class="fs-6 fw-normal text-muted ms-1" th:text="#{common.daysUnit}">日</span>
             </div>
         </div>
         <!-- 実働時間 -->
@@ -100,13 +100,13 @@
         <div class="small" th:text="#{agreement36.note}">集計方法の説明</div>
     </div>
 
-    <!-- 月份切换与工具栏：独立カードレイアウト，確保上下並べ -->
+    <!-- 月切り替えとツールバー：独立したカードレイアウトで上下に並べる -->
     <div class="attendance-header-card p-3 mb-4">
         <div class="row align-items-center">
-            <!-- 左側：月份切り替えロジック -->
+            <!-- 左側：月の切り替え -->
             <div class="col-md-5">
                 <div class="d-flex align-items-center gap-3">
-                    <h4 class="mb-0 fw-bold text-primary" th:text="${currentYear + '年' + currentMonth + '月'}">2024年1月</h4>
+                    <h4 class="mb-0 fw-bold text-primary" th:text="#{common.yearMonth(${'' + currentYear}, ${'' + currentMonth})}">2024年1月</h4>
                     <div class="btn-group shadow-sm">
                         <a th:href="@{/attendance(year=${prevYear}, month=${prevMonth})}" class="btn btn-white btn-sm border bg-white">
                             <i class="bi bi-chevron-left"></i> <span th:text="#{attendance.previousMonth}">前月</span>
@@ -129,7 +129,7 @@
                     </a>
                 </div>
             </div>
-            <!-- 新增：默认值显示 -->
+            <!-- デフォルト値の表示 -->
             <div class="col-md-12 mt-2" th:if="${defaultSetting != null}">
                 <div class="card bg-light border-0">
                     <div class="card-body py-2 px-3">
@@ -151,7 +151,7 @@
                                 <span th:text="${defaultSetting.defaultBreakMinutes != null ? (defaultSetting.defaultBreakMinutes / 60 + ':' + #numbers.formatInteger(defaultSetting.defaultBreakMinutes % 60, 2)) : '-'}">01:00</span>
                             </div>
                             <div class="attendance-default-values-item">
-                                <span class="fw-bold">区分:</span>
+                                <span class="fw-bold" th:text="#{attendance.status} + ':'">区分:</span>
                                 <span th:text="${defaultSetting.defaultAgreement36Status ?: '-'}">出社</span>
                             </div>
                         </div>
@@ -292,14 +292,14 @@
             if (selectedValue) {
                 const [year, month] = selectedValue.split(',');
                 
-                // 获取当前年月作为最大限制
+                // 現在の年月を上限として取得
                 const maxCurrentYear = parseInt(document.getElementById('currentYear').value);
                 const maxCurrentMonth = parseInt(document.getElementById('currentMonth').value);
                 
-                // 检查所选月份是否超过当前月份
+                // 選択した月が当月を超えていないかチェック
                 if (year > maxCurrentYear || (year == maxCurrentYear && month > maxCurrentMonth)) {
                     alert(attendanceMessages.futureMonth);
-                    // 重置为当前月份
+                    // 当月に戻す
                     document.getElementById('monthSelector').value = maxCurrentYear + ',' + maxCurrentMonth;
                     return;
                 }
@@ -310,7 +310,7 @@
 
         function handleStatusChange(day) {
             const status = document.getElementById('status-' + day).value;
-            // 【未入力铁律】：如果选择重置类状态，物理抹除前端输入框
+            // 【未入力の鉄則】：リセット系のステータスを選んだ場合は入力欄をクリアする
             if (!status || status === '-' || status === '欠勤' || status === '有給') {
                 document.getElementById('startTime-' + day).value = '';
                 document.getElementById('endTime-' + day).value = '';
@@ -328,7 +328,7 @@
             const workHoursCell = document.getElementById('workHours-' + day);
             const overtimeHoursCell = document.getElementById('overtimeHours-' + day);
 
-            // 【未入力逻辑】：状态无效或时间不全，强制清零显示
+            // 【未入力の処理】：ステータスが無効、または時刻が揃っていない場合は 0 を表示する
             if (!status || status === '-' || status === '欠勤' || status === '有給' || !startTime || !endTime) {
                 workHoursCell.innerText = '0.00';
                 overtimeHoursCell.innerText = '0.00';
@@ -343,7 +343,7 @@
 
                 const bParts = breakTime.split(':');
                 const bMs = (parseInt(bParts[0]) * 60 + (parseInt(bParts[1]) || 0)) * 60000;
-                // 预览用，规则与服务端 AttendanceService.calculateWorkHours 相同（保存后以服务端结果为准）
+                // プレビュー用。ルールはサーバー側の AttendanceService.calculateWorkHours と同じ（保存後はサーバー側の結果が正）
                 const workH = Math.max(0, (d2 - d1 - bMs) / 3600000);
                 const isRestDay = document.getElementById('row-' + day).getAttribute('data-rest-day') === 'true';
                 const overH = isRestDay ? workH : Math.max(0, workH - 8.0);
@@ -365,10 +365,10 @@
                 const oh = parseFloat(document.getElementById('overtimeHours-' + dayId).innerText) || 0;
                 const status = document.getElementById('status-' + dayId)?.value || '';
 
-                // 累加工时
+                // 実働時間を加算
                 totalWH += wh;
                 totalOH += oh;
-                // 只有"出社"或"在宅"状态且工时大于0才计入出勤天数
+                // "出社"または"在宅"で実働が 0 より大きい場合のみ出勤日数に数える
                 if ((status === '出社' || status === '在宅') && wh > 0) totalDays++;
             });
             document.getElementById('totalWorkDays').innerText = totalDays;
@@ -417,7 +417,7 @@
             formData.append('year', document.getElementById('currentYear')?.value || '');
             formData.append('month', document.getElementById('currentMonth')?.value || '');
 
-            // 非出勤状态时清空时间。工时和加班由服务端计算，不提交
+            // 出勤以外のステータスでは時刻をクリアする。実働時間と残業時間はサーバー側で計算するため送信しない
             if (!status || status === '-' || status === '欠勤' || status === '有給') {
                 formData.append('startTime', '');
                 formData.append('endTime', '');

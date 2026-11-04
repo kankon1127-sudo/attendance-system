@@ -1,6 +1,7 @@
 package com.wkrepo.system.service;
 
 import com.wkrepo.system.entity.User;
+import com.wkrepo.system.exception.BusinessException;
 import com.wkrepo.system.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -19,7 +20,7 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
-    /** 密码一律以 BCrypt 哈希保存。所有设置密码的地方都要经过这里 */
+    /** パスワードは必ず BCrypt ハッシュで保存する。パスワードを設定する処理はすべてここを通すこと */
     public static String encodePassword(String rawPassword) {
         return PASSWORD_ENCODER.encode(rawPassword);
     }
@@ -29,7 +30,7 @@ public class UserService {
     }
 
     /**
-     * 把库中残留的明文密码转换为哈希（启动时执行；恢复旧备份后再次启动也会处理）。返回转换的件数。
+     * DB に残っている平文パスワードをハッシュに変換する（起動時に実行。旧バックアップを復元して再起動した場合も処理される）。変換した件数を返す。
      */
     public int encodePlainTextPasswords() {
         int converted = 0;
@@ -52,7 +53,7 @@ public class UserService {
         if (isEncoded(stored)) {
             return PASSWORD_ENCODER.matches(rawPassword, stored);
         }
-        // 运行中恢复了含明文密码的旧备份时：验证一次后立即转换为哈希
+        // 稼働中に平文パスワードを含む旧バックアップを復元した場合：一度認証した時点でハッシュに変換する
         if (stored.equals(rawPassword)) {
             user.setPassword(encodePassword(rawPassword));
             userRepository.save(user);
@@ -64,18 +65,18 @@ public class UserService {
     public User login(String username, String password) {
         Optional<User> userOpt = userRepository.findByUsername(username);
         if (userOpt.isEmpty()) {
-            throw new RuntimeException("ユーザーが存在しません。");
+            throw new RuntimeException("login.error.userNotFound");
         }
         
         User user = userOpt.get();
         if ("INACTIVE".equals(user.getStatus())) {
-            throw new RuntimeException("このアカウントは無効化されています。管理者に連絡してください。");
+            throw new RuntimeException("login.error.inactive");
         }
         if (!passwordMatches(user, password)) {
-            throw new RuntimeException("パスワードが正しくありません。");
+            throw new RuntimeException("login.error.wrongPassword");
         }
         
-        // 补全 null 字段，给予默认值
+        // null の項目にデフォルト値を設定
         if (user.getRole() == null || user.getRole().trim().isEmpty()) {
             user.setRole("GENERAL");
         }
@@ -88,22 +89,22 @@ public class UserService {
     
     public User createUser(User user) {
         if (user.getUsername() == null || user.getUsername().isBlank()) {
-            throw new RuntimeException("ユーザー名を入力してください。");
+            throw new RuntimeException("user.error.usernameRequired");
         }
         if (user.getPassword() == null || user.getPassword().isBlank()) {
-            throw new RuntimeException("パスワードを入力してください。");
+            throw new RuntimeException("user.error.passwordRequired");
         }
         if (user.getName() == null || user.getName().isBlank()) {
-            throw new RuntimeException("氏名を入力してください。");
+            throw new RuntimeException("user.error.nameRequired");
         }
         if (user.getEmployeeId() == null || user.getEmployeeId().isBlank()) {
-            throw new RuntimeException("社員番号を入力してください。");
+            throw new RuntimeException("user.error.employeeIdRequired");
         }
         if (userRepository.existsByUsername(user.getUsername())) {
-            throw new RuntimeException("ユーザー名は既に存在します: " + user.getUsername());
+            throw new BusinessException("user.error.usernameExists", user.getUsername());
         }
         if (userRepository.existsByEmployeeId(user.getEmployeeId())) {
-            throw new RuntimeException("社員番号は既に存在します: " + user.getEmployeeId());
+            throw new BusinessException("user.error.employeeIdExists", user.getEmployeeId());
         }
         if (user.getRole() == null || user.getRole().isBlank()) {
             user.setRole("GENERAL");
@@ -125,12 +126,12 @@ public class UserService {
     
     public User getUserById(Long id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("用户不存在，ID: " + id));
+                .orElseThrow(() -> new RuntimeException("user.error.notFound"));
     }
     
     public User getUserByUsername(String username) {
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("用户不存在: " + username));
+                .orElseThrow(() -> new RuntimeException("user.error.notFound"));
     }
     
     public List<User> getAllUsers() {
@@ -143,13 +144,13 @@ public class UserService {
 
     public void updatePassword(Long userId, String newPassword) {
         if (newPassword == null || newPassword.trim().isEmpty()) {
-            throw new RuntimeException("パスワードが空です。");
+            throw new RuntimeException("user.error.passwordRequired");
         }
         if (newPassword.length() < 4) {
-            throw new RuntimeException("パスワードは4文字以上必要です。");
+            throw new RuntimeException("user.error.passwordTooShort");
         }
         User u = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("ユーザーが存在しません ID=" + userId));
+                .orElseThrow(() -> new RuntimeException("user.error.notFound"));
         u.setPassword(encodePassword(newPassword));
         userRepository.save(u);
     }

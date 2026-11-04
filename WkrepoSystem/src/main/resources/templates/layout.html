@@ -374,7 +374,7 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- 左側导航栏 -->
+        <!-- 左サイドナビ -->
         <div class="sidebar" id="sidebarNavigation">
             <div class="sidebar-header">
                 <div>
@@ -428,9 +428,9 @@
             </nav>
         </div>
         
-        <!-- 右側主内容区 -->
+        <!-- 右側メインコンテンツ -->
         <div class="main-content">
-            <!-- 顶部栏 -->
+            <!-- トップバー -->
             <div class="top-bar">
                 <div class="top-bar-left">
                     <button type="button" class="sidebar-toggle" th:attr="aria-label=#{common.menu}"
@@ -470,7 +470,7 @@
                 </div>
             </div>
             
-            <!-- 主内容区域 -->
+            <!-- メインコンテンツ領域 -->
             <div class="content-area">
                 <th:block th:replace="~{::main-content}"></th:block>
             </div>
@@ -738,7 +738,7 @@
                     return Math.max(0, (endDate - startDate) / 3600000 - pauseMinutes / 60);
                 }
 
-                // 预览用，规则与服务端 AttendanceService.calculateWorkHours 相同（保存后以服务端结果为准）
+                // プレビュー用。ルールはサーバー側の AttendanceService.calculateWorkHours と同じ（保存後はサーバー側の結果が正）
                 var isRestDay = row.getAttribute('data-rest-day') === 'true';
                 function updateHourPreview() {
                     var hours = calculatedWorkHours();

@@ -33,10 +33,10 @@ public class MonthlySummaryService {
         LocalDate startDate = yearMonth.atDay(1);
         LocalDate endDate = yearMonth.atEndOfMonth();
         
-        // 1. 统计勤務実績
+        // 1. 勤務実績の集計
         calculateAttendance(summary, user, startDate, endDate);
         
-        // 2. 統計経費
+        // 2. 経費の集計
         calculateExpenses(summary, user, startDate, endDate);
         
         return summary;
@@ -44,7 +44,7 @@ public class MonthlySummaryService {
     
     private void calculateAttendance(MonthlySummaryDTO summary, User user, LocalDate startDate, LocalDate endDate) {
         List<Attendance> attendances = attendanceService.getAttendancesByUserAndDateRange(user, startDate, endDate);
-        // 与勤怠页面、首页、Excel 使用同一个统计方法
+        // 勤怠画面・ホーム・Excel と同じ集計メソッドを使う
         AttendanceService.MonthlyStatistics statistics =
                 attendanceService.calculateMonthlyStatistics(attendances, YearMonth.from(startDate));
 
@@ -54,7 +54,7 @@ public class MonthlySummaryService {
     }
 
     /**
-     * 经费合计只计入承認済（与 Excel 导出一致）；申請中的金额另外合计，供参考。
+     * 経費の合計には承認済のみを含める（Excel 出力と同じ）。申請中の金額は参考として別に合計する。
      */
     private void calculateExpenses(MonthlySummaryDTO summary, User user, LocalDate startDate, LocalDate endDate) {
         BigDecimal travelExpenseTotal = BigDecimal.ZERO;
@@ -62,7 +62,7 @@ public class MonthlySummaryService {
         BigDecimal generalExpenseTotal = BigDecimal.ZERO;
         BigDecimal pendingTotal = BigDecimal.ZERO;
 
-        // 統計旅費交通費
+        // 旅費交通費の集計
         List<TravelExpense> travelExpenses = travelExpenseService.getTravelExpensesByUserAndDateRange(user, startDate, endDate);
         for (TravelExpense expense : travelExpenses) {
             if (expense.getAmount() == null) {
@@ -79,7 +79,7 @@ public class MonthlySummaryService {
             }
         }
 
-        // 統計諸経費
+        // 諸経費の集計
         List<GeneralExpense> generalExpenses = generalExpenseService.getGeneralExpensesByUserAndDateRange(user, startDate, endDate);
         for (GeneralExpense expense : generalExpenses) {
             if (expense.getAmount() == null) {

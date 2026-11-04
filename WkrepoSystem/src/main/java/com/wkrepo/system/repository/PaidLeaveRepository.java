@@ -31,4 +31,11 @@ public interface PaidLeaveRepository extends JpaRepository<PaidLeave, Long> {
     Double getTotalLeaveDaysByUserAndDateRange(@Param("userId") Long userId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
     
     List<PaidLeave> findByUserId(Long userId);
+
+    // 申請一覧用：申請者もまとめて取得し、1 件ずつの読み込み（N+1）を避ける
+    @Query("SELECT p FROM PaidLeave p JOIN FETCH p.user")
+    List<PaidLeave> findAllWithUser();
+
+    @Query("SELECT p FROM PaidLeave p JOIN FETCH p.user u WHERE u.id = :userId OR u.department = :department")
+    List<PaidLeave> findByUserIdOrDepartment(@Param("userId") Long userId, @Param("department") String department);
 }

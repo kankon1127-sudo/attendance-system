@@ -23,7 +23,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** 年休申请删除：只有本人，且只能删除申請中 / 拒否 的申请 */
+/** 年休申請の削除：本人のみ、かつ 申請中 / 拒否 の申請に限る */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class PaidLeaveServiceTest {

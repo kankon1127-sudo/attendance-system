@@ -30,8 +30,8 @@ import java.util.stream.Collectors;
 
 /**
  * 月度勤怠・経費集計の Excel 出力。
- * - 勤怠集計：每人一行（勤怠合计用 AttendanceService.calculateMonthlyStatistics + 承認済经费合计）
- * - 交通費明細 / 諸経費明細：逐笔列出所有状态的经费，表尾为承認済合计
+ * - 勤怠集計：1 人 1 行（勤怠の合計は AttendanceService.calculateMonthlyStatistics、経費は承認済の合計）
+ * - 交通費明細 / 諸経費明細：全ステータスの経費を 1 件ずつ出力し、末尾行は承認済の合計
  */
 @Service
 public class AttendanceExcelExportService {
@@ -55,7 +55,7 @@ public class AttendanceExcelExportService {
     public byte[] exportMonthlyAttendance(List<User> users, List<Attendance> attendances,
                                           List<TravelExpense> travelExpenses, List<GeneralExpense> generalExpenses,
                                           YearMonth yearMonth) throws IOException {
-        // 只输出 users（调用方已按权限过滤）的数据
+        // users（呼び出し側で権限により絞り込み済み）のデータのみ出力する
         Set<Long> visibleUserIds = users.stream().map(User::getId).collect(Collectors.toSet());
         Map<Long, List<Attendance>> attendanceByUser = new HashMap<>();
         for (Attendance attendance : attendances) {
@@ -209,7 +209,7 @@ public class AttendanceExcelExportService {
         setNumber(row, labelColumn + 1, total, styles.boldAmount);
     }
 
-    /** 列宽自适应、冻结表头、筛选范围只包含数据行（不含表尾合计） */
+    /** 列幅の自動調整、ヘッダー行の固定、フィルター範囲はデータ行のみ（末尾の合計行は含まない） */
     private void finishSheet(Sheet sheet, int columnCount, int dataEndExclusive) {
         for (int column = 0; column < columnCount; column++) {
             sheet.autoSizeColumn(column);

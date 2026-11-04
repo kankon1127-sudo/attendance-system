@@ -1,5 +1,6 @@
 package com.wkrepo.system.controller;
 
+import com.wkrepo.system.config.Messages;
 import com.wkrepo.system.entity.TravelExpense;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.service.ApplicationNotificationService;
@@ -36,6 +37,9 @@ public class TravelExpenseController {
 
     @Autowired
     private AttendanceService attendanceService;
+
+    @Autowired
+    private Messages messages;
     
     @GetMapping
     public String showTravelExpense(
@@ -104,7 +108,7 @@ public class TravelExpenseController {
         List<Integer> availableYears = generateAvailableYears(startYearMonth, currentYearMonthForModel);
         model.addAttribute("availableYears", availableYears);
         
-        // 分页按钮逻辑
+        // ページングボタンの処理
         YearMonth prev = yearMonth.minusMonths(1);
         YearMonth next = yearMonth.plusMonths(1);
         model.addAttribute("prevYear", prev.getYear());
@@ -161,13 +165,13 @@ public class TravelExpenseController {
             
             logger.info("Redirecting to year: {}, month: {} after saving expense", year, month);
             
-            // 构建重定向URL，确保参数有效
+            // リダイレクト URL を組み立てる（パラメータが有効であることを保証）
             String redirectUrl = "/travel-expense?year=" + year + "&month=" + month;
             
             return "redirect:" + redirectUrl;
         } catch (Exception e) {
             logger.error("Error saving travel expense", e);
-            redirectAttributes.addFlashAttribute("expenseErrorMessage", e.getMessage());
+            redirectAttributes.addFlashAttribute("expenseErrorMessage", messages.of(e));
             return "redirect:/travel-expense?year=" + redirectYear + "&month=" + redirectMonth;
         }
     }
@@ -191,7 +195,7 @@ public class TravelExpenseController {
             logger.info("Successfully deleted travel expense with ID: {}", id);
         } catch (Exception e) {
             logger.error("Error deleting travel expense with ID: {}", id, e);
-            redirectAttributes.addFlashAttribute("expenseErrorMessage", e.getMessage());
+            redirectAttributes.addFlashAttribute("expenseErrorMessage", messages.of(e));
         }
         
         Integer year = effectiveDate.getYear();

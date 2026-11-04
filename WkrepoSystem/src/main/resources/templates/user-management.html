@@ -268,7 +268,7 @@
                 <label class="form-label" th:text="#{user.password}">パスワード</label>
                 <div class="row-action-bottom">
                     <div class="input-group-pwd flex-grow-1">
-                        <input type="password" name="password" id="createPassword" class="form-control" required placeholder="4文字以上" minlength="4">
+                        <input type="password" name="password" id="createPassword" class="form-control" required th:placeholder="#{user.passwordMinLength}" minlength="4">
                         <button type="button" class="pwd-toggle"
                                 onclick="togglePwd('createPassword', this)" th:title="#{user.showHidePassword}">
                             <i class="bi bi-eye-slash"></i>

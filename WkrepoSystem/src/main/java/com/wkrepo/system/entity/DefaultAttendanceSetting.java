@@ -12,7 +12,7 @@ public class DefaultAttendanceSetting {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // /attendance/getDefaultSetting 返回 JSON 时不输出（延迟加载的代理无法序列化，也不需要用户信息）
+    // /attendance/getDefaultSetting の JSON には出力しない（遅延ロードのプロキシはシリアライズできず、ユーザー情報も不要）
     @JsonIgnore
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -38,7 +38,7 @@ public class DefaultAttendanceSetting {
 
     public DefaultAttendanceSetting(User user) {
         this.user = user;
-        // 设置默认值
+        // デフォルト値を設定
         this.defaultStartTime = LocalTime.of(8, 30);
         this.defaultEndTime = LocalTime.of(18, 0);
         this.defaultBreakMinutes = 60;

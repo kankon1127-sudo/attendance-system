@@ -32,7 +32,7 @@ public class GeneralExpenseService {
     
     public void deleteGeneralExpense(Long id, User user) {
         GeneralExpense existing = generalExpenseRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("諸経費データが見つかりません。"));
+                .orElseThrow(() -> new IllegalArgumentException("expense.error.generalNotFound"));
         ensureOwner(existing.getUser(), user);
         attendanceService.ensureMonthEditable(existing.getUser(), existing.getDate());
         generalExpenseRepository.delete(existing);
@@ -61,7 +61,7 @@ public class GeneralExpenseService {
     private void validateEditableExpense(GeneralExpense expense) {
         if (expense.getId() != null) {
             GeneralExpense existing = generalExpenseRepository.findById(expense.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("諸経費データが見つかりません。"));
+                    .orElseThrow(() -> new IllegalArgumentException("expense.error.generalNotFound"));
             ensureOwner(existing.getUser(), expense.getUser());
             attendanceService.ensureMonthEditable(existing.getUser(), existing.getDate());
         }
@@ -71,7 +71,7 @@ public class GeneralExpenseService {
     private void ensureOwner(User owner, User currentUser) {
         if (owner == null || owner.getId() == null || currentUser == null || currentUser.getId() == null
                 || !Objects.equals(owner.getId(), currentUser.getId())) {
-            throw new SecurityException("自分の諸経費データのみ変更できます。");
+            throw new SecurityException("expense.error.generalNotOwner");
         }
     }
 }

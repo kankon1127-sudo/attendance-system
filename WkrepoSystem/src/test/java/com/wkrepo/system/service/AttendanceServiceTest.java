@@ -60,11 +60,11 @@ class AttendanceServiceTest {
                 .thenReturn(Optional.empty());
     }
 
-    // ---------- 工时计算（所有保存入口都经过 updateAttendance → calculateWorkHours） ----------
+    // ---------- 実働時間の計算（すべての保存経路が updateAttendance → calculateWorkHours を通る） ----------
 
     @ParameterizedTest(name = "{0}")
     @CsvSource({
-            // 说明,                         日期,        区分, 出勤,  退勤,  休憩,  期望実働, 期望残業
+            // 説明,                         日付,        区分, 出勤,  退勤,  休憩,  期待実働, 期待残業
             "'平日 9-18 休1h',              2026-11-02, 出社, 09:00, 18:00, 01:00, 8.00, 0.00",
             "'平日 9-21 休1h 有加班',        2026-11-02, 在宅, 09:00, 21:00, 01:00, 11.00, 3.00",
             "'周日 9-19 休1h 全部算加班',    2026-11-01, 出社, 09:00, 19:00, 01:00, 9.00, 9.00",
@@ -121,7 +121,7 @@ class AttendanceServiceTest {
         assertThat(saved.getOvertimeHours()).isEqualByComparingTo("0");
     }
 
-    // ---------- 月份锁定 ----------
+    // ---------- 月のロック ----------
 
     @Test
     void rejectsChangesToSubmittedMonth() {
@@ -145,18 +145,18 @@ class AttendanceServiceTest {
         assertThat(attendanceService.isMonthLocked(user, 2026, 11)).isTrue();
     }
 
-    // ---------- 月度统计（勤怠页面、首页、月报、Excel 共用） ----------
+    // ---------- 月次統計（勤怠画面・ホーム・月報・Excel で共通） ----------
 
     @Test
     void monthlyStatisticsCountOnlyWorkedOfficeAndRemoteDays() {
         List<Attendance> attendances = List.of(
                 TestData.attendanceWithHours(user, "2026-11-02", "出社", "8.00", "0.00"),
                 TestData.attendanceWithHours(user, "2026-11-03", "在宅", "3.00", "3.00"),
-                TestData.attendanceWithHours(user, "2026-11-04", "有給", "8.00", "0.00"),  // 跳过
-                TestData.attendanceWithHours(user, "2026-11-05", "欠勤", "1.00", "0.00"),  // 跳过
-                TestData.attendanceWithHours(user, "2026-11-06", "-", "1.00", "0.00"),     // 跳过
-                TestData.attendanceWithHours(user, "2026-11-09", "出社", "0.00", "0.00"),  // 工时为 0 不算天数
-                TestData.attendanceWithHours(user, "2026-10-30", "出社", "8.00", "0.00")); // 其他月份
+                TestData.attendanceWithHours(user, "2026-11-04", "有給", "8.00", "0.00"),  // スキップ
+                TestData.attendanceWithHours(user, "2026-11-05", "欠勤", "1.00", "0.00"),  // スキップ
+                TestData.attendanceWithHours(user, "2026-11-06", "-", "1.00", "0.00"),     // スキップ
+                TestData.attendanceWithHours(user, "2026-11-09", "出社", "0.00", "0.00"),  // 実働 0 は日数に含めない
+                TestData.attendanceWithHours(user, "2026-10-30", "出社", "8.00", "0.00")); // 他の月
 
         AttendanceService.MonthlyStatistics statistics =
                 attendanceService.calculateMonthlyStatistics(attendances, YearMonth.of(2026, 11));
@@ -166,7 +166,7 @@ class AttendanceServiceTest {
         assertThat(statistics.overtimeHours()).isEqualByComparingTo("3.00");
     }
 
-    // ---------- 启动时的重算 ----------
+    // ---------- 起動時の再計算 ----------
 
     @Test
     void recalculationSkipsLockedMonths() {

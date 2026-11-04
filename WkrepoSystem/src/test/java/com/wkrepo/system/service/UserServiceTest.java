@@ -53,7 +53,7 @@ class UserServiceTest {
         userWithPassword(UserService.encodePassword("secret1"));
 
         assertThatThrownBy(() -> userService.login("user1", "wrong"))
-                .hasMessageContaining("パスワード");
+                .hasMessage("login.error.wrongPassword");
     }
 
     @Test
@@ -62,7 +62,7 @@ class UserServiceTest {
         user.setStatus("INACTIVE");
 
         assertThatThrownBy(() -> userService.login("user1", "secret1"))
-                .hasMessageContaining("無効");
+                .hasMessage("login.error.inactive");
     }
 
     @Test

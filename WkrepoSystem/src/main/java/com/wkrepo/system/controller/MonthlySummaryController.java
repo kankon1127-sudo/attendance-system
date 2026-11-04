@@ -1,5 +1,6 @@
 package com.wkrepo.system.controller;
 
+import com.wkrepo.system.config.Messages;
 import com.wkrepo.system.dto.MonthlySummaryDTO;
 import com.wkrepo.system.entity.MonthlyReport;
 import com.wkrepo.system.entity.User;
@@ -39,6 +40,9 @@ public class MonthlySummaryController {
 
     @Autowired
     private Agreement36Service agreement36Service;
+
+    @Autowired
+    private Messages messages;
 
     @Autowired
     private UserRepository userRepository;
@@ -119,16 +123,7 @@ public class MonthlySummaryController {
         model.addAttribute("workContent", workContent);
         model.addAttribute("approvalSteps", getApprovalSteps(currentStep));
 
-        String statusText = "下書き";
-        if (currentStep == 2) {
-            statusText = "提出済";
-        } else if (currentStep == 3) {
-            statusText = "リーダー承認済";
-        } else if (currentStep >= 4) {
-            statusText = "総務確認済";
-        }
-        model.addAttribute("statusText", statusText);
-        log.info("[月報サマリー] 表示データ設定完了 currentStep={}, statusText={}", currentStep, statusText);
+        log.info("[月報サマリー] 表示データ設定完了 currentStep={}", currentStep);
 
         try {
             MonthlySummaryDTO summary = monthlySummaryService.calculateMonthlySummary(user, currentYear, currentMonth);
@@ -168,7 +163,7 @@ public class MonthlySummaryController {
             log.error("[月報サマリー] 下書き保存失敗 userId={}, year={}, month={}",
                     user.getId(), year, month, e);
             redirectAttributes.addFlashAttribute("errorMessage",
-                    e.getMessage() != null ? e.getMessage() : "月報の下書き保存に失敗しました。");
+                    messages.of(e));
         }
         return "redirect:/monthly-summary?year=" + year + "&month=" + month;
     }
@@ -192,7 +187,7 @@ public class MonthlySummaryController {
                                         || "ADMIN".equals(manager.getRole()))
                                 .orElse(null);
                 if (directApprover == null || !directApprover.getId().equals(approverId)) {
-                    throw new IllegalArgumentException("直属上司未设置或审批人信息不正确，请联系管理员更新员工信息。");
+                    throw new IllegalArgumentException("monthly.error.noDirectApprover");
                 }
                 log.info("[月報サマリー] 提出開始 userId={}, year={}, month={}, approverId={}, workContentLength={}",
                         user.getId(), year, month, directApprover.getId(),
@@ -205,7 +200,7 @@ public class MonthlySummaryController {
                 log.error("[月報サマリー] 提出失敗 userId={}, year={}, month={}",
                         user.getId(), year, month, e);
                 redirectAttributes.addFlashAttribute("errorMessage",
-                        e.getMessage() != null ? e.getMessage() : "月報の提出に失敗しました。");
+                        messages.of(e));
             }
         }
         return "redirect:/monthly-summary?year=" + year + "&month=" + month;
@@ -216,14 +211,6 @@ public class MonthlySummaryController {
         for (int i = 1; i <= 4; i++) {
             Map<String, Object> stepMap = new HashMap<>();
             stepMap.put("step", i);
-            String name = switch (i) {
-                case 1 -> "下書き";
-                case 2 -> "提出済";
-                case 3 -> "リーダー承認";
-                case 4 -> "総務確認";
-                default -> "";
-            };
-            stepMap.put("name", name);
             stepMap.put("active", i == currentStep);
             stepMap.put("completed", i < currentStep);
             steps.add(stepMap);

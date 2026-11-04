@@ -1,5 +1,6 @@
 package com.wkrepo.system.controller;
 
+import com.wkrepo.system.config.Messages;
 import com.wkrepo.system.entity.GeneralExpense;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.service.ApplicationNotificationService;
@@ -33,6 +34,9 @@ public class GeneralExpenseController {
 
     @Autowired
     private ApplicationNotificationService applicationNotificationService;
+
+    @Autowired
+    private Messages messages;
     
     @GetMapping
     public String showGeneralExpense(
@@ -77,7 +81,7 @@ public class GeneralExpenseController {
         List<Integer> availableYears = generateAvailableYears(today);
         model.addAttribute("availableYears", availableYears);
         
-        // 分页按钮逻辑
+        // ページングボタンの処理
         YearMonth prev = yearMonth.minusMonths(1);
         YearMonth next = yearMonth.plusMonths(1);
         model.addAttribute("prevYear", prev.getYear());
@@ -112,7 +116,7 @@ public class GeneralExpenseController {
             expense.setUser(user);
             GeneralExpense savedExpense = generalExpenseService.saveGeneralExpense(expense);
 
-            // 与交通费相同：只对一般员工通知上司；通知失败不影响保存
+            // 交通費と同様：一般社員の場合のみ上司に通知する。通知に失敗しても保存には影響しない
             ApplicationNotificationService.Result notificationResult;
             try {
                 notificationResult = applicationNotificationService.notifyManager(
@@ -139,7 +143,7 @@ public class GeneralExpenseController {
             return "redirect:" + redirectUrl;
         } catch (Exception e) {
             logger.error("Error saving general expense", e);
-            redirectAttributes.addFlashAttribute("expenseErrorMessage", e.getMessage());
+            redirectAttributes.addFlashAttribute("expenseErrorMessage", messages.of(e));
             return "redirect:/general-expense?year=" + year + "&month=" + month;
         }
     }
@@ -162,7 +166,7 @@ public class GeneralExpenseController {
             logger.info("Successfully deleted general expense with ID: {}", id);
         } catch (Exception e) {
             logger.error("Error deleting general expense with ID: {}", id, e);
-            redirectAttributes.addFlashAttribute("expenseErrorMessage", e.getMessage());
+            redirectAttributes.addFlashAttribute("expenseErrorMessage", messages.of(e));
         }
         
         return "redirect:/general-expense?year=" + year + "&month=" + month;

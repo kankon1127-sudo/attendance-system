@@ -16,11 +16,11 @@ import org.springframework.stereotype.Component;
 import java.util.Optional;
 
 /**
- * 启动时的账号初始化。
- * - 管理员：数据库里没有任何 ADMIN 时才创建。dev 模式下密码为 123456，
- *   否则使用环境变量 APP_ADMIN_INITIAL_PASSWORD（未设置则不创建）。
- * - 测试账号（manager / employee1 / employee2 / soumu）：只在 dev 模式下创建。
- * - 库中残留的明文密码转换为 BCrypt 哈希。
+ * 起動時のアカウント初期化。
+ * - 管理者：DB に ADMIN が 1 件もない場合のみ作成する。dev モードではパスワードは 123456、
+ *   それ以外は環境変数 APP_ADMIN_INITIAL_PASSWORD を使う（未設定なら作成しない）。
+ * - テストアカウント（manager / employee1 / employee2 / soumu）：dev モードでのみ作成する。
+ * - DB に残っている平文パスワードを BCrypt ハッシュに変換する。
  */
 @Component
 public class DataInitializer {
@@ -46,13 +46,13 @@ public class DataInitializer {
     public void init() {
         boolean devMode = environment.acceptsProfiles(Profiles.of("dev"));
 
-        // 0. 明文密码转换为哈希（旧版本的数据）
+        // 0. 平文パスワードをハッシュに変換（旧バージョンのデータ）
         int converted = userService.encodePlainTextPasswords();
         if (converted > 0) {
-            logger.info("已将 {} 个账号的明文密码转换为哈希", converted);
+            logger.info("{} 件のアカウントの平文パスワードをハッシュに変換しました", converted);
         }
 
-        // 为现有的 admin 补全字段
+        // 既存の admin の不足項目を補完する
         Optional<User> adminOpt = userRepository.findByUsername("admin");
         if (adminOpt.isPresent()) {
             User admin = adminOpt.get();
@@ -65,12 +65,12 @@ public class DataInitializer {
             userRepository.save(admin);
         }
 
-        // 1. 没有任何管理员时创建 admin
+        // 1. 管理者が 1 人もいない場合に admin を作成
         if (!userRepository.existsByRole("ADMIN")) {
             createInitialAdmin(devMode);
         }
 
-        // 2. 测试账号只在 dev 模式下创建
+        // 2. テストアカウントは dev モードでのみ作成
         if (devMode) {
             createTestAccounts();
         }
@@ -79,12 +79,12 @@ public class DataInitializer {
     private void createInitialAdmin(boolean devMode) {
         String password = devMode ? DEV_PASSWORD : environment.getProperty(ADMIN_PASSWORD_ENV);
         if (password == null || password.trim().length() < 4) {
-            logger.warn("数据库中没有管理员账号，且未设置有效的环境变量 {}（至少 4 个字符），未创建管理员。"
-                    + "请设置该环境变量后重新启动。", ADMIN_PASSWORD_ENV);
+            logger.warn("DB に管理者アカウントがなく、有効な環境変数 {}（4 文字以上）も設定されていないため、管理者を作成しませんでした。"
+                    + "この環境変数を設定してから再起動してください。", ADMIN_PASSWORD_ENV);
             return;
         }
         if (userRepository.existsByUsername("admin") || userRepository.existsByEmployeeId("EMP001")) {
-            logger.warn("数据库中没有管理员账号，但用户名 admin 或社员番号 EMP001 已被其他账号使用，未创建管理员。");
+            logger.warn("DB に管理者アカウントがありませんが、ユーザー名 admin または社員番号 EMP001 が他のアカウントで使用されているため、管理者を作成しませんでした。");
             return;
         }
 
@@ -97,13 +97,13 @@ public class DataInitializer {
         admin.setRole("ADMIN");
         User savedAdmin = userRepository.save(admin);
         defaultAttendanceSettingService.save(new DefaultAttendanceSetting(savedAdmin));
-        logger.info("【创建】管理员账号: admin");
+        logger.info("【作成】管理者アカウント: admin");
     }
 
     private void createTestAccounts() {
         Long adminId = userRepository.findByUsername("admin").map(User::getId).orElse(null);
 
-        // 部门主管
+        // 部長
         Optional<User> managerOpt = userRepository.findByUsername("manager");
         Long managerId;
         if (managerOpt.isEmpty()) {
@@ -112,7 +112,7 @@ public class DataInitializer {
             managerId = managerOpt.get().getId();
         }
 
-        // 普通员工
+        // 一般社員
         if (!userRepository.existsByUsername("employee1")) {
             createTestUser("employee1", "山田太郎", "EMP003", "开发部", "GENERAL", managerId);
         }
@@ -129,7 +129,7 @@ public class DataInitializer {
     private Long createTestUser(String username, String name, String employeeId,
                                 String department, String role, Long managerId) {
         if (userRepository.existsByEmployeeId(employeeId)) {
-            logger.warn("社员番号 {} 已被其他账号使用，跳过测试账号 {}", employeeId, username);
+            logger.warn("社員番号 {} は他のアカウントで使用されているため、テストアカウント {} をスキップします", employeeId, username);
             return null;
         }
         User user = new User();
@@ -142,7 +142,7 @@ public class DataInitializer {
         user.setManagerId(managerId);
         User saved = userRepository.save(user);
         defaultAttendanceSettingService.save(new DefaultAttendanceSetting(saved));
-        logger.info("【创建】测试账号: {}", username);
+        logger.info("【作成】テストアカウント: {}", username);
         return saved.getId();
     }
 }

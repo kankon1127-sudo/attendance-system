@@ -9,8 +9,8 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
 /**
- * 启动时按当前规则重算未锁定月份的工时和加班。
- * 修正旧版本中「不扣休息时间」「直接保存前端传来的值」留下的数据；结果相同的记录不会被更新。
+ * 起動時に現行ルールで未ロックの月の実働時間と残業時間を再計算する。
+ * 旧バージョンの「休憩時間を差し引かない」「フロントエンドから送られた値をそのまま保存する」処理で残ったデータを修正する。結果が変わらないレコードは更新しない。
  */
 @Component
 public class AttendanceRecalculationRunner implements ApplicationRunner {
@@ -24,7 +24,7 @@ public class AttendanceRecalculationRunner implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         int changed = attendanceService.recalculateUnlockedAttendances();
         if (changed > 0) {
-            logger.info("按当前规则重算了 {} 条勤怠记录的工时和加班（已提交月报的月份除外）", changed);
+            logger.info("現行ルールで {} 件の勤怠レコードの実働時間と残業時間を再計算しました（月報提出済みの月を除く）", changed);
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.wkrepo.system.controller;
 
+import com.wkrepo.system.config.Messages;
 import com.wkrepo.system.dto.AttendanceAnomaly;
 import com.wkrepo.system.entity.Attendance;
 import com.wkrepo.system.entity.DefaultAttendanceSetting;
@@ -68,8 +69,11 @@ public class AttendanceController {
     @Autowired
     private Agreement36Service agreement36Service;
 
+    @Autowired
+    private Messages messages;
+
     /**
-     * 1. 勤怠入力 画面表示逻辑
+     * 1. 勤怠入力 画面表示処理
      */
     @GetMapping
     public String showAttendance(
@@ -86,11 +90,11 @@ public class AttendanceController {
         int currentYear = (year != null) ? year : today.getYear();
         int currentMonth = (month != null) ? month : today.getMonthValue();
 
-        // 验证年月参数，不允许访问未来月份
+        // 年月パラメータを検証し、未来の月へのアクセスは許可しない
         YearMonth requestYearMonth = YearMonth.of(currentYear, currentMonth);
         YearMonth currentYearMonth = YearMonth.from(today);
         if (requestYearMonth.isAfter(currentYearMonth)) {
-            // 重定向到当前月份
+            // 当月にリダイレクト
             return "redirect:/attendance?year=" + today.getYear() + "&month=" + today.getMonthValue();
         }
 
@@ -115,9 +119,9 @@ public class AttendanceController {
             
             dayMap.put("sunday", date.getDayOfWeek() == DayOfWeek.SUNDAY);
             dayMap.put("saturday", date.getDayOfWeek() == DayOfWeek.SATURDAY);
-            dayMap.put("holiday", holidayService.isRestDay(date)); // 使用统一的节假日判定逻辑
+            dayMap.put("holiday", holidayService.isRestDay(date)); // 共通の休日判定ロジックを使用
 
-            // 装载数据库中の真实记录
+            // DB の実レコードを読み込む
             Attendance attendance = attendanceMap.get(date);
             dayMap.put("attendance", attendance);
 
@@ -139,7 +143,7 @@ public class AttendanceController {
         model.addAttribute("user", user);
         model.addAttribute("attendanceLocked", attendanceService.isMonthLocked(user, currentYear, currentMonth));
 
-        // 分页按钮逻辑
+        // ページングボタンの処理
         YearMonth prev = yearMonth.minusMonths(1);
         YearMonth next = yearMonth.plusMonths(1);
         model.addAttribute("prevYear", prev.getYear());
@@ -148,11 +152,11 @@ public class AttendanceController {
         model.addAttribute("nextMonth", next.getMonthValue());
         model.addAttribute("showNextMonth", !yearMonth.isAfter(YearMonth.from(today)));
 
-        // 生成从用户最早考勤记录到当前月份の月份リスト
+        // ユーザーの最初の勤怠レコードから当月までの月リストを生成
         YearMonth currentYearMonthForModel = YearMonth.from(today);
         YearMonth startYearMonth = attendanceService.getFirstAttendanceYearMonth(user);
         if (startYearMonth == null) {
-            // 如果没有考勤记录，则使用当前月份往前推12个月
+            // 勤怠レコードがない場合は当月から 12 か月前までを使う
             startYearMonth = currentYearMonthForModel.minusMonths(12);
         }
         
@@ -167,7 +171,7 @@ public class AttendanceController {
         }
                 model.addAttribute("availableMonths", availableMonths);
 
-        // 新增代码：获取并添加默认考勤设置到Model
+        // デフォルト勤怠設定を取得して Model に追加
         DefaultAttendanceSetting defaultSetting = defaultAttendanceSettingService.getOrCreateDefaultSetting(user);
         model.addAttribute("defaultSetting", defaultSetting);
 
@@ -206,7 +210,7 @@ public class AttendanceController {
         List<GeneralExpense> generalExpenses = generalExpenseService.getAllGeneralExpensesByDateRange(startDate, endDate);
 
         try {
-            // 经费按 visibleUsers 过滤，可见范围与勤怠相同
+            // 経費は visibleUsers で絞り込む（表示範囲は勤怠と同じ）
             byte[] workbook = attendanceExcelExportService.exportMonthlyAttendance(
                     visibleUsers, attendances, travelExpenses, generalExpenses, yearMonth);
             String filename = "attendance-" + yearMonth + ".xlsx";
@@ -235,7 +239,7 @@ public class AttendanceController {
     }
 
     /**
-     * 2. 保存逻辑：先查后改（UPDATE），完美抹除脏数据
+     * 2. 保存処理：既存レコードを検索してから更新（UPDATE）し、不正なデータを残さない
      */
     @PostMapping("/saveInline")
     public String saveInline(
@@ -263,13 +267,13 @@ public class AttendanceController {
             attendance = new Attendance(user, date);
         }
 
-        // 更新考勤数据
+        // 勤怠データを更新
         attendance.setStartTime(startTime != null && !startTime.isEmpty() ? LocalTime.parse(startTime) : null);
         attendance.setEndTime(endTime != null && !endTime.isEmpty() ? LocalTime.parse(endTime) : null);
         attendance.setBreakTime(breakTime != null && !breakTime.isEmpty() ? LocalTime.parse(breakTime) : null);
         attendance.setAgreement36Status(status);
         attendance.setRemarks(remarks);
-        // 工时和加班由服务端计算，不接收前端的值
+        // 実働時間と残業時間はサーバー側で計算し、フロントエンドの値は受け取らない
 
         attendanceService.updateAttendance(attendance);
 
@@ -282,7 +286,7 @@ public class AttendanceController {
     }
 
     /**
-     * 3. 跳转到考勤编辑页面
+     * 3. 勤怠編集画面へ遷移
      */
     @GetMapping("/edit/{date}")
     public String showEditPage(@PathVariable("date") String dateStr, HttpSession session, Model model) {
@@ -305,7 +309,7 @@ public class AttendanceController {
     }
 
     /**
-     * 4. 保存考勤编辑页面
+     * 4. 勤怠編集画面の保存
      */
     @PostMapping("/edit")
     public String saveEditPage(
@@ -341,7 +345,7 @@ public class AttendanceController {
     }
 
     /**
-     * 5. 获取默认设置
+     * 5. デフォルト設定の取得
      */
         @GetMapping("/getDefaultSetting")
     @ResponseBody
@@ -368,14 +372,14 @@ public class AttendanceController {
         User user = (User) session.getAttribute("user");
         if (user == null) {
             response.put("success", false);
-            response.put("message", "セッションがタイムアウトしました。");
+            response.put("message", messages.get("common.error.sessionTimeout"));
             return response;
         }
 
         try {
             if (attendanceService.isMonthLocked(user, year, month)) {
                 response.put("success", false);
-                response.put("message", "この月の勤怠は提出済みのため変更できません。申請一覧から月報を撤回してください。");
+                response.put("message", messages.get("attendance.error.monthLocked"));
                 return response;
             }
             DefaultAttendanceSetting setting = defaultAttendanceSettingService.getOrCreateDefaultSetting(user);
@@ -383,7 +387,7 @@ public class AttendanceController {
             response.put("success", true);
         } catch (Exception e) {
             response.put("success", false);
-            response.put("message", "エラーが発生しました: " + e.getMessage());
+            response.put("message", messages.get("common.error.withDetail", messages.of(e)));
         }
         return response;
     }

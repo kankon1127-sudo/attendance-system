@@ -1,5 +1,6 @@
 package com.wkrepo.system.controller;
 
+import com.wkrepo.system.config.Messages;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.dto.ApplicationItem;
 import com.wkrepo.system.entity.Attendance;
@@ -32,6 +33,7 @@ public class AuthController {
     private final AttendanceService attendanceService;
     private final PaidLeaveService paidLeaveService;
     private final Agreement36Service agreement36Service;
+    private final Messages messages;
 
     @Autowired
     public AuthController(
@@ -39,12 +41,14 @@ public class AuthController {
             ApplicationListService applicationListService,
             AttendanceService attendanceService,
             PaidLeaveService paidLeaveService,
-            Agreement36Service agreement36Service) {
+            Agreement36Service agreement36Service,
+            Messages messages) {
         this.userService = userService;
         this.applicationListService = applicationListService;
         this.attendanceService = attendanceService;
         this.paidLeaveService = paidLeaveService;
         this.agreement36Service = agreement36Service;
+        this.messages = messages;
     }
     
     @GetMapping("/login")
@@ -62,7 +66,7 @@ public class AuthController {
             session.setAttribute(SESSION_USER, user);
             return "redirect:/home";
         } catch (RuntimeException e) {
-            model.addAttribute("error", e.getMessage());
+            model.addAttribute("error", messages.of(e));
             return "login";
         }
     }
@@ -80,7 +84,6 @@ public class AuthController {
             return "redirect:/login";
         }
         model.addAttribute(SESSION_USER, user);
-        model.addAttribute("pageTitle", "ホーム");
         model.addAttribute("currentPage", "home");
         List<ApplicationItem> pendingApprovals = applicationListService.getPendingApprovalsForUser(user);
         model.addAttribute("pendingApprovalCount", pendingApprovals.size());

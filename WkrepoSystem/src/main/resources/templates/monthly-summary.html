@@ -322,7 +322,7 @@
                 <div class="form-title" th:text="#{page.monthly-summary}">月報サマリー・提出</div>
                 <div class="month-nav">
                     <a th:href="@{/monthly-summary(year=${prevYear}, month=${prevMonth})}" class="month-btn">◀</a>
-                    <div class="month-display" th:text="${year} + '年' + ${month} + '月'">2024年1月</div>
+                    <div class="month-display" th:text="#{common.yearMonth(${'' + year}, ${'' + month})}">2024年1月</div>
                     <a th:href="@{/monthly-summary(year=${nextYear}, month=${nextMonth})}" class="month-btn">▶</a>
                 </div>
                 <div class="status-badge" th:text="${currentStep == 1 ? '⚪ ' + #messages.msg('monthly.draft') : (currentStep == 2 ? '🟡 ' + #messages.msg('monthly.submittedStatus') : (currentStep == 3 ? '🟢 ' + #messages.msg('monthly.approved') : '✅ ' + #messages.msg('monthly.finalized')))}">⚪ 下書き</div>
@@ -369,49 +369,49 @@
                     </div>
                     <div class="info-item">
                         <span class="info-label" th:text="#{monthly.employmentType}">雇用形態</span>
-                        <span class="info-value">正社員</span>
+                        <span class="info-value" th:text="#{monthly.employmentType.regular}">正社員</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label" th:text="#{common.period}">対象月</span>
-                        <span class="info-value" th:text="${year} + '年' + ${month} + '月'">2024年1月</span>
+                        <span class="info-value" th:text="#{common.yearMonth(${'' + year}, ${'' + month})}">2024年1月</span>
                     </div>
                 </div>
                 <div class="info-box">
                     <div class="info-title" th:text="#{monthly.workRecord}">勤務実績</div>
                     <div class="info-item">
                         <span class="info-label" th:text="#{monthly.workDays}">稼働日数</span>
-                        <span class="info-value" th:text="${summary.workDays} + '日'">0日</span>
+                        <span class="info-value" th:text="${summary.workDays} + #{common.daysUnit}">0日</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label" th:text="#{attendance.workHours}">実働時間</span>
-                        <span class="info-value" th:text="${summary.totalWorkHours} + '時間'">0時間</span>
+                        <span class="info-value" th:text="${summary.totalWorkHours} + #{common.hoursUnit}">0時間</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label" th:text="#{attendance.overtimeHours}">残業時間</span>
-                        <span class="info-value" th:text="${summary.totalOvertimeHours} + '時間'">0時間</span>
+                        <span class="info-value" th:text="${summary.totalOvertimeHours} + #{common.hoursUnit}">0時間</span>
                     </div>
                 </div>
                 <div class="info-box">
                     <div class="info-title" th:text="#{monthly.expenses}">経費</div>
                     <div class="info-item">
                         <span class="info-label" th:text="#{monthly.nonTaxableTransport}">非課税交通費</span>
-                        <span class="info-value" th:text="${summary.nonTaxableTransportExpense} + '円'">0円</span>
+                        <span class="info-value" th:text="${summary.nonTaxableTransportExpense} + #{common.yenUnit}">0円</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label" th:text="#{monthly.travelExpense}">旅費交通費</span>
-                        <span class="info-value" th:text="${summary.travelExpense} + '円'">0円</span>
+                        <span class="info-value" th:text="${summary.travelExpense} + #{common.yenUnit}">0円</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label" th:text="#{monthly.generalExpense}">諸経費</span>
-                        <span class="info-value" th:text="${summary.generalExpense} + '円'">0円</span>
+                        <span class="info-value" th:text="${summary.generalExpense} + #{common.yenUnit}">0円</span>
                     </div>
                     <div class="info-item">
                         <span class="info-label" th:text="#{monthly.total}">合計</span>
-                        <span class="info-value total" th:text="${summary.totalExpense} + '円'">0円</span>
+                        <span class="info-value total" th:text="${summary.totalExpense} + #{common.yenUnit}">0円</span>
                     </div>
                     <div class="info-item" th:if="${summary.pendingExpense != null and summary.pendingExpense.signum() > 0}">
                         <span class="info-label" th:text="#{monthly.pendingExpense}">申請中（合計に含まない）</span>
-                        <span class="info-value" th:text="${summary.pendingExpense} + '円'">0円</span>
+                        <span class="info-value" th:text="${summary.pendingExpense} + #{common.yenUnit}">0円</span>
                     </div>
                 </div>
             </div>
@@ -457,7 +457,13 @@
         </div>
     </div>
     
-    <script>
+    <script th:inline="javascript">
+        const monthlyMessages = {
+            workContentRequired: /*[[#{monthly.error.workContentRequired}]]*/ '作業内容を入力してください',
+            approverRequired: /*[[#{monthly.error.approverRequired}]]*/ '承認依頼先を選択してください',
+            submitConfirm: /*[[#{monthly.submitConfirm}]]*/ '月報を提出してもよろしいですか？'
+        };
+
         function getReportYearMonth() {
             return {
                 year: document.getElementById('reportYear').value,
@@ -502,16 +508,16 @@
             const { year, month } = getReportYearMonth();
             
             if (!workContent.trim()) {
-                alert('作業内容を入力してください');
+                alert(monthlyMessages.workContentRequired);
                 return;
             }
             
             if (!approverId) {
-                alert('承認依頼先を選択してください');
+                alert(monthlyMessages.approverRequired);
                 return;
             }
             
-            if (!confirm('月報を提出してもよろしいですか？')) {
+            if (!confirm(monthlyMessages.submitConfirm)) {
                 return;
             }
             

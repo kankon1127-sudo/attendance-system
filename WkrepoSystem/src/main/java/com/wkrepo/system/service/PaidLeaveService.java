@@ -60,8 +60,8 @@ public class PaidLeaveService {
     }
     
     /**
-     * 只有本人可以删除，且只能删除申請中或被拒否的申请（已批准的会影响余额和勤怠的有給检查）。
-     * 异常消息为 messages*.properties 的 key。
+     * 削除できるのは本人のみで、申請中または拒否された申請に限る（承認済みのものは残日数と勤怠の有給チェックに影響するため）。
+     * 例外メッセージは messages*.properties のキー。
      */
     public void deletePaidLeave(Long id, User currentUser) {
         PaidLeave existing = paidLeaveRepository.findById(id)
@@ -76,7 +76,7 @@ public class PaidLeaveService {
         paidLeaveRepository.delete(existing);
     }
 
-    // paid-leave.html 的删除按钮使用相同的判断
+    // paid-leave.html の削除ボタンも同じ判定を使う
     private boolean isDeletable(PaidLeave leave) {
         ApplicationStatus status = leave.getStatus();
         return status == null || status == ApplicationStatus.PENDING || status == ApplicationStatus.REJECTED;

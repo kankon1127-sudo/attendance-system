@@ -52,7 +52,7 @@ public class ApprovalHistoryService {
                         application.setStatus(nextStatus);
                         travelExpenseRepository.save(application);
                         return status;
-                    }).orElseThrow(() -> new IllegalArgumentException("Travel expense not found"));
+                    }).orElseThrow(() -> new IllegalArgumentException("application.error.notFound"));
             case "GENERAL" -> generalExpenseRepository.findById(applicationId)
                     .map(application -> {
                         ApplicationStatus status = application.getStatus() == null
@@ -60,7 +60,7 @@ public class ApprovalHistoryService {
                         application.setStatus(nextStatus);
                         generalExpenseRepository.save(application);
                         return status;
-                    }).orElseThrow(() -> new IllegalArgumentException("General expense not found"));
+                    }).orElseThrow(() -> new IllegalArgumentException("application.error.notFound"));
             case "PAID_LEAVE" -> paidLeaveRepository.findById(applicationId)
                     .map(application -> {
                         ApplicationStatus status = application.getStatus() == null
@@ -68,7 +68,7 @@ public class ApprovalHistoryService {
                         application.setStatus(nextStatus);
                         paidLeaveRepository.save(application);
                         return status;
-                    }).orElseThrow(() -> new IllegalArgumentException("Paid leave not found"));
+                    }).orElseThrow(() -> new IllegalArgumentException("application.error.notFound"));
             case "MONTHLY_REPORT" -> monthlyReportRepository.findById(applicationId)
                     .map(application -> {
                         ApplicationStatus status = application.getStatus() == null
@@ -76,8 +76,8 @@ public class ApprovalHistoryService {
                         application.setStatus(nextStatus);
                         monthlyReportRepository.save(application);
                         return status;
-                    }).orElseThrow(() -> new IllegalArgumentException("Monthly report not found"));
-            default -> throw new IllegalArgumentException("Unknown application type: " + applicationType);
+                    }).orElseThrow(() -> new IllegalArgumentException("application.error.notFound"));
+            default -> throw new IllegalArgumentException("application.error.invalidRequest");
         };
 
         ApprovalHistory history = new ApprovalHistory();

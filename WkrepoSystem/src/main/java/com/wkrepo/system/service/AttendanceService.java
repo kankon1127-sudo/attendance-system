@@ -5,6 +5,7 @@ import com.wkrepo.system.entity.Attendance;
 import com.wkrepo.system.entity.DefaultAttendanceSetting;
 import com.wkrepo.system.entity.MonthlyReport;
 import com.wkrepo.system.entity.User;
+import com.wkrepo.system.exception.BusinessException;
 import com.wkrepo.system.repository.AttendanceRepository;
 import com.wkrepo.system.repository.MonthlyReportRepository;
 import com.wkrepo.system.enums.ApplicationStatus;
@@ -57,7 +58,7 @@ public class AttendanceService {
     
     public Attendance updateAttendance(Attendance attendance) {
         ensureMonthEditable(attendance.getUser(), attendance.getDate());
-        // 核心修复：如果 ID 为空但该日期已有记录，自动关联 ID 确保是“更新”而非“新增”
+        // ID が空でも同じ日付のレコードが既にあれば ID を引き継ぎ、「新規作成」ではなく「更新」にする
         if (attendance.getId() == null && attendance.getUser() != null && attendance.getDate() != null) {
             attendanceRepository.findByUserAndDate(attendance.getUser(), attendance.getDate())
                     .ifPresent(existing -> attendance.setId(existing.getId()));
@@ -85,7 +86,7 @@ public class AttendanceService {
 
     public void ensureMonthEditable(User user, LocalDate date) {
         if (user != null && date != null && isMonthLocked(user, date.getYear(), date.getMonthValue())) {
-            throw new IllegalStateException("月報提出済みのデータは変更できません。申請一覧より撤回を行ってください。");
+            throw new IllegalStateException("attendance.error.monthLocked");
         }
     }
 
@@ -121,18 +122,13 @@ public class AttendanceService {
         }
 
         java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd");
-        StringBuilder message = new StringBuilder("勤怠で有給を選択した日付は、年休申請しリーダー承認後でないと月報を提出できません。");
-        if (!missingApplicationDates.isEmpty()) {
-            message.append(" 未申請: ")
-                    .append(missingApplicationDates.stream().map(formatter::format).collect(java.util.stream.Collectors.joining(", ")))
-                    .append("。");
-        }
-        if (!unapprovedDates.isEmpty()) {
-            message.append(" リーダー未承認: ")
-                    .append(unapprovedDates.stream().map(formatter::format).collect(java.util.stream.Collectors.joining(", ")))
-                    .append("。");
-        }
-        throw new RuntimeException(message.toString());
+        throw new BusinessException("monthly.error.paidLeaveNotApproved",
+                formatDates(missingApplicationDates, formatter), formatDates(unapprovedDates, formatter));
+    }
+
+    private static String formatDates(List<LocalDate> dates, java.time.format.DateTimeFormatter formatter) {
+        return dates.isEmpty() ? "-"
+                : dates.stream().map(formatter::format).collect(java.util.stream.Collectors.joining(", "));
     }
     
     public void deleteAttendance(Long id) {
@@ -141,7 +137,7 @@ public class AttendanceService {
     
     public Attendance getAttendanceById(Long id) {
         return attendanceRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("考勤记录不存在，ID: " + id));
+                .orElseThrow(() -> new RuntimeException("attendance.error.notFound"));
     }
     
     public Attendance getAttendanceByUserAndDate(User user, LocalDate date) {
@@ -154,8 +150,8 @@ public class AttendanceService {
     }
 
     /**
-     * 月度勤怠统计的唯一实现。勤怠页面、首页、月报、Excel 导出都使用这里的结果。
-     * 跳过 -/欠勤/有給/空 的记录；出勤天数只统计工时 > 0 的 出社/在宅。
+     * 月次勤怠統計の唯一の実装。勤怠画面・ホーム・月報・Excel 出力はすべてここの結果を使う。
+     * -/欠勤/有給/空 のレコードはスキップする。出勤日数は実働時間 > 0 の 出社/在宅 のみ数える。
      */
     public MonthlyStatistics calculateMonthlyStatistics(List<Attendance> attendances, YearMonth yearMonth) {
         BigDecimal totalWorkHours = BigDecimal.ZERO;
@@ -298,21 +294,21 @@ public class AttendanceService {
     }
     
     /**
-     * 一括デフォルト入力逻辑
+     * 一括デフォルト入力処理
      */
     public void bulkApplyDefaults(User user, int year, int month, DefaultAttendanceSetting setting) {
         if (isMonthLocked(user, year, month)) {
-            throw new IllegalStateException("この月の勤怠は提出済みのため変更できません。申請一覧から月報を撤回してください。");
+            throw new IllegalStateException("attendance.error.monthLocked");
         }
         if (setting == null) {
-            throw new RuntimeException("デフォルト設定が見つかりません。");
+            throw new RuntimeException("settings.error.notFound");
         }
 
         YearMonth yearMonth = YearMonth.of(year, month);
         LocalDate startDate = yearMonth.atDay(1);
         LocalDate endDate = yearMonth.atEndOfMonth();
 
-        // 获取已有记录
+        // 既存レコードを取得
         List<Attendance> existingAttendances = getAttendancesByUserAndDateRange(user, startDate, endDate);
         java.util.Set<LocalDate> existingDates = existingAttendances.stream()
                 .filter(a -> a.getAgreement36Status() != null && !"-".equals(a.getAgreement36Status()) && !"".equals(a.getAgreement36Status()))
@@ -322,29 +318,29 @@ public class AttendanceService {
         for (int i = 1; i <= yearMonth.lengthOfMonth(); i++) {
             LocalDate date = yearMonth.atDay(i);
             
-            // 规则1：土曜日和日曜日不处理
-            // 规则：如果是节假日也不处理 (保持逻辑一致性)
+            // ルール1：土曜日と日曜日は処理しない
+            // ルール：祝日も処理しない（ロジックの一貫性を保つ）
             if (holidayService.isRestDay(date)) {
                 continue;
             }
 
-            // 规则2：已经存在记录的日期不覆盖 (指状态不为 "-" 或 空 の记录)
+            // ルール2：既にレコードがある日は上書きしない（ステータスが "-" でも空でもないレコード）
             if (existingDates.contains(date)) {
                 continue;
             }
 
-            // 获取或创建记录
+            // レコードを取得または作成
             Attendance attendance = existingAttendances.stream()
                     .filter(a -> a.getDate().equals(date))
                     .findFirst()
                     .orElse(new Attendance(user, date));
 
-            // 规则3&4：设置默认値
+            // ルール3&4：デフォルト値を設定
             attendance.setAgreement36Status(setting.getDefaultAgreement36Status() != null ? setting.getDefaultAgreement36Status() : "出社");
             attendance.setStartTime(setting.getDefaultStartTime());
             attendance.setEndTime(setting.getDefaultEndTime());
             
-            // 处理休息時間 (minutes to LocalTime)
+            // 休憩時間の変換 (minutes to LocalTime)
             Integer breakMin = setting.getDefaultBreakMinutes();
             if (breakMin != null) {
                 attendance.setBreakTime(LocalTime.of(breakMin / 60, breakMin % 60));
@@ -352,29 +348,29 @@ public class AttendanceService {
                 attendance.setBreakTime(LocalTime.of(1, 0));
             }
 
-            // 规则5：工时和加班由 updateAttendance → calculateWorkHours 统一计算
+            // ルール5：実働時間と残業時間は updateAttendance → calculateWorkHours でまとめて計算する
             updateAttendance(attendance);
         }
     }
     
     private void validateAttendance(Attendance attendance) {
         if (attendance.getUser() == null) {
-            throw new RuntimeException("用户不能为空");
+            throw new RuntimeException("attendance.error.invalid");
         }
         if (attendance.getDate() == null) {
-            throw new RuntimeException("日期不能为空");
+            throw new RuntimeException("attendance.error.invalid");
         }
         
         Optional<Attendance> existing = attendanceRepository.findByUserAndDate(attendance.getUser(), attendance.getDate());
         if (existing.isPresent() && !existing.get().getId().equals(attendance.getId())) {
-            throw new RuntimeException("该日期已存在考勤记录: " + attendance.getDate());
+            throw new BusinessException("attendance.error.duplicateDate", attendance.getDate());
         }
     }
     
     /**
-     * 工时和加班一律在服务端根据上下班时间和休息时间计算，不使用前端传来的值。
-     * 実働 = 退勤 − 出勤（跨零点加 24 小时）− 休憩；残業 = 休息日为全部実働，平日为超过 8 小时的部分。
-     * 前端的预览（attendance.html、layout.html 的手机端编辑）使用相同的规则。
+     * 実働時間と残業時間は常にサーバー側で出勤・退勤時刻と休憩時間から計算し、フロントエンドから送られた値は使わない。
+     * 実働 = 退勤 − 出勤（日をまたぐ場合は 24 時間を加算）− 休憩。残業 = 休日は実働のすべて、平日は 8 時間を超えた分。
+     * フロントエンドのプレビュー（attendance.html、layout.html のスマホ用編集）も同じルールを使う。
      */
     private void calculateWorkHours(Attendance attendance) {
         String status = attendance.getAgreement36Status();
@@ -405,8 +401,8 @@ public class AttendanceService {
     }
 
     /**
-     * 按当前规则重算所有未锁定月份（月报未提交或被拒否）的工时和加班。
-     * 已提交、已承认的月份保持原样，避免审批过的数字发生变化。返回有变化的记录数。
+     * 現行ルールで、未ロックの月（月報が未提出または拒否）の実働時間と残業時間をすべて再計算する。
+     * 提出済み・承認済みの月はそのままにし、承認された数値が変わらないようにする。変更があったレコード数を返す。
      */
     public int recalculateUnlockedAttendances() {
         Map<String, Boolean> lockedMonths = new HashMap<>();
@@ -440,9 +436,9 @@ public class AttendanceService {
     }
     
     private void determineAgreement36Status(Attendance attendance) {
-        // 铁律：只要状态位已有值（包括用户录入的"-"），后端绝对禁止擅自改写状态！
+        // 鉄則：ステータスに値がある場合（ユーザーが入力した"-"を含む）、サーバー側で勝手に書き換えてはならない
         if (attendance.getAgreement36Status() != null && !attendance.getAgreement36Status().trim().isEmpty()) {
-            // 如果已经是"-"状态，不要修改它
+            // 既に"-"の場合は変更しない
             if ("-".equals(attendance.getAgreement36Status().trim())) {
                 return;
             }

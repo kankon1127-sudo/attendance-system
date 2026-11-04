@@ -78,7 +78,7 @@ public class MonthlyReportService {
             MonthlyReport report = findOrCreateReport(user, year, month);
             if (report.getStatus() != ApplicationStatus.DRAFT
                     && report.getStatus() != ApplicationStatus.REJECTED) {
-                throw new IllegalStateException("提出済みまたは承認中の月報は編集できません。");
+                throw new IllegalStateException("monthly.error.notEditable");
             }
             if (workContent != null) {
                 report.setWorkContent(workContent);
@@ -102,7 +102,7 @@ public class MonthlyReportService {
             log.info("[MonthlyReportService] 変更前 status={}", report.getStatus());
             if (report.getStatus() != ApplicationStatus.DRAFT
                     && report.getStatus() != ApplicationStatus.REJECTED) {
-                throw new IllegalStateException("提出済みまたは承認中の月報は再提出できません。");
+                throw new IllegalStateException("monthly.error.notResubmittable");
             }
             attendanceService.validatePaidLeaveApprovedForMonthlySubmit(user, year, month);
             if (workContent != null) {
@@ -152,20 +152,20 @@ public class MonthlyReportService {
     @Transactional
     public MonthlyReport withdrawReport(Long id, User user) {
         if (user == null || user.getId() == null) {
-            throw new SecurityException("ログインが必要です。");
+            throw new SecurityException("common.error.loginRequired");
         }
         MonthlyReport report = monthlyReportRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("月報が見つかりません。"));
+                .orElseThrow(() -> new IllegalArgumentException("monthly.error.notFound"));
         if (report.getUser() == null || !user.getId().equals(report.getUser().getId())) {
-            throw new SecurityException("自分の月報のみ撤回できます。");
+            throw new SecurityException("monthly.error.withdrawNotOwner");
         }
         if (report.getStatus() != ApplicationStatus.SUBMITTED) {
-            throw new IllegalStateException("提出済みの月報のみ撤回できます。");
+            throw new IllegalStateException("monthly.error.withdrawNotSubmitted");
         }
 
         approvalHistoryService.transition("MONTHLY_REPORT", id, ApplicationStatus.DRAFT, user);
         return monthlyReportRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("月報が見つかりません。"));
+                .orElseThrow(() -> new IllegalArgumentException("monthly.error.notFound"));
     }
 
     @Transactional

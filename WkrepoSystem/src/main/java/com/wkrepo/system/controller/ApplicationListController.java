@@ -1,5 +1,6 @@
 package com.wkrepo.system.controller;
 
+import com.wkrepo.system.config.Messages;
 import com.wkrepo.system.dto.ApplicationDetailDTO;
 import com.wkrepo.system.dto.ApplicationItem;
 import com.wkrepo.system.entity.MonthlyReport;
@@ -31,6 +32,7 @@ import java.util.Map;
 public class ApplicationListController {
 
     private static final Logger log = LoggerFactory.getLogger(ApplicationListController.class);
+    private static final int PAGE_SIZE = 20;
 
     @Autowired
     private ApplicationListService applicationListService;
@@ -41,10 +43,14 @@ public class ApplicationListController {
     @Autowired
     private ApprovalHistoryService approvalHistoryService;
 
+    @Autowired
+    private Messages messages;
+
     @GetMapping("/list")
     public String getApplicationList(HttpSession session, Model model,
                                      @RequestParam(name = "filterType", required = false) String filterType,
-                                     @RequestParam(name = "filterStatus", required = false) String filterStatus) {
+                                     @RequestParam(name = "filterStatus", required = false) String filterStatus,
+                                     @RequestParam(name = "page", defaultValue = "1") int page) {
         User user = (User) session.getAttribute("user");
         if (user == null) {
             return "redirect:/login";
@@ -52,12 +58,25 @@ public class ApplicationListController {
 
         List<ApplicationItem> applications = applicationListService.getApplicationsForUser(user, filterType, filterStatus);
 
-        model.addAttribute("applications", applications);
+        // 4 種類の申請をまとめて申請日順に並べるため、メモリ上でページングする
+        int totalCount = applications.size();
+        int totalPages = Math.max(1, (totalCount + PAGE_SIZE - 1) / PAGE_SIZE);
+        int currentPageNumber = Math.min(Math.max(page, 1), totalPages);
+        int fromIndex = (currentPageNumber - 1) * PAGE_SIZE;
+        int toIndex = Math.min(fromIndex + PAGE_SIZE, totalCount);
+
+        model.addAttribute("applications", applications.subList(fromIndex, toIndex));
+        model.addAttribute("totalCount", totalCount);
+        model.addAttribute("page", currentPageNumber);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("pageOffset", fromIndex);
+        // ページ番号ボタン：現在ページの前後 2 ページずつ
+        model.addAttribute("pageWindowStart", Math.max(1, currentPageNumber - 2));
+        model.addAttribute("pageWindowEnd", Math.min(totalPages, currentPageNumber + 2));
         model.addAttribute("filterType", filterType);
         model.addAttribute("filterStatus", filterStatus);
         model.addAttribute("allStatuses", com.wkrepo.system.enums.ApplicationStatus.values());
         model.addAttribute("currentPage", "application-list");
-        model.addAttribute("pageTitle", "申請一覧");
         model.addAttribute("user", user);
 
         return "application-list";
@@ -115,9 +134,9 @@ public class ApplicationListController {
             return "redirect:/monthly-summary?year=" + report.getYear() + "&month=" + report.getMonth();
         } catch (SecurityException e) {
             log.warn("[ApplicationListController] 権限なしの月報撤回要求 id={}, userId={}", id, user.getId(), e);
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", messages.of(e));
         } catch (IllegalArgumentException | IllegalStateException e) {
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", messages.of(e));
         }
         return "redirect:/application/list";
     }
@@ -131,7 +150,7 @@ public class ApplicationListController {
         if (user == null) {
             Map<String, Object> err = new HashMap<>();
             err.put("success", false);
-            err.put("message", "未ログイン");
+            err.put("message", messages.get("common.error.loginRequired"));
             return ResponseEntity.status(401).body(err);
         }
         try {
@@ -142,18 +161,18 @@ public class ApplicationListController {
             log.warn("[ApplicationListController] 権限なし id={}, type={}, userId={}", id, type, user.getId(), e);
             Map<String, Object> err = new HashMap<>();
             err.put("success", false);
-            err.put("message", "権限がありません");
+            err.put("message", messages.get("common.error.forbidden"));
             return ResponseEntity.status(403).body(err);
         } catch (IllegalArgumentException e) {
             Map<String, Object> err = new HashMap<>();
             err.put("success", false);
-            err.put("message", e.getMessage());
+            err.put("message", messages.of(e));
             return ResponseEntity.status(400).body(err);
         } catch (Exception e) {
             log.error("[ApplicationListController] 詳細取得エラー id={}, type={}", id, type, e);
             Map<String, Object> err = new HashMap<>();
             err.put("success", false);
-            err.put("message", "データ取得に失敗しました");
+            err.put("message", messages.get("application.error.loadFailed"));
             return ResponseEntity.status(500).body(err);
         }
     }
@@ -167,7 +186,7 @@ public class ApplicationListController {
         if (user == null) {
             Map<String, Object> err = new HashMap<>();
             err.put("success", false);
-            err.put("message", "未ログイン");
+            err.put("message", messages.get("common.error.loginRequired"));
             return ResponseEntity.status(401).body(err);
         }
         if (!applicationListService.canApproveApplication(id, type, user)) {
@@ -175,20 +194,20 @@ public class ApplicationListController {
                     id, type, user.getId());
             Map<String, Object> err = new HashMap<>();
             err.put("success", false);
-            err.put("message", "権限がないか、申請が承認可能な状態ではありません");
+            err.put("message", messages.get("application.error.cannotApprove"));
             return ResponseEntity.status(403).body(err);
         }
         try {
             approvalHistoryService.transition(type, id, approvedStatus(type, id, user), user);
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
-            result.put("message", "承認しました");
+            result.put("message", messages.get("application.approvedMessage"));
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("[ApplicationListController] API承認エラー id={}, type={}, userId={}", id, type, user.getId(), e);
             Map<String, Object> err = new HashMap<>();
             err.put("success", false);
-            err.put("message", "承認に失敗しました: " + e.getMessage());
+            err.put("message", messages.get("application.error.approveFailed", messages.of(e)));
             return ResponseEntity.status(500).body(err);
         }
     }
@@ -202,7 +221,7 @@ public class ApplicationListController {
         if (user == null) {
             Map<String, Object> err = new HashMap<>();
             err.put("success", false);
-            err.put("message", "未ログイン");
+            err.put("message", messages.get("common.error.loginRequired"));
             return ResponseEntity.status(401).body(err);
         }
         if (!applicationListService.canApproveApplication(id, type, user)) {
@@ -210,20 +229,20 @@ public class ApplicationListController {
                     id, type, user.getId());
             Map<String, Object> err = new HashMap<>();
             err.put("success", false);
-            err.put("message", "権限がないか、申請が拒否可能な状態ではありません");
+            err.put("message", messages.get("application.error.cannotReject"));
             return ResponseEntity.status(403).body(err);
         }
         try {
             approvalHistoryService.transition(type, id, ApplicationStatus.REJECTED, user);
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
-            result.put("message", "拒否しました");
+            result.put("message", messages.get("application.rejectedMessage"));
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("[ApplicationListController] API拒否エラー id={}, type={}, userId={}", id, type, user.getId(), e);
             Map<String, Object> err = new HashMap<>();
             err.put("success", false);
-            err.put("message", "拒否に失敗しました: " + e.getMessage());
+            err.put("message", messages.get("application.error.rejectFailed", messages.of(e)));
             return ResponseEntity.status(500).body(err);
         }
     }

@@ -46,7 +46,7 @@ public class DefaultAttendanceSettingController {
         if (user == null) {
             return "redirect:/login";
         }
-        // 所有员工都能修改自己的设置（只操作 Session 中的本人），保存前检查输入值
+        // 全社員が自分の設定を変更できる（対象は Session の本人のみ）。保存前に入力値をチェックする
         if (defaultBreakMinutes != null && (defaultBreakMinutes < 0 || defaultBreakMinutes > MAX_BREAK_MINUTES)) {
             return "redirect:/default-attendance-setting?error";
         }

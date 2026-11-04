@@ -1,5 +1,6 @@
 package com.wkrepo.system.controller;
 
+import com.wkrepo.system.config.Messages;
 import com.wkrepo.system.entity.DefaultAttendanceSetting;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.repository.UserRepository;
@@ -32,6 +33,9 @@ public class UserManagementController {
 
     @Autowired
     private DefaultAttendanceSettingService defaultAttendanceSettingService;
+
+    @Autowired
+    private Messages messages;
     
     @GetMapping("/user-management")
     public String userManagement(
@@ -44,7 +48,7 @@ public class UserManagementController {
             return "redirect:/login";
         }
 
-        // 第三层：GENERAL 角色直接重定向回首页
+        // 第 3 層：GENERAL ロールはホーム画面にリダイレクト
         if ("GENERAL".equals(user.getRole())) {
             return "redirect:/home";
         }
@@ -118,7 +122,6 @@ public class UserManagementController {
         model.addAttribute("totalCount", totalCount);
         model.addAttribute("activeCount", activeCount);
         model.addAttribute("currentPage", "user-management");
-        model.addAttribute("pageTitle", "社員管理");
         model.addAttribute("user", user);
         model.addAttribute("isAdmin", isAdmin);
         model.addAttribute("isSoumu", isSoumu);
@@ -156,12 +159,12 @@ public class UserManagementController {
         if (isManager) {
             department = currentUser.getDepartment();
             if (!"GENERAL".equals(role) && !"MANAGER".equals(role)) {
-                redirectAttributes.addFlashAttribute("errorMessage", "部長は一般または部長のみ追加できます。");
+                redirectAttributes.addFlashAttribute("errorMessage", messages.get("user.error.managerCreateRole"));
                 return "redirect:/user-management";
             }
         }
         if (isSoumu && "ADMIN".equals(role)) {
-            redirectAttributes.addFlashAttribute("errorMessage", "総務は管理者を追加できません。");
+            redirectAttributes.addFlashAttribute("errorMessage", messages.get("user.error.soumuCreateAdmin"));
             return "redirect:/user-management";
         }
 
@@ -178,9 +181,9 @@ public class UserManagementController {
             newUser.setStatus("ACTIVE");
             User saved = userService.createUser(newUser);
             defaultAttendanceSettingService.save(new DefaultAttendanceSetting(saved));
-            redirectAttributes.addFlashAttribute("successMessage", "社員を追加しました: " + saved.getName());
+            redirectAttributes.addFlashAttribute("successMessage", messages.get("user.created", saved.getName()));
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", messages.of(e));
         }
         return "redirect:/user-management";
     }
@@ -216,12 +219,12 @@ public class UserManagementController {
 
         User targetUser = userRepository.findById(userId).orElse(null);
         if (targetUser == null) {
-            redirectAttributes.addFlashAttribute("errorMessage", "対象ユーザーが存在しません");
+            redirectAttributes.addFlashAttribute("errorMessage", messages.get("user.error.notFound"));
             return buildListRedirect(searchName, searchDepartment);
         }
 
         if (!isAdmin && "ADMIN".equals(targetUser.getRole())) {
-            redirectAttributes.addFlashAttribute("errorMessage", "管理者アカウントは管理者のみ変更できます。");
+            redirectAttributes.addFlashAttribute("errorMessage", messages.get("user.error.adminOnly"));
             return buildListRedirect(searchName, searchDepartment);
         }
 
@@ -236,28 +239,28 @@ public class UserManagementController {
             if (!currentUserDept.equals(finalDept) || "ADMIN".equals(finalRole) || "SOUMU".equals(finalRole)) {
                 return buildListRedirect(searchName, searchDepartment);
             }
-            // 部長只能编辑本部门的一般员工和自己，不能修改其他部長（包括密码）
+            // 部長が編集できるのは自部署の一般社員と自分のみ。他の部長は変更できない（パスワードも含む）
             if (!currentUser.getId().equals(targetUser.getId()) && !"GENERAL".equals(targetUser.getRole())) {
-                redirectAttributes.addFlashAttribute("errorMessage", "部長は一般社員と自分自身のみ変更できます。");
+                redirectAttributes.addFlashAttribute("errorMessage", messages.get("user.error.managerEditScope"));
                 return buildListRedirect(searchName, searchDepartment);
             }
         }
         if (isSoumu && "ADMIN".equals(finalRole) && !"ADMIN".equals(targetUser.getRole())) {
-            redirectAttributes.addFlashAttribute("errorMessage", "総務は管理者ロールを付与できません。");
+            redirectAttributes.addFlashAttribute("errorMessage", messages.get("user.error.soumuGrantAdmin"));
             return buildListRedirect(searchName, searchDepartment);
         }
 
-        // 用户名・社员番号的重复检查（排除本人），在修改任何字段之前进行
+        // ユーザー名・社員番号の重複チェック（本人を除く）。どの項目を変更するよりも前に行う
         String newUsername = username == null ? "" : username.trim();
         if (!newUsername.isEmpty() && !newUsername.equals(targetUser.getUsername())
                 && userRepository.existsByUsername(newUsername)) {
-            redirectAttributes.addFlashAttribute("errorMessage", "ユーザー名は既に存在します: " + newUsername);
+            redirectAttributes.addFlashAttribute("errorMessage", messages.get("user.error.usernameExists", newUsername));
             return buildListRedirect(searchName, searchDepartment);
         }
         String newEmployeeId = employeeId == null ? "" : employeeId.trim();
         if (!newEmployeeId.isEmpty() && !newEmployeeId.equals(targetUser.getEmployeeId())
                 && userRepository.existsByEmployeeId(newEmployeeId)) {
-            redirectAttributes.addFlashAttribute("errorMessage", "社員番号は既に存在します: " + newEmployeeId);
+            redirectAttributes.addFlashAttribute("errorMessage", messages.get("user.error.employeeIdExists", newEmployeeId));
             return buildListRedirect(searchName, searchDepartment);
         }
 
@@ -293,7 +296,7 @@ public class UserManagementController {
             try {
                 userService.updatePassword(targetUser.getId(), password.trim());
             } catch (Exception e) {
-                redirectAttributes.addFlashAttribute("errorMessage", "パスワード更新に失敗しました: " + e.getMessage());
+                redirectAttributes.addFlashAttribute("errorMessage", messages.get("user.error.passwordUpdateFailed", messages.of(e)));
                 return buildListRedirect(searchName, searchDepartment);
             }
         }
@@ -303,11 +306,11 @@ public class UserManagementController {
         try {
             userRepository.save(targetUser);
         } catch (DataIntegrityViolationException e) {
-            // 上面的检查之后被其他请求抢先使用时的兜底
-            redirectAttributes.addFlashAttribute("errorMessage", "ユーザー名または社員番号が重複しています。");
+            // 上記チェックの後に別のリクエストで先に使用された場合の保険
+            redirectAttributes.addFlashAttribute("errorMessage", messages.get("user.error.duplicate"));
             return buildListRedirect(searchName, searchDepartment);
         }
-        redirectAttributes.addFlashAttribute("successMessage", "ユーザー情報を更新しました: " + targetUser.getName());
+        redirectAttributes.addFlashAttribute("successMessage", messages.get("user.updated", targetUser.getName()));
 
         return buildListRedirect(searchName, searchDepartment);
     }
@@ -333,12 +336,12 @@ public class UserManagementController {
 
         User targetUser = userRepository.findById(userId).orElse(null);
         if (targetUser == null) {
-            redirectAttributes.addFlashAttribute("errorMessage", "対象ユーザーが存在しません");
+            redirectAttributes.addFlashAttribute("errorMessage", messages.get("user.error.notFound"));
             return buildListRedirect(searchName, searchDepartment);
         }
 
         if (!isAdmin && "ADMIN".equals(targetUser.getRole())) {
-            redirectAttributes.addFlashAttribute("errorMessage", "管理者アカウントは管理者のみ変更できます。");
+            redirectAttributes.addFlashAttribute("errorMessage", messages.get("user.error.adminOnly"));
             return buildListRedirect(searchName, searchDepartment);
         }
         if (isManager) {
@@ -347,12 +350,12 @@ public class UserManagementController {
                 return buildListRedirect(searchName, searchDepartment);
             }
             if (!"GENERAL".equals(targetUser.getRole()) && !currentUser.getId().equals(targetUser.getId())) {
-                redirectAttributes.addFlashAttribute("errorMessage", "部長は一般社員のみ有効/無効を切り替えられます。");
+                redirectAttributes.addFlashAttribute("errorMessage", messages.get("user.error.managerToggleScope"));
                 return buildListRedirect(searchName, searchDepartment);
             }
         }
         if (currentUser.getId().equals(targetUser.getId())) {
-            redirectAttributes.addFlashAttribute("errorMessage", "自分自身を無効化できません。");
+            redirectAttributes.addFlashAttribute("errorMessage", messages.get("user.error.cannotDisableSelf"));
             return buildListRedirect(searchName, searchDepartment);
         }
 
@@ -360,7 +363,8 @@ public class UserManagementController {
         targetUser.setStatus(next);
         userRepository.save(targetUser);
         redirectAttributes.addFlashAttribute("successMessage",
-                "ステータスを変更しました: " + targetUser.getName() + " → " + ("ACTIVE".equals(next) ? "有効" : "無効"));
+                messages.get("user.statusChanged", targetUser.getName(),
+                        messages.get("ACTIVE".equals(next) ? "user.active" : "user.inactive")));
 
         return buildListRedirect(searchName, searchDepartment);
     }

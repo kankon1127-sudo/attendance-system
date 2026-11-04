@@ -42,7 +42,7 @@ class MonthlySummaryServiceTest {
 
     @BeforeEach
     void setUp() {
-        // 月度统计使用真实实现（与勤怠页面、Excel 共用的那一份）
+        // 月次統計は実際の実装を使う（勤怠画面・Excel と共通のもの）
         when(attendanceService.calculateMonthlyStatistics(any(), any())).thenCallRealMethod();
         when(attendanceService.getAttendancesByUserAndDateRange(eq(user), any(), any())).thenReturn(List.of(
                 TestData.attendanceWithHours(user, "2026-11-02", "出社", "8.00", "0.00"),

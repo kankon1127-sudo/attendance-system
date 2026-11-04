@@ -201,9 +201,9 @@
                                 <td th:text="${expense.transportation}">電車</td>
                                 <td th:text="${expense.route}">自宅→会社</td>
                                 <td th:text="${expense.summary}">通勤</td>
-                                <td th:text="|${#numbers.formatInteger(#objects.nullSafe(expense.amount, 0), 0, 'COMMA')}円|">1,000円</td>
+                                <td th:text="${#numbers.formatInteger(#objects.nullSafe(expense.amount, 0), 0, 'COMMA')} + #{common.yenUnit}">1,000円</td>
                                 <td>
-                                    <form th:action="@{/travel-expense/delete/{id}(id=${expense.id})}" method="post" style="display:inline;" onsubmit="return confirm('削除してもよろしいですか？');">
+                                    <form th:action="@{/travel-expense/delete/{id}(id=${expense.id})}" method="post" style="display:inline;" th:data-confirm="#{common.deleteConfirm}" onsubmit="return confirm(this.dataset.confirm);">
                                         <button type="submit" class="btn-delete" th:text="#{common.delete}" th:disabled="${expenseLocked}">削除</button>
                                     </form>
                                 </td>
@@ -212,7 +212,7 @@
                     </table>
                 </div>
                 <div class="section-total">
-                    <span th:text="#{travel.nonTaxableSubtotal}">非課税交通費 小計</span>: <span th:text="|${#numbers.formatInteger(#objects.nullSafe(nonTaxableTotal, 0), 0, 'COMMA')}円|">0円</span>
+                    <span th:text="#{travel.nonTaxableSubtotal}">非課税交通費 小計</span>: <span th:text="${#numbers.formatInteger(#objects.nullSafe(nonTaxableTotal, 0), 0, 'COMMA')} + #{common.yenUnit}">0円</span>
                 </div>
             </div>
         </div>
@@ -274,9 +274,9 @@
                                 <td th:text="${expense.transportation}">電車</td>
                                 <td th:text="${expense.route}">東京→大阪</td>
                                 <td th:text="${expense.summary}">出張</td>
-                                <td th:text="|${#numbers.formatInteger(#objects.nullSafe(expense.amount, 0), 0, 'COMMA')}円|">1,000円</td>
+                                <td th:text="${#numbers.formatInteger(#objects.nullSafe(expense.amount, 0), 0, 'COMMA')} + #{common.yenUnit}">1,000円</td>
                                 <td>
-                                    <form th:action="@{/travel-expense/delete/{id}(id=${expense.id})}" method="post" style="display:inline;" onsubmit="return confirm('削除してもよろしいですか？');">
+                                    <form th:action="@{/travel-expense/delete/{id}(id=${expense.id})}" method="post" style="display:inline;" th:data-confirm="#{common.deleteConfirm}" onsubmit="return confirm(this.dataset.confirm);">
                                         <button type="submit" class="btn-delete" th:text="#{common.delete}" th:disabled="${expenseLocked}">削除</button>
                                     </form>
                                 </td>
@@ -285,14 +285,14 @@
                     </table>
                 </div>
                 <div class="section-total">
-                    <span th:text="#{common.travelSubtotal}">旅費交通費 小計</span>: <span th:text="|${#numbers.formatInteger(#objects.nullSafe(travelTotal, 0), 0, 'COMMA')}円|">0円</span>
+                    <span th:text="#{common.travelSubtotal}">旅費交通費 小計</span>: <span th:text="${#numbers.formatInteger(#objects.nullSafe(travelTotal, 0), 0, 'COMMA')} + #{common.yenUnit}">0円</span>
                 </div>
             </div>
         </div>
         
         <!-- 合計金額 -->
         <div class="grand-total">
-            <div><span th:text="#{common.totalAmount}">合計金額</span>: <span class="total-amount" th:text="|${#numbers.formatInteger(#objects.nullSafe(totalAmount, 0), 0, 'COMMA')}円|">0円</span></div>
+            <div><span th:text="#{common.totalAmount}">合計金額</span>: <span class="total-amount" th:text="${#numbers.formatInteger(#objects.nullSafe(totalAmount, 0), 0, 'COMMA')} + #{common.yenUnit}">0円</span></div>
         </div>
     </div>
 </th:block>

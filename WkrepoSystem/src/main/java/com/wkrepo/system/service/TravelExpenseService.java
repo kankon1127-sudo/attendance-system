@@ -49,7 +49,7 @@ public class TravelExpenseService {
     
     public void deleteTravelExpense(Long id, User user) {
         TravelExpense existing = travelExpenseRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("交通費データが見つかりません。"));
+                .orElseThrow(() -> new IllegalArgumentException("expense.error.travelNotFound"));
         ensureOwner(existing.getUser(), user);
         attendanceService.ensureMonthEditable(existing.getUser(), existing.getExpenseDate());
         travelExpenseRepository.delete(existing);
@@ -70,7 +70,7 @@ public class TravelExpenseService {
     private void validateEditableExpense(TravelExpense expense) {
         if (expense.getId() != null) {
             TravelExpense existing = travelExpenseRepository.findById(expense.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("交通費データが見つかりません。"));
+                    .orElseThrow(() -> new IllegalArgumentException("expense.error.travelNotFound"));
             ensureOwner(existing.getUser(), expense.getUser());
             attendanceService.ensureMonthEditable(existing.getUser(), existing.getExpenseDate());
         }
@@ -80,7 +80,7 @@ public class TravelExpenseService {
     private void ensureOwner(User owner, User currentUser) {
         if (owner == null || owner.getId() == null || currentUser == null || currentUser.getId() == null
                 || !Objects.equals(owner.getId(), currentUser.getId())) {
-            throw new SecurityException("自分の交通費データのみ変更できます。");
+            throw new SecurityException("expense.error.travelNotOwner");
         }
     }
 }

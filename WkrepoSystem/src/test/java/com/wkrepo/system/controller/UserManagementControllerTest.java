@@ -1,6 +1,7 @@
 package com.wkrepo.system.controller;
 
 import com.wkrepo.system.TestData;
+import com.wkrepo.system.config.Messages;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.repository.UserRepository;
 import com.wkrepo.system.service.DefaultAttendanceSettingService;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -27,7 +29,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** 社员管理的权限规则（#16 管理员账号保护、#25 部长不能修改同级）和重复检查（#26） */
+/** 社員管理の権限ルール（#16 管理者アカウントの保護、#25 部長は同格の部長を変更できない）と重複チェック（#26） */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class UserManagementControllerTest {
@@ -38,11 +40,13 @@ class UserManagementControllerTest {
     private UserService userService;
     @Mock
     private DefaultAttendanceSettingService defaultAttendanceSettingService;
+    @Spy
+    private Messages messages = TestData.messages();
 
     @InjectMocks
     private UserManagementController controller;
 
-    // admin 与部长同部门，用来确认同部门的部长也不能修改 ADMIN
+    // admin は部長と同じ部署。同じ部署の部長でも ADMIN を変更できないことを確認するため
     private final User admin = TestData.user(1L, "ADMIN", "开发部");
     private final User manager = TestData.user(2L, "MANAGER", "开发部");
     private final User peerManager = TestData.user(3L, "MANAGER", "开发部");
@@ -56,7 +60,7 @@ class UserManagementControllerTest {
         }
     }
 
-    // ---------- #16 只有 ADMIN 能修改 ADMIN ----------
+    // ---------- #16 ADMIN を変更できるのは ADMIN のみ ----------
 
     @Test
     void soumuCannotChangeAdminPasswordOrRole() {
@@ -85,7 +89,7 @@ class UserManagementControllerTest {
         assertThat(otherAdmin.getStatus()).isEqualTo("INACTIVE");
     }
 
-    // ---------- #25 部长只能修改一般员工和自己 ----------
+    // ---------- #25 部長が変更できるのは一般社員と自分のみ ----------
 
     @Test
     void managerCannotChangePeerManagerPassword() {
@@ -118,7 +122,7 @@ class UserManagementControllerTest {
         assertThat(employee.getStatus()).isEqualTo("INACTIVE");
     }
 
-    // ---------- #26 用户名・社员番号的重复检查 ----------
+    // ---------- #26 ユーザー名・社員番号の重複チェック ----------
 
     @Test
     void duplicateUsernameIsRejectedWithoutSaving() {

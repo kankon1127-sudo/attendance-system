@@ -417,7 +417,7 @@
                     <td>
                         <form th:if="${leave.status == null or leave.status.name() == 'PENDING' or leave.status.name() == 'REJECTED'}"
                               th:action="@{/paid-leave/delete/{id}(id=${leave.id})}" method="post" style="display: inline;">
-                            <button type="submit" class="btn-delete" onclick="return confirm('削除してもよろしいですか？');">
+                            <button type="submit" class="btn-delete" th:data-confirm="#{common.deleteConfirm}" onclick="return confirm(this.dataset.confirm);">
                                 <span th:text="#{common.delete}">削除</span>
                             </button>
                         </form>

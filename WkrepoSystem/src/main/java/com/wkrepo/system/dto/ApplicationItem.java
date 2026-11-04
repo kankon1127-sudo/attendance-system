@@ -12,9 +12,9 @@ public class ApplicationItem {
     private String applicantName;
     private String applicantDepartment;
     private String applicationType; // TRAVEL, GENERAL, PAID_LEAVE
-    private String applicationTypeLabel; // 交通费, 諸経費, 年休
+    private String applicationTypeLabel; // 交通費, 諸経費, 年休
     private LocalDateTime applicationDate;
-    private BigDecimal amount; // 金額（交通费、诸费用）或天数（年假）
+    private BigDecimal amount; // 金額（交通費・諸経費）または日数（年休）
     private String amountLabel;
     private ApplicationStatus status;
     private boolean canApprove;

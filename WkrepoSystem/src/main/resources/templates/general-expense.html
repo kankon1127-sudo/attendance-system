@@ -220,13 +220,13 @@
                             <td th:text="${#temporals.format(expense.date, 'yyyy/MM/dd')}">2024/01/01</td>
                             <td th:text="${expense.expenseType == '消耗品' ? #messages.msg('expense.category.consumables') : (expense.expenseType == '交際費' ? #messages.msg('expense.category.entertainment') : (expense.expenseType == '通信費' ? #messages.msg('expense.category.communication') : (expense.expenseType == '光熱費' ? #messages.msg('expense.category.utilities') : (expense.expenseType == '家賃' ? #messages.msg('expense.category.rent') : (expense.expenseType == 'その他' ? #messages.msg('expense.category.other') : expense.expenseType)))))}">カテゴリ</td>
                             <td th:text="${expense.summary}">摘要</td>
-                            <td th:text="${#numbers.formatInteger(#objects.nullSafe(expense.amount, 0), 0, 'COMMA') + '円'}">1,000円</td>
+                            <td th:text="${#numbers.formatInteger(#objects.nullSafe(expense.amount, 0), 0, 'COMMA')} + #{common.yenUnit}">1,000円</td>
                             <td th:text="${expense.remarks}">備考</td>
                             <td>
                                 <form th:action="@{/general-expense/delete/{id}(id=${expense.id})}" method="post" style="display: inline;">
                                     <input type="hidden" name="year" th:value="${currentYear}">
                                     <input type="hidden" name="month" th:value="${currentMonth}">
-                                    <button type="submit" class="btn-delete" th:disabled="${expenseLocked}" onclick="return confirm('削除してもよろしいですか？');">
+                                    <button type="submit" class="btn-delete" th:disabled="${expenseLocked}" th:data-confirm="#{common.deleteConfirm}" onclick="return confirm(this.dataset.confirm);">
                                         <span th:text="#{common.delete}">削除</span>
                                     </button>
                                 </form>
@@ -238,7 +238,7 @@
             
             <!-- 合計金額 -->
             <div class="total-section">
-                <div><span th:text="#{common.totalAmount}">合計金額</span>: <span class="total-amount" th:text="${#numbers.formatInteger(#objects.nullSafe(totalAmount, 0), 0, 'COMMA') + '円'}">0円</span></div>
+                <div><span th:text="#{common.totalAmount}">合計金額</span>: <span class="total-amount" th:text="${#numbers.formatInteger(#objects.nullSafe(totalAmount, 0), 0, 'COMMA')} + #{common.yenUnit}">0円</span></div>
             </div>
         </div>
     </div>
