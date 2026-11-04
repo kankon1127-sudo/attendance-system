@@ -17,6 +17,8 @@ import com.wkrepo.system.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -68,6 +70,12 @@ public class ApplicationListService {
 
     @Autowired
     private HolidayService holidayService;
+
+    @Autowired
+    private Agreement36Service agreement36Service;
+
+    @Autowired
+    private MessageSource messageSource;
 
     public List<ApplicationItem> getApplicationsForUser(User currentUser) {
         return getApplicationsForUser(currentUser, null, null);
@@ -575,6 +583,17 @@ public class ApplicationListService {
                 dto.setMonthlySummary(summary);
             } catch (Exception e) {
                 log.warn("[ApplicationListService] MonthlySummary計算でエラー reportId={}", id, e);
+            }
+            try {
+                Agreement36Service.Result agreement36 =
+                        agreement36Service.check(applicant, YearMonth.of(mr.getYear(), mr.getMonth()));
+                Locale locale = LocaleContextHolder.getLocale();
+                dto.setAgreement36Alerts(agreement36.alerts().stream()
+                        .map(alert -> messageSource.getMessage(alert.messageKey(), alert.args(), locale))
+                        .collect(Collectors.toList()));
+                dto.setAgreement36HasErrors(agreement36.hasErrors());
+            } catch (Exception e) {
+                log.warn("[ApplicationListService] 36協定チェックでエラー reportId={}", id, e);
             }
             try {
                 dto.setAttendanceList(buildAttendanceDailyList(applicant, mr.getYear(), mr.getMonth()));

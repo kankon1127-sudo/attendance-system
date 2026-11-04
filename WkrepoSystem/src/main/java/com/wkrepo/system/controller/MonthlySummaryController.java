@@ -4,6 +4,7 @@ import com.wkrepo.system.dto.MonthlySummaryDTO;
 import com.wkrepo.system.entity.MonthlyReport;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.repository.UserRepository;
+import com.wkrepo.system.service.Agreement36Service;
 import com.wkrepo.system.service.MonthlyReportService;
 import com.wkrepo.system.service.MonthlySummaryService;
 import jakarta.servlet.http.HttpSession;
@@ -35,6 +36,9 @@ public class MonthlySummaryController {
 
     @Autowired
     private MonthlyReportService monthlyReportService;
+
+    @Autowired
+    private Agreement36Service agreement36Service;
 
     @Autowired
     private UserRepository userRepository;
@@ -136,6 +140,8 @@ public class MonthlySummaryController {
             e.printStackTrace();
             model.addAttribute("summary", new MonthlySummaryDTO());
         }
+        model.addAttribute("agreement36",
+                agreement36Service.check(user, java.time.YearMonth.of(currentYear, currentMonth)));
 
         return "monthly-summary";
     }

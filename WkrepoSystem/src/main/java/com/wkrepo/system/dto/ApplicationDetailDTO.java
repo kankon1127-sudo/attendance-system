@@ -46,6 +46,9 @@ public class ApplicationDetailDTO {
     private MonthlySummaryDTO monthlySummary;
     private List<AttendanceDailyItem> attendanceList;
     private List<ApprovalHistoryEntry> approvalHistory;
+    // 36協定チェック（表示用に解決済みの文言）
+    private List<String> agreement36Alerts;
+    private boolean agreement36HasErrors;
 
     public static class AttendanceDailyItem {
         private String date;
@@ -356,6 +359,22 @@ public class ApplicationDetailDTO {
 
     public void setMonthlySummary(MonthlySummaryDTO monthlySummary) {
         this.monthlySummary = monthlySummary;
+    }
+
+    public List<String> getAgreement36Alerts() {
+        return agreement36Alerts;
+    }
+
+    public void setAgreement36Alerts(List<String> agreement36Alerts) {
+        this.agreement36Alerts = agreement36Alerts;
+    }
+
+    public boolean isAgreement36HasErrors() {
+        return agreement36HasErrors;
+    }
+
+    public void setAgreement36HasErrors(boolean agreement36HasErrors) {
+        this.agreement36HasErrors = agreement36HasErrors;
     }
 
     public List<AttendanceDailyItem> getAttendanceList() {

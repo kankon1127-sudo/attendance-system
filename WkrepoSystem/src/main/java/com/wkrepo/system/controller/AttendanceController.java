@@ -7,6 +7,7 @@ import com.wkrepo.system.entity.GeneralExpense;
 import com.wkrepo.system.entity.TravelExpense;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.repository.UserRepository;
+import com.wkrepo.system.service.Agreement36Service;
 import com.wkrepo.system.service.AttendanceService;
 import com.wkrepo.system.service.AttendanceExcelExportService;
 import com.wkrepo.system.service.DefaultAttendanceSettingService;
@@ -63,6 +64,9 @@ public class AttendanceController {
 
     @Autowired
     private GeneralExpenseService generalExpenseService;
+
+    @Autowired
+    private Agreement36Service agreement36Service;
 
     /**
      * 1. 勤怠入力 画面表示逻辑
@@ -129,6 +133,7 @@ public class AttendanceController {
         model.addAttribute("totalWorkHours", statistics.workHours());
         model.addAttribute("totalOvertimeHours", statistics.overtimeHours());
         model.addAttribute("attendanceAnomalies", anomalies);
+        model.addAttribute("agreement36", agreement36Service.check(user, yearMonth));
         model.addAttribute("currentYear", currentYear);
         model.addAttribute("currentMonth", currentMonth);
         model.addAttribute("user", user);

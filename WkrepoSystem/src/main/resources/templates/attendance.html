@@ -87,6 +87,19 @@
         </ul>
     </div>
 
+    <div class="alert mb-4" th:if="${agreement36 != null and agreement36.hasAlerts()}"
+         th:classappend="${agreement36.hasErrors() ? 'alert-danger' : 'alert-warning'}">
+        <div class="fw-bold mb-2">
+            <i class="bi bi-exclamation-octagon me-1"></i>
+            <span th:text="#{agreement36.title}">36協定チェック</span>
+        </div>
+        <ul class="mb-1 ps-3">
+            <li th:each="alert : ${agreement36.alerts()}" th:classappend="${alert.error() ? 'fw-bold' : ''}"
+                th:text="${#messages.msgWithParams(alert.messageKey(), alert.args())}">36協定の警告</li>
+        </ul>
+        <div class="small" th:text="#{agreement36.note}">集計方法の説明</div>
+    </div>
+
     <!-- 月份切换与工具栏：独立カードレイアウト，確保上下並べ -->
     <div class="attendance-header-card p-3 mb-4">
         <div class="row align-items-center">

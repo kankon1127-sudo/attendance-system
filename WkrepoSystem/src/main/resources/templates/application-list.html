@@ -662,6 +662,8 @@
             travelExpense: /*[[#{monthly.travelExpense}]]*/ '旅費交通費',
             generalExpense: /*[[#{monthly.generalExpense}]]*/ '諸経費',
             total: /*[[#{monthly.total}]]*/ '合計',
+            agreement36Title: /*[[#{agreement36.title}]]*/ '36協定チェック',
+            agreement36Note: /*[[#{agreement36.note}]]*/ '',
             workContent: /*[[#{application.workContent}]]*/ '作業内容',
             noInput: /*[[#{application.noInput}]]*/ '(未入力)',
             dailyAttendance: /*[[#{application.dailyAttendance}]]*/ '毎日勤怠明細',
@@ -998,6 +1000,19 @@
                         '</div>' +
                     '</div>';
             html += '</div>';
+
+            // 36協定チェック（承認判断の参考。警告があっても承認はできる）
+            if (d.agreement36Alerts && d.agreement36Alerts.length > 0) {
+                html += '<div class="alert ' + (d.agreement36HasErrors ? 'alert-danger' : 'alert-warning') + '" style="margin-bottom: 24px;">' +
+                            '<div class="fw-bold mb-2">' + escapeHtml(applicationMessages.agreement36Title) + '</div>' +
+                            '<ul class="mb-1 ps-3">' +
+                                d.agreement36Alerts.map(function (message) {
+                                    return '<li>' + escapeHtml(message) + '</li>';
+                                }).join('') +
+                            '</ul>' +
+                            '<div class="small">' + escapeHtml(applicationMessages.agreement36Note) + '</div>' +
+                        '</div>';
+            }
 
             html += '<div class="detail-info-item full" style="margin-bottom: 24px;">' +
                         '<div class="detail-info-label" style="margin-bottom: 8px;">' + applicationMessages.workContent + '</div>' +

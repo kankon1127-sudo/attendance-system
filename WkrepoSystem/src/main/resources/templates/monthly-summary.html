@@ -331,7 +331,17 @@
 
         <div class="error-banner" th:if="${errorMessage}" th:text="${errorMessage}"></div>
         <div class="alert alert-success" th:if="${successMessage}" th:text="${#messages.msg(successMessage)}"></div>
-        
+
+        <div class="alert" th:if="${agreement36 != null and agreement36.hasAlerts()}"
+             th:classappend="${agreement36.hasErrors() ? 'alert-danger' : 'alert-warning'}">
+            <div style="font-weight: 700; margin-bottom: 6px;" th:text="#{agreement36.title}">36協定チェック</div>
+            <ul style="margin: 0 0 4px; padding-left: 20px;">
+                <li th:each="alert : ${agreement36.alerts()}" th:style="${alert.error() ? 'font-weight: 700;' : ''}"
+                    th:text="${#messages.msgWithParams(alert.messageKey(), alert.args())}">36協定の警告</li>
+            </ul>
+            <div style="font-size: 0.85em;" th:text="#{agreement36.note}">集計方法の説明</div>
+        </div>
+
         <div class="approval-flow-card">
             <div class="form-title" th:text="#{monthly.approvalFlow}">承認フロー</div>
             <div class="flow-steps">

@@ -491,42 +491,6 @@ public class AttendanceService {
         }
     }
     
-    public boolean validateAgreement36Rules(User user, LocalDate startDate, LocalDate endDate) {
-        List<Attendance> attendances = attendanceRepository.findByUserAndDateBetweenOrderByDateAsc(user, startDate, endDate);
-        
-        BigDecimal totalOvertimeHours = BigDecimal.ZERO;
-        BigDecimal totalHolidayHours = BigDecimal.ZERO;
-        
-        for (Attendance attendance : attendances) {
-            String status = attendance.getAgreement36Status();
-            BigDecimal workHours = attendance.getWorkHours() != null ? attendance.getWorkHours() : BigDecimal.ZERO;
-            
-            if (status != null && (status.contains("加班") || status.contains("深夜"))) {
-                if (status.contains("休日")) {
-                    totalHolidayHours = totalHolidayHours.add(workHours);
-                } else {
-                    BigDecimal overtime = workHours.subtract(STANDARD_WORK_HOURS);
-                    if (overtime.compareTo(BigDecimal.ZERO) > 0) {
-                        totalOvertimeHours = totalOvertimeHours.add(overtime);
-                    }
-                }
-            }
-        }
-        
-        BigDecimal monthlyOvertimeLimit = new BigDecimal("45.0");
-        BigDecimal monthlyHolidayLimit = new BigDecimal("40.0");
-        
-        if (totalOvertimeHours.compareTo(monthlyOvertimeLimit) > 0) {
-            throw new RuntimeException("36协定违规：月度加班時間超過制限（" + totalOvertimeHours + "時間，制限：" + monthlyOvertimeLimit + "時間）");
-        }
-        
-        if (totalHolidayHours.compareTo(monthlyHolidayLimit) > 0) {
-            throw new RuntimeException("36协定违规：月度休日工作時間超過制限（" + totalHolidayHours + "時間，制限：" + monthlyHolidayLimit + "時間）");
-        }
-        
-        return true;
-    }
-
     public record MonthlyStatistics(
             BigDecimal workHours,
             BigDecimal overtimeHours,
