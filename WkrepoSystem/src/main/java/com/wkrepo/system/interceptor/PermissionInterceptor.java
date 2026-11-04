@@ -17,10 +17,9 @@ public class PermissionInterceptor implements HandlerInterceptor {
 
     private static final String SESSION_USER = "user";
 
-    // 需要管理员权限的路径
+    // 需要管理员权限的路径（数据库备份 /admin/database-backup 和恢复 /admin/database-restore）
     private static final List<String> ADMIN_PATHS = Arrays.asList(
-        "/default-attendance-setting",
-        "/admin/database-backup"
+        "/admin/"
     );
 
     // 需要部長・総務・管理员权限的路径（Controller 内还会按部门和角色做细分检查）

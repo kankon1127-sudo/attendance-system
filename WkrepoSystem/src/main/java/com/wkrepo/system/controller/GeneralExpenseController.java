@@ -2,6 +2,7 @@ package com.wkrepo.system.controller;
 
 import com.wkrepo.system.entity.GeneralExpense;
 import com.wkrepo.system.entity.User;
+import com.wkrepo.system.service.ApplicationNotificationService;
 import com.wkrepo.system.service.AttendanceService;
 import com.wkrepo.system.service.GeneralExpenseService;
 import jakarta.servlet.http.HttpSession;
@@ -29,6 +30,9 @@ public class GeneralExpenseController {
 
     @Autowired
     private AttendanceService attendanceService;
+
+    @Autowired
+    private ApplicationNotificationService applicationNotificationService;
     
     @GetMapping
     public String showGeneralExpense(
@@ -107,7 +111,24 @@ public class GeneralExpenseController {
         try {
             expense.setUser(user);
             GeneralExpense savedExpense = generalExpenseService.saveGeneralExpense(expense);
-            
+
+            // 与交通费相同：只对一般员工通知上司；通知失败不影响保存
+            ApplicationNotificationService.Result notificationResult;
+            try {
+                notificationResult = applicationNotificationService.notifyManager(
+                        user,
+                        "【Wkrepo】諸経費申請の承認依頼",
+                        "日付: " + savedExpense.getDate()
+                                + "\n種類: " + (savedExpense.getExpenseType() == null ? "-" : savedExpense.getExpenseType())
+                                + "\n金額: " + (savedExpense.getAmount() == null ? "-" : savedExpense.getAmount()) + " 円");
+            } catch (RuntimeException exception) {
+                logger.error("General expense was saved, but its notification could not be processed", exception);
+                notificationResult = ApplicationNotificationService.Result.FAILED;
+            }
+            if (notificationResult != ApplicationNotificationService.Result.NOT_APPLICABLE) {
+                redirectAttributes.addFlashAttribute("notificationStatus", notificationResult.name());
+            }
+
             logger.debug("Saved expense with ID: {}, date: {}, amount: {}", 
                         savedExpense.getId(), savedExpense.getDate(), savedExpense.getAmount());
             

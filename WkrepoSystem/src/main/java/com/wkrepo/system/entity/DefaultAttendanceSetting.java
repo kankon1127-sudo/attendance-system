@@ -1,5 +1,6 @@
 package com.wkrepo.system.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalTime;
 
@@ -11,6 +12,8 @@ public class DefaultAttendanceSetting {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // /attendance/getDefaultSetting 返回 JSON 时不输出（延迟加载的代理无法序列化，也不需要用户信息）
+    @JsonIgnore
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;

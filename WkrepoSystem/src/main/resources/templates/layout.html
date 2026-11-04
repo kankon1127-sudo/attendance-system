@@ -414,22 +414,15 @@
                     <i class="bi bi-check2-square"></i>
                     <span th:text="#{nav.applications}">申請一覧</span>
                 </a>
+                <!-- 自分のデフォルト勤怠設定（全員） -->
+                <a href="/default-attendance-setting" class="nav-item" th:classappend="${currentPage == 'default-attendance-setting' ? 'active' : ''}">
+                    <i class="bi bi-gear"></i>
+                    <span th:text="#{nav.settings}">デフォルト設定</span>
+                </a>
                 <th:block th:if="${user.role == 'ADMIN' or user.role == 'MANAGER' or user.role == 'SOUMU'}">
                     <a href="/user-management" class="nav-item" th:classappend="${currentPage == 'user-management' ? 'active' : ''}">
                         <i class="bi bi-people"></i>
                         <span th:text="#{nav.users}">社員管理</span>
-                    </a>
-                </th:block>
-                
-                <!-- 管理员才能看到的菜单 -->
-                <th:block th:if="${user.role == 'ADMIN'}">
-                    <hr style="border-color: rgba(255,255,255,0.1); margin: 10px 0;">
-                    <div style="padding: 0 20px; font-size: 11px; color: rgba(255,255,255,0.5);">
-                        管理者機能
-                    </div>
-                    <a href="/default-attendance-setting" class="nav-item" th:classappend="${currentPage == 'default-attendance-setting' ? 'active' : ''}">
-                        <i class="bi bi-gear"></i>
-                        <span th:text="#{nav.settings}">デフォルト設定</span>
                     </a>
                 </th:block>
             </nav>

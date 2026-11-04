@@ -85,9 +85,17 @@ class PermissionInterceptorTest {
     @Test
     void adminPathsRequireAdmin() throws Exception {
         assertThat(allowed("SOUMU", "/admin/database-backup")).isFalse();
-        assertThat(allowed("MANAGER", "/default-attendance-setting")).isFalse();
+        assertThat(allowed("MANAGER", "/admin/database-restore")).isFalse();
         assertThat(allowed("ADMIN", "/admin/database-backup")).isTrue();
+        assertThat(allowed("ADMIN", "/admin/database-restore")).isTrue();
         assertThat(allowed("GENERAL", "/attendance")).isTrue();
+    }
+
+    @Test
+    void everyoneCanEditOwnDefaultAttendanceSetting() throws Exception {
+        assertThat(allowed("GENERAL", "/default-attendance-setting")).isTrue();
+        assertThat(allowed("GENERAL", "/default-attendance-setting/save")).isTrue();
+        assertThat(allowed("MANAGER", "/default-attendance-setting")).isTrue();
     }
 
     private boolean allowed(String role, String uri) throws Exception {

@@ -229,6 +229,9 @@
                     <div th:if="${param.success}" class="alert alert-success" role="alert">
                         <span th:text="#{settings.saved}">設定を保存しました。</span>
                     </div>
+                    <div th:if="${param.error}" class="alert alert-danger" role="alert">
+                        <span th:text="#{settings.invalid}">入力内容が正しくありません。</span>
+                    </div>
                     
                     <form action="/default-attendance-setting/save" method="post">
                         <div class="row mb-3">
@@ -247,7 +250,7 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label" th:text="#{attendance.breakTimeMinutes}">休憩時間（分）</label>
-                                <input type="number" class="form-control" name="defaultBreakMinutes" 
+                                <input type="number" class="form-control" name="defaultBreakMinutes" min="0" max="600"
                                        th:value="${setting.defaultBreakMinutes != null ? setting.defaultBreakMinutes : 60}">
                             </div>
                         </div>

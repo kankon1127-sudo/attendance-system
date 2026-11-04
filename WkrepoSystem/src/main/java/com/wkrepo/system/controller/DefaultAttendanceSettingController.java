@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/default-attendance-setting")
 public class DefaultAttendanceSettingController {
 
+    private static final java.util.Set<String> ALLOWED_STATUSES = java.util.Set.of("出社", "在宅", "有給", "欠勤");
+    private static final int MAX_BREAK_MINUTES = 600;
+
     @Autowired
     private DefaultAttendanceSettingService defaultAttendanceSettingService;
 
@@ -43,16 +46,25 @@ public class DefaultAttendanceSettingController {
         if (user == null) {
             return "redirect:/login";
         }
+        // 所有员工都能修改自己的设置（只操作 Session 中的本人），保存前检查输入值
+        if (defaultBreakMinutes != null && (defaultBreakMinutes < 0 || defaultBreakMinutes > MAX_BREAK_MINUTES)) {
+            return "redirect:/default-attendance-setting?error";
+        }
+        if (defaultAgreement36Status != null && !ALLOWED_STATUSES.contains(defaultAgreement36Status)) {
+            return "redirect:/default-attendance-setting?error";
+        }
 
         java.time.LocalTime defaultStartTime = null;
         java.time.LocalTime defaultEndTime = null;
-        
-        if (defaultStartTimeStr != null && !defaultStartTimeStr.isEmpty()) {
-            defaultStartTime = java.time.LocalTime.parse(defaultStartTimeStr);
-        }
-        
-        if (defaultEndTimeStr != null && !defaultEndTimeStr.isEmpty()) {
-            defaultEndTime = java.time.LocalTime.parse(defaultEndTimeStr);
+        try {
+            if (defaultStartTimeStr != null && !defaultStartTimeStr.isEmpty()) {
+                defaultStartTime = java.time.LocalTime.parse(defaultStartTimeStr);
+            }
+            if (defaultEndTimeStr != null && !defaultEndTimeStr.isEmpty()) {
+                defaultEndTime = java.time.LocalTime.parse(defaultEndTimeStr);
+            }
+        } catch (java.time.format.DateTimeParseException e) {
+            return "redirect:/default-attendance-setting?error";
         }
 
         defaultAttendanceSettingService.updateOrCreateDefaultSetting(
