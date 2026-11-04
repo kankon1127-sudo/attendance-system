@@ -14,7 +14,15 @@ echo ====================================================
 if "%JAVA_HOME%"=="" set "JAVA_HOME=C:\Program Files\Microsoft\jdk-17.0.21.21-hotspot"
 
 echo [1/3] 正在检查环境并清理旧进程...
-taskkill /F /IM java.exe /T > nul 2>&1 || echo 无正在运行的Java进程。
+:: 只结束占用 8080 端口的进程（上次启动的本系统），不影响 IDE 等其他 Java 进程
+set "PORT_PID="
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr /r /c:":8080 .*LISTENING"') do set "PORT_PID=%%p"
+if defined PORT_PID (
+    echo 结束占用 8080 端口的进程 PID=%PORT_PID%
+    taskkill /F /PID %PORT_PID% > nul 2>&1
+) else (
+    echo 8080 端口未被占用。
+)
 
 echo [2/3] 正在编译项目 (clean compile)...
 

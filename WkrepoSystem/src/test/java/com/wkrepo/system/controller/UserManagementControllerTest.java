@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 
@@ -26,7 +27,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** 社员管理的权限规则（#16 管理员账号保护、#25 部长不能修改同级） */
+/** 社员管理的权限规则（#16 管理员账号保护、#25 部长不能修改同级）和重复检查（#26） */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class UserManagementControllerTest {
@@ -115,6 +116,57 @@ class UserManagementControllerTest {
         toggle(manager, employee);
 
         assertThat(employee.getStatus()).isEqualTo("INACTIVE");
+    }
+
+    // ---------- #26 用户名・社员番号的重复检查 ----------
+
+    @Test
+    void duplicateUsernameIsRejectedWithoutSaving() {
+        when(userRepository.existsByUsername("user2")).thenReturn(true);
+        RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
+
+        controller.updateUser(employee.getId(), null, "user2", null, null, null, null, null, null,
+                null, null, sessionOf(admin), redirect);
+
+        assertThat((String) redirect.getFlashAttributes().get("errorMessage")).contains("user2");
+        assertThat(employee.getUsername()).isEqualTo("user4");
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void duplicateEmployeeIdIsRejected() {
+        when(userRepository.existsByEmployeeId("EMP2")).thenReturn(true);
+        RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
+
+        controller.updateUser(employee.getId(), null, null, "EMP2", null, null, null, null, null,
+                null, null, sessionOf(admin), redirect);
+
+        assertThat(redirect.getFlashAttributes()).containsKey("errorMessage");
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void keepingOwnUsernameIsNotADuplicate() {
+        // 自分の現在のユーザー名をそのまま送っても重複扱いにしない
+        when(userRepository.existsByUsername("user4")).thenReturn(true);
+        RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
+
+        controller.updateUser(employee.getId(), "NewName", "user4", "EMP4", null, null, null, null, null,
+                null, null, sessionOf(admin), redirect);
+
+        assertThat(redirect.getFlashAttributes()).containsKey("successMessage");
+        verify(userRepository).save(employee);
+    }
+
+    @Test
+    void uniqueConstraintViolationShowsErrorInsteadOf500() {
+        when(userRepository.save(any())).thenThrow(new DataIntegrityViolationException("duplicate"));
+        RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
+
+        controller.updateUser(employee.getId(), null, "newname", null, null, null, null, null, null,
+                null, null, sessionOf(admin), redirect);
+
+        assertThat(redirect.getFlashAttributes()).containsKey("errorMessage");
     }
 
     @Test

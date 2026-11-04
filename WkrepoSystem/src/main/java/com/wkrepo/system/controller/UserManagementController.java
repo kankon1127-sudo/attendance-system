@@ -7,6 +7,7 @@ import com.wkrepo.system.service.DefaultAttendanceSettingService;
 import com.wkrepo.system.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -246,6 +247,20 @@ public class UserManagementController {
             return buildListRedirect(searchName, searchDepartment);
         }
 
+        // 用户名・社员番号的重复检查（排除本人），在修改任何字段之前进行
+        String newUsername = username == null ? "" : username.trim();
+        if (!newUsername.isEmpty() && !newUsername.equals(targetUser.getUsername())
+                && userRepository.existsByUsername(newUsername)) {
+            redirectAttributes.addFlashAttribute("errorMessage", "ユーザー名は既に存在します: " + newUsername);
+            return buildListRedirect(searchName, searchDepartment);
+        }
+        String newEmployeeId = employeeId == null ? "" : employeeId.trim();
+        if (!newEmployeeId.isEmpty() && !newEmployeeId.equals(targetUser.getEmployeeId())
+                && userRepository.existsByEmployeeId(newEmployeeId)) {
+            redirectAttributes.addFlashAttribute("errorMessage", "社員番号は既に存在します: " + newEmployeeId);
+            return buildListRedirect(searchName, searchDepartment);
+        }
+
         if (managerId != null && managerId > 0) {
             User managerUser = userRepository.findById(managerId).orElse(null);
             if (managerUser == null) {
@@ -285,7 +300,13 @@ public class UserManagementController {
 
         targetUser.setDepartment(finalDept);
         targetUser.setRole(finalRole);
-        userRepository.save(targetUser);
+        try {
+            userRepository.save(targetUser);
+        } catch (DataIntegrityViolationException e) {
+            // 上面的检查之后被其他请求抢先使用时的兜底
+            redirectAttributes.addFlashAttribute("errorMessage", "ユーザー名または社員番号が重複しています。");
+            return buildListRedirect(searchName, searchDepartment);
+        }
         redirectAttributes.addFlashAttribute("successMessage", "ユーザー情報を更新しました: " + targetUser.getName());
 
         return buildListRedirect(searchName, searchDepartment);

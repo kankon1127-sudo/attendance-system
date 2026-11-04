@@ -3,6 +3,7 @@ package com.wkrepo.system.controller;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.dto.ApplicationItem;
 import com.wkrepo.system.entity.Attendance;
+import com.wkrepo.system.service.Agreement36Service;
 import com.wkrepo.system.service.AttendanceService;
 import com.wkrepo.system.service.ApplicationListService;
 import com.wkrepo.system.service.PaidLeaveService;
@@ -30,17 +31,20 @@ public class AuthController {
     private final ApplicationListService applicationListService;
     private final AttendanceService attendanceService;
     private final PaidLeaveService paidLeaveService;
+    private final Agreement36Service agreement36Service;
 
     @Autowired
     public AuthController(
             UserService userService,
             ApplicationListService applicationListService,
             AttendanceService attendanceService,
-            PaidLeaveService paidLeaveService) {
+            PaidLeaveService paidLeaveService,
+            Agreement36Service agreement36Service) {
         this.userService = userService;
         this.applicationListService = applicationListService;
         this.attendanceService = attendanceService;
         this.paidLeaveService = paidLeaveService;
+        this.agreement36Service = agreement36Service;
     }
     
     @GetMapping("/login")
@@ -97,9 +101,12 @@ public class AuthController {
         List<AttendanceService.MonthlyTrend> monthlyTrend =
                 attendanceService.calculateMonthlyTrend(attendances, firstTrendMonth, 6);
         AttendanceService.MonthlyTrend statistics = monthlyTrend.get(monthlyTrend.size() - 1);
+        // 進捗バーは 36 協定の時間外労働（日曜日の休日労働を除く）で月 45 時間と比較する
+        Agreement36Service.Result agreement36 = agreement36Service.check(user, currentMonth);
+        BigDecimal monthlyOvertime = agreement36.monthlyOvertime();
         BigDecimal overtimeLimit = new BigDecimal("45.0");
         BigDecimal overtimeWarningThreshold = new BigDecimal("40.0");
-        BigDecimal overtimePercent = statistics.overtimeHours()
+        BigDecimal overtimePercent = monthlyOvertime
                 .multiply(BigDecimal.valueOf(100))
                 .divide(overtimeLimit, 0, RoundingMode.HALF_UP)
                 .min(BigDecimal.valueOf(100));
@@ -109,12 +116,14 @@ public class AuthController {
         model.addAttribute("homeRemainingLeave",
                 paidLeaveService.getBalance(user, today.getYear()).remainingDays());
         model.addAttribute("homeMonthlyTrend", monthlyTrend);
+        model.addAttribute("homeAgreement36Overtime", monthlyOvertime);
+        model.addAttribute("homeAgreement36", agreement36);
         model.addAttribute("homeOvertimePercent", overtimePercent);
         model.addAttribute("homeOvertimeLimit", overtimeLimit);
         model.addAttribute("homeOvertimeRemaining",
-                overtimeLimit.subtract(statistics.overtimeHours()).max(BigDecimal.ZERO));
+                overtimeLimit.subtract(monthlyOvertime).max(BigDecimal.ZERO));
         model.addAttribute("homeOvertimeWarningReached",
-                statistics.overtimeHours().compareTo(overtimeWarningThreshold) >= 0);
+                monthlyOvertime.compareTo(overtimeWarningThreshold) >= 0);
         return "home";
     }
 }

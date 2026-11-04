@@ -261,7 +261,7 @@
         <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
             <span th:text="#{home.monthlyOvertime}">本月加班时长</span>
             <strong class="text-nowrap">
-                <span th:text="${#numbers.formatDecimal(homeOvertimeHours, 1, 2)}">0.00</span>
+                <span th:text="${#numbers.formatDecimal(homeAgreement36Overtime, 1, 2)}">0.00</span>
                 <span>h / </span>
                 <span th:text="${#numbers.formatDecimal(homeOvertimeLimit, 1, 0)}">45</span>
                 <span>h</span>
@@ -288,6 +288,12 @@
         </div>
         <div class="small text-muted mt-2" th:text="#{home.overtimeLimit}">
             月加班上限为45小时。
+        </div>
+        <div class="small mt-2" th:if="${homeAgreement36 != null and homeAgreement36.hasAlerts()}"
+             th:classappend="${homeAgreement36.hasErrors() ? 'text-danger fw-bold' : 'text-warning-emphasis'}">
+            <i class="bi bi-exclamation-octagon me-1"></i>
+            <a th:href="@{/attendance}" class="link-underline-opacity-0" style="color: inherit;"
+               th:text="#{home.agreement36Alert(${homeAgreement36.alerts().size()})}">36協定の警告があります</a>
         </div>
     </div>
 </th:block>
