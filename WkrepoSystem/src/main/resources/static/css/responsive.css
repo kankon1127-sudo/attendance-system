@@ -574,3 +574,845 @@
         min-height: 42px;
     }
 }
+
+/* =====================================================================
+   スマホ表示の改善（上部バー 1 行化・下部ナビ・コンパクトな一覧）
+   ===================================================================== */
+
+/* デスクトップでは使わない要素 */
+.sidebar-account,
+.mobile-bottom-nav {
+    display: none;
+}
+
+@media (max-width: 767.98px) {
+    body {
+        background: #f1f5f9;
+    }
+
+    .content-area {
+        padding: 12px 12px calc(76px + env(safe-area-inset-bottom));
+    }
+
+    .desktop-only {
+        display: none !important;
+    }
+
+    /* ---------- 上部バー：☰・タイトル・アバターを 1 行に ---------- */
+    .top-bar {
+        position: sticky;
+        top: 0;
+        z-index: 1020;
+        flex-wrap: nowrap;
+        gap: 8px;
+        padding: 8px 12px;
+    }
+
+    .top-bar-left {
+        flex: 1 1 auto;
+        width: auto;
+    }
+
+    .top-bar .system-name {
+        display: none;
+    }
+
+    .top-bar-left h2 {
+        margin: 0;
+        font-size: 17px;
+    }
+
+    .sidebar-toggle {
+        width: 38px;
+        height: 38px;
+        flex-basis: 38px;
+    }
+
+    .top-bar-right {
+        flex-direction: row;
+        width: auto;
+        gap: 0;
+    }
+
+    /* 氏名の div にはインラインの display 指定があるため !important で隠す */
+    .top-bar-right .user-info > div:last-child,
+    .top-bar-right .top-bar-actions {
+        display: none !important;
+    }
+
+    .top-bar-right .user-avatar {
+        width: 34px;
+        height: 34px;
+        flex: 0 0 34px;
+        cursor: pointer;
+    }
+
+    /* ---------- サイドメニュー：下にユーザー情報・言語・ログアウト ---------- */
+    .sidebar.is-open {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .sidebar-account {
+        display: block;
+        margin-top: auto;
+        padding: 16px;
+        border-top: 1px solid rgba(255, 255, 255, .12);
+    }
+
+    .sidebar-account-user {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .sidebar-account-name {
+        color: #fff;
+        font-weight: 600;
+    }
+
+    .sidebar-account-meta {
+        color: rgba(255, 255, 255, .6);
+        font-size: 12px;
+    }
+
+    .sidebar-account .form-select {
+        margin-bottom: 10px;
+    }
+
+    .sidebar-account-logout {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 10px;
+        border-radius: 8px;
+        background: #e74c3c;
+        color: #fff;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    /* ---------- 下部ナビゲーション ---------- */
+    .mobile-bottom-nav {
+        display: flex;
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 1030;
+        padding-bottom: env(safe-area-inset-bottom);
+        border-top: 1px solid #e2e8f0;
+        background: #fff;
+        box-shadow: 0 -2px 10px rgba(15, 23, 42, .06);
+    }
+
+    .mobile-bottom-nav a {
+        display: flex;
+        flex: 1 1 0;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        padding: 7px 0 6px;
+        color: #64748b;
+        font-size: 11px;
+        text-decoration: none;
+    }
+
+    .mobile-bottom-nav a i {
+        font-size: 20px;
+        line-height: 1;
+    }
+
+    .mobile-bottom-nav a.active {
+        color: #2563eb;
+        font-weight: 600;
+    }
+
+    /* ---------- カードの余白・入れ子を減らす ---------- */
+    .content-area .card {
+        margin-bottom: 12px;
+        padding: 14px;
+        border-radius: 12px;
+    }
+
+    .content-area .content-wrapper {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .content-area .page-title-card,
+    .content-area > .card > h3:first-child {
+        display: none;
+    }
+
+    .content-area .header-card,
+    .content-area .filter-card,
+    .content-area .summary-card,
+    .content-area .approval-flow-card {
+        margin-bottom: 12px;
+        padding: 14px;
+    }
+
+    .content-area .table-card,
+    .content-area .attendance-table-card {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    /* ---------- 統計カード：2 列・3 列 ---------- */
+    .home-stat-row {
+        --bs-gutter-x: 10px;
+        margin-bottom: 4px !important;
+    }
+
+    .home-stat-row > [class*="col-"] {
+        flex: 0 0 50%;
+        max-width: 50%;
+        margin-bottom: 10px !important;
+    }
+
+    .home-stat-row .stat-card {
+        padding: 12px 8px;
+    }
+
+    .home-stat-row .stat-card h4 {
+        margin-bottom: 4px;
+        font-size: 12px;
+    }
+
+    .home-stat-row .stat-card .stat-value,
+    .home-stat-row .stat-card .stat-unit {
+        display: inline;
+    }
+
+    .home-stat-row .stat-card .stat-value {
+        font-size: 22px;
+    }
+
+    .home-stat-row .stat-card .stat-unit {
+        margin-left: 2px;
+    }
+
+    .content-area .attendance-stat-cards {
+        flex-direction: row;
+        gap: 8px !important;
+        margin-bottom: 12px !important;
+    }
+
+    .content-area .attendance-stat-cards > div {
+        min-width: 0;
+        padding: 10px 4px !important;
+    }
+
+    .content-area .attendance-stat-cards .h2 {
+        font-size: 20px;
+    }
+
+    .content-area .attendance-stat-cards .small {
+        margin-bottom: 2px !important;
+        font-size: 11px;
+    }
+
+    .content-area .stat-cards {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    /* ---------- 勤怠：月の切り替えとボタン ---------- */
+    .attendance-header-card {
+        margin-bottom: 12px !important;
+        padding: 12px !important;
+    }
+
+    .content-area .attendance-toolbar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px !important;
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    .content-area .attendance-toolbar > * {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        min-height: 40px;
+        border-radius: 8px !important;
+        font-size: 13px;
+    }
+
+    /* 一括編集を隠すと 3 個になるので、最後（Excel 出力）は横幅いっぱいに */
+    .content-area .attendance-toolbar > :last-child {
+        grid-column: 1 / -1;
+    }
+
+    .attendance-header-card .card {
+        margin: 0;
+        padding: 0;
+    }
+
+    .attendance-header-card .card .card-body {
+        padding: 8px 10px !important;
+    }
+
+    .attendance-default-values {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px 12px;
+    }
+
+    .attendance-default-values-title {
+        flex-basis: 100%;
+    }
+
+    /* ---------- 一覧を「1 件 2〜3 行」のコンパクトな行に ---------- */
+    .content-area .js-mobile-card-table tbody {
+        gap: 8px;
+    }
+
+    .content-area .js-mobile-card-table tbody tr:not(.no-data-row) {
+        padding: 6px 12px;
+        border-radius: 10px;
+    }
+
+    .content-area .js-mobile-card-table tbody tr:not(.no-data-row) > td {
+        gap: 10px;
+        padding: 5px 0;
+        font-size: 13.5px;
+    }
+
+    .content-area .js-mobile-card-table tbody tr:not(.no-data-row) > td::before {
+        flex-basis: 34%;
+        font-size: 11.5px;
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row),
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row),
+    .content-area .js-mobile-expense-table tbody tr:not(.no-data-row),
+    .content-area .js-mobile-user-table tbody tr:not(.no-data-row) {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 3px 8px;
+        padding: 10px 12px;
+    }
+
+    /* 1 行目と 2 行目の区切り（order: 5） */
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row)::after,
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row)::after,
+    .content-area .js-mobile-expense-table tbody tr:not(.no-data-row)::after,
+    .content-area .js-mobile-user-table tbody tr:not(.no-data-row)::after {
+        order: 5;
+        flex-basis: 100%;
+        height: 0;
+        content: "";
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td,
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td,
+    .content-area .js-mobile-expense-table tbody tr:not(.no-data-row) > td,
+    .content-area .js-mobile-user-table tbody tr:not(.no-data-row) > td {
+        display: block;
+        width: auto;
+        padding: 0;
+        border: 0;
+        text-align: left !important;
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td::before,
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td::before,
+    .content-area .js-mobile-expense-table tbody tr:not(.no-data-row) > td::before,
+    .content-area .js-mobile-user-table tbody tr:not(.no-data-row) > td::before {
+        content: none;
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td.mobile-action-cell,
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td.mobile-action-cell,
+    .content-area .js-mobile-expense-table tbody tr:not(.no-data-row) > td.mobile-action-cell {
+        display: none;
+    }
+
+    /* 2 行目の小さい灰色の文字 */
+    .content-area .js-mobile-card-table tbody tr:not(.no-data-row) > td.sub,
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(n+3):nth-child(-n+5),
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(7),
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(9),
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(3),
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(5),
+    .content-area .js-mobile-expense-table tbody tr:not(.no-data-row) > td:nth-child(n+2):nth-child(-n+4),
+    .content-area .js-mobile-user-table tbody tr:not(.no-data-row) > td:nth-child(1),
+    .content-area .js-mobile-user-table tbody tr:not(.no-data-row) > td:nth-child(3),
+    .content-area .js-mobile-user-table tbody tr:not(.no-data-row) > td:nth-child(5) {
+        color: #64748b;
+        font-size: 12.5px;
+    }
+
+    /* ----- 勤怠：「11-02 月 ……… 在宅 8.50h」「08:30 – 18:00 休憩 01:00 ……… 残業 0.50h」 ----- */
+    .content-area .js-mobile-attendance-table tbody {
+        gap: 6px;
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr.rest-day:not(.no-data-row) {
+        background: #f8fafc;
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(1) {
+        order: 1;
+        font-weight: 700;
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(1).text-muted {
+        color: #1e293b !important;
+    }
+
+    /* 祝日・会社休日の名前を曜日の横に表示 */
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(2)[title]::after {
+        margin-left: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        content: attr(title);
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(2) {
+        order: 2;
+        font-size: 12.5px;
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(8) {
+        order: 3;
+        margin-left: auto;
+    }
+
+    .content-area .js-mobile-attendance-table .status-chip {
+        display: inline-block;
+        padding: 1px 8px;
+        border-radius: 999px;
+        background: #e0e7ff;
+        color: #3730a3;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .content-area .js-mobile-attendance-table .status-chip.is-empty {
+        display: none;
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(6) {
+        order: 4;
+        min-width: 3.4em;
+        font-weight: 700;
+        text-align: right !important;
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(6)::after {
+        margin-left: 1px;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 500;
+        content: "h";
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(3) {
+        order: 6;
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(4) {
+        order: 7;
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(4)::before {
+        margin-right: 6px;
+        content: "–";
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(5) {
+        order: 8;
+        margin-left: 4px;
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(5)::before,
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(7)::before {
+        margin-right: 3px;
+        content: attr(data-label);
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(7) {
+        order: 9;
+        margin-left: auto;
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(7)::after {
+        content: "h";
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(9) {
+        order: 10;
+        flex-basis: 100%;
+    }
+
+    /* 時刻のない日（未入力・有給・欠勤）は 1 行だけ */
+    .content-area .js-mobile-attendance-table tbody tr.no-times:not(.no-data-row)::after,
+    .content-area .js-mobile-attendance-table tbody tr.no-times:not(.no-data-row) > td:nth-child(n+3):nth-child(-n+7),
+    .content-area .js-mobile-attendance-table tbody tr.no-remarks:not(.no-data-row) > td:nth-child(9) {
+        display: none;
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr.no-times:not(.no-data-row) {
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+
+    /* ----- 申請一覧：「交通費 山田太郎 開発部 ……… 申請中」「日時 待機日数 ……… ¥1,440」 ----- */
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(1) {
+        display: none;
+    }
+
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(4) {
+        order: 1;
+    }
+
+    /* 申請者・部署・金額は元のスマホ用 CSS で隠していたので表示し直す */
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(2),
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(3),
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(6) {
+        display: block;
+        border: 0;
+    }
+
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(2) {
+        order: 2;
+        font-weight: 600;
+    }
+
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(3) {
+        order: 3;
+    }
+
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(7) {
+        order: 4;
+        margin-left: auto;
+    }
+
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(5) {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+        order: 6;
+    }
+
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(5) .badge {
+        margin-top: 0 !important;
+    }
+
+    .content-area .js-mobile-application-table tbody tr:not(.no-data-row) > td:nth-child(6) {
+        order: 7;
+        margin-left: auto;
+    }
+
+    /* ----- 交通費・諸経費：「日付 ……… 金額」「交通手段 · 経路 · 摘要」 ----- */
+    .content-area .js-mobile-expense-table tbody tr:not(.no-data-row) > td:nth-child(1) {
+        order: 1;
+        font-weight: 600;
+    }
+
+    .content-area .js-mobile-expense-table tbody tr:not(.no-data-row) > td:nth-child(5) {
+        order: 2;
+        margin-left: auto;
+        color: #1e293b;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .content-area .js-mobile-expense-table tbody tr:not(.no-data-row) > td:nth-child(2) {
+        order: 6;
+    }
+
+    .content-area .js-mobile-expense-table tbody tr:not(.no-data-row) > td:nth-child(3) {
+        order: 7;
+    }
+
+    .content-area .js-mobile-expense-table tbody tr:not(.no-data-row) > td:nth-child(4) {
+        order: 8;
+    }
+
+    .content-area .js-mobile-expense-table tbody tr:not(.no-data-row) > td:nth-child(3):not(:empty)::before,
+    .content-area .js-mobile-expense-table tbody tr:not(.no-data-row) > td:nth-child(4):not(:empty)::before {
+        margin-right: 6px;
+        content: "·";
+    }
+
+    /* 諸経費の列は「日付・カテゴリ・摘要・金額・備考」なので、交通費用の指定を上書きする */
+    .content-area .js-mobile-expense-table.js-mobile-general-table tbody tr:not(.no-data-row) > td:nth-child(4) {
+        order: 2;
+        margin-left: auto;
+        color: #1e293b;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .content-area .js-mobile-expense-table.js-mobile-general-table tbody tr:not(.no-data-row) > td:nth-child(4):not(:empty)::before {
+        content: none;
+    }
+
+    .content-area .js-mobile-expense-table.js-mobile-general-table tbody tr:not(.no-data-row) > td:nth-child(5) {
+        order: 9;
+        flex-basis: 100%;
+        margin-left: 0;
+        color: #64748b;
+        font-size: 12.5px;
+        font-weight: 400;
+    }
+
+    /* table-striped の背景色を消す */
+    .content-area .js-mobile-expense-table > tbody > tr > td {
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    /* 交通費：カードの入れ子の余白を減らす */
+    .content-area .expense-section {
+        padding: 0;
+    }
+
+    /* 交通費：登録済みの一覧を入力フォームより先に表示 */
+    .content-area .expense-section .card-body {
+        display: flex;
+        flex-direction: column;
+        padding: 12px;
+    }
+
+    .content-area .expense-section .card-body > .table-responsive {
+        order: 3;
+    }
+
+    .content-area .expense-section .card-body > .section-total {
+        order: 4;
+        margin-bottom: 14px;
+    }
+
+    .content-area .expense-section .card-body > form {
+        order: 5;
+        padding-top: 14px;
+        border-top: 1px dashed #cbd5e1;
+    }
+
+    /* 入力フォームは 2 列 */
+    .content-area .expense-section form .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    /* 1 行目は 3 項目なので、3 つ目（経路）は横幅いっぱいに */
+    .content-area .expense-section form .form-row:first-of-type > .form-group:nth-child(3) {
+        grid-column: 1 / -1;
+    }
+
+    .content-area .expense-section form label {
+        margin-bottom: 2px;
+        font-size: 12.5px;
+    }
+
+    /* 諸経費：.card（Bootstrap では縦の flex）の中で margin: auto のフォームが縮まないようにする */
+    .content-area .expense-form {
+        width: 100%;
+        max-width: none;
+    }
+
+    .content-area .expense-form fieldset > .form-row:nth-of-type(-n+2) {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .content-area .expense-form label {
+        margin-bottom: 2px;
+        font-size: 12.5px;
+    }
+
+    /* 諸経費：登録済みの一覧と合計を入力フォームより先に表示 */
+    .content-area .card:has(> .expense-form) > .mt-5 {
+        order: 1;
+        margin-top: 0 !important;
+    }
+
+    .content-area .card:has(> .expense-form) > .total-section {
+        order: 2;
+        margin: 10px 0 14px;
+    }
+
+    .content-area .card:has(> .expense-form) > .expense-form {
+        order: 3;
+        padding-top: 14px;
+        border-top: 1px dashed #cbd5e1;
+    }
+
+    /* 年月の選択は 1 行 */
+    .content-area form[method="GET"].d-flex {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center !important;
+        gap: 6px;
+    }
+
+    .content-area form[method="GET"].d-flex > label {
+        display: none;
+    }
+
+    .content-area form[method="GET"].d-flex > select {
+        flex: 1 1 0;
+        margin: 0 !important;
+    }
+
+    .content-area form[method="GET"].d-flex > button {
+        flex: 0 0 auto;
+        width: auto;
+        margin: 0 !important;
+    }
+
+    /* ----- 社員一覧：「山田太郎 @user 一般 ……… 有効」「EMP003 開発部 上司」「編集 無効化」 ----- */
+    /* 社員管理画面の .um-table td { padding: 14px 12px !important } を打ち消す */
+    .content-area .js-mobile-user-table.um-table tbody tr:not(.no-data-row) > td {
+        padding: 0 !important;
+    }
+    .content-area .js-mobile-user-table tbody tr:not(.no-data-row) > td:nth-child(2) {
+        order: 1;
+    }
+
+    .content-area .js-mobile-user-table .um-name-primary,
+    .content-area .js-mobile-user-table .um-name-secondary {
+        display: inline;
+    }
+
+    .content-area .js-mobile-user-table .um-name-primary {
+        font-size: 14.5px;
+        font-weight: 700;
+    }
+
+    .content-area .js-mobile-user-table .um-name-secondary {
+        margin-left: 4px;
+        color: #94a3b8;
+        font-size: 12px;
+    }
+
+    .content-area .js-mobile-user-table tbody tr:not(.no-data-row) > td:nth-child(4) {
+        order: 2;
+    }
+
+    .content-area .js-mobile-user-table tbody tr:not(.no-data-row) > td:nth-child(6) {
+        order: 3;
+        margin-left: auto;
+    }
+
+    .content-area .js-mobile-user-table tbody tr:not(.no-data-row) > td:nth-child(1) {
+        order: 6;
+        font-family: inherit !important;
+        font-weight: 600 !important;
+    }
+
+    .content-area .js-mobile-user-table tbody tr:not(.no-data-row) > td:nth-child(3) {
+        order: 7;
+        font-weight: 500 !important;
+    }
+
+    .content-area .js-mobile-user-table tbody tr:not(.no-data-row) > td:nth-child(5) {
+        order: 8;
+        font-size: 12.5px !important;
+    }
+
+    .content-area .js-mobile-user-table tbody tr:not(.no-data-row) > td:nth-child(5) span {
+        color: inherit !important;
+        font-weight: 500 !important;
+    }
+
+    .content-area .js-mobile-user-table tbody tr:not(.no-data-row) > td.mobile-action-cell {
+        display: block;
+        order: 9;
+        flex-basis: 100%;
+        margin-top: 6px;
+    }
+
+    .content-area .js-mobile-user-table .action-buttons-um {
+        flex-direction: row;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+
+    .content-area .js-mobile-user-table .action-buttons-um > *,
+    .content-area .js-mobile-user-table .action-buttons-um button {
+        width: auto;
+        min-height: 32px;
+        padding: 4px 12px;
+        font-size: 12.5px;
+    }
+
+    /* ---------- 申請一覧の絞り込み：2 列 ---------- */
+    .content-area .filter-card {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .content-area .filter-card .filter-group {
+        gap: 4px;
+    }
+
+    .content-area .filter-card .filter-group:nth-of-type(3) {
+        flex-direction: row;
+        grid-column: 1 / -1;
+        gap: 8px;
+    }
+
+    .content-area .filter-card .filter-group:nth-of-type(3) > * {
+        flex: 1 1 0;
+        min-height: 40px;
+    }
+
+    .content-area .filter-card .filter-count {
+        grid-column: 1 / -1;
+        font-size: 13px;
+    }
+
+    .content-area .filter-card .filter-label {
+        font-size: 12.5px;
+    }
+
+    /* ---------- スマホでは見出しだけに折りたためるカード ---------- */
+    .content-area .mobile-collapsible > .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+    }
+
+    .content-area .mobile-collapsible > .card-header::after {
+        font-family: bootstrap-icons;
+        content: "\F282";
+        transition: transform .2s;
+    }
+
+    .content-area .mobile-collapsible:not(.is-collapsed) > .card-header::after {
+        transform: rotate(180deg);
+    }
+
+    .content-area .mobile-collapsible.is-collapsed > :not(.card-header) {
+        display: none !important;
+    }
+
+    .content-area .mobile-collapsible.is-collapsed > .card-header {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: 0;
+    }
+}

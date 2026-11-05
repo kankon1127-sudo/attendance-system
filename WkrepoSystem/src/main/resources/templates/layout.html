@@ -432,6 +432,24 @@
                     <span th:text="#{nav.holidays}">祝日管理</span>
                 </a>
             </nav>
+            <!-- スマホ用：ユーザー情報・言語・ログアウト（スマホでは上部バーから移す） -->
+            <div class="sidebar-account">
+                <div class="sidebar-account-user">
+                    <div class="user-avatar" th:text="${user?.name?.substring(0, 1) ?: 'A'}">A</div>
+                    <div class="sidebar-account-text">
+                        <div class="sidebar-account-name" th:text="${user?.name}">admin</div>
+                        <div class="sidebar-account-meta" th:text="${user?.department + ' / ' + #messages.msg('user.role.' + user?.role)}">管理部 / 管理者</div>
+                    </div>
+                </div>
+                <select class="form-select form-select-sm" th:attr="aria-label=#{language.label}"
+                        onchange="var query = window.location.search.substring(1).split('&'); var kept = []; for (var i = 0; i < query.length; i++) { if (query[i] && query[i].split('=')[0] !== 'lang') kept.push(query[i]); } kept.push('lang=' + encodeURIComponent(this.value)); window.location.href = window.location.pathname + '?' + kept.join('&') + window.location.hash;">
+                    <option value="ja" th:selected="${#locale.language == 'ja'}" th:text="#{language.japanese}">日本語</option>
+                    <option value="zh-CN" th:selected="${#locale.language == 'zh'}" th:text="#{language.chinese}">简体中文</option>
+                </select>
+                <a href="/logout" class="sidebar-account-logout">
+                    <i class="bi bi-box-arrow-right"></i> <span th:text="#{action.logout}">ログアウト</span>
+                </a>
+            </div>
         </div>
         
         <!-- 右側メインコンテンツ -->
@@ -483,6 +501,25 @@
         </div>
     </div>
 
+    <!-- スマホ用の下部ナビゲーション（よく使う 5 画面。その他は左上のメニュー） -->
+    <nav class="mobile-bottom-nav" th:attr="aria-label=#{common.menu}">
+        <a href="/home" th:classappend="${currentPage == 'home' ? 'active' : ''}">
+            <i class="bi bi-house-door"></i><span th:text="#{nav.short.home}">ホーム</span>
+        </a>
+        <a href="/attendance" th:classappend="${currentPage == 'attendance' ? 'active' : ''}">
+            <i class="bi bi-calendar-check"></i><span th:text="#{nav.short.attendance}">勤怠</span>
+        </a>
+        <a href="/travel-expense" th:classappend="${currentPage == 'travel-expense' or currentPage == 'general-expense' ? 'active' : ''}">
+            <i class="bi bi-car-front"></i><span th:text="#{nav.short.expense}">経費</span>
+        </a>
+        <a href="/monthly-summary" th:classappend="${currentPage == 'monthly-summary' ? 'active' : ''}">
+            <i class="bi bi-bar-chart"></i><span th:text="#{nav.short.monthly}">月報</span>
+        </a>
+        <a href="/application/list" th:classappend="${currentPage == 'application-list' ? 'active' : ''}">
+            <i class="bi bi-check2-square"></i><span th:text="#{nav.short.applications}">申請</span>
+        </a>
+    </nav>
+
     <div class="modal fade" id="mobileRecordModal" tabindex="-1" aria-labelledby="mobileRecordModalTitle" aria-hidden="true"
          th:attr="data-close-label=#{common.close}">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
@@ -521,6 +558,34 @@
             }
         });
         window.matchMedia('(min-width: 768px)').addEventListener('change', () => setSidebarOpen(false));
+        // スマホでは上部バーのアバターからもメニュー（ユーザー情報・ログアウト）を開く
+        document.querySelectorAll('.top-bar .user-avatar').forEach(avatar => {
+            avatar.addEventListener('click', () => {
+                if (window.matchMedia('(max-width: 767.98px)').matches) setSidebarOpen(true);
+            });
+        });
+
+        // スマホでは .mobile-collapsible のカードを見出しだけに折りたたむ（見出しをタップで開閉）
+        if (window.matchMedia('(max-width: 767.98px)').matches) {
+            document.querySelectorAll('.mobile-collapsible').forEach(card => {
+                const header = card.querySelector(':scope > .card-header');
+                if (!header) return;
+                // data-keep-open="true"（検索中など）のカードは開いたままにする
+                const keepOpen = card.dataset.keepOpen === 'true';
+                card.classList.toggle('is-collapsed', !keepOpen);
+                header.setAttribute('role', 'button');
+                header.setAttribute('tabindex', '0');
+                header.setAttribute('aria-expanded', String(keepOpen));
+                const toggle = () => {
+                    const collapsed = card.classList.toggle('is-collapsed');
+                    header.setAttribute('aria-expanded', String(!collapsed));
+                };
+                header.addEventListener('click', toggle);
+                header.addEventListener('keydown', event => {
+                    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggle(); }
+                });
+            });
+        }
     </script>
     <script>
         (function () {

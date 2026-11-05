@@ -25,14 +25,6 @@
         .editing .display-mode {
             display: none;
         }
-        @media (max-width: 767.98px) {
-            .attendance-stat-cards {
-                flex-direction: column;
-            }
-            .attendance-stat-cards > div {
-                width: 100%;
-            }
-        }
     </style>
 </head>
 <body>
@@ -119,10 +111,10 @@
             </div>
             <!-- 右側：ツールバー -->
             <div class="col-md-7 text-end">
-                <div class="btn-group gap-2">
+                <div class="btn-group gap-2 attendance-toolbar">
                     <a href="/default-attendance-setting" class="btn btn-outline-primary btn-sm rounded"><i class="bi bi-gear"></i> <span th:text="#{attendance.defaultSettings}">デフォルト設定</span></a>
                     <button type="button" class="btn btn-outline-secondary btn-sm rounded" onclick="applyDefaultValues()" th:disabled="${attendanceLocked}"><i class="bi bi-magic"></i> <span th:text="#{attendance.bulkDefault}">一括デフォルト入力</span></button>
-                    <button type="button" class="btn btn-primary btn-sm rounded px-3" th:disabled="${attendanceLocked}"><i class="bi bi-pencil-square"></i> <span th:text="#{attendance.bulkEdit}">一括編集</span></button>
+                    <button type="button" class="btn btn-primary btn-sm rounded px-3 desktop-only" th:disabled="${attendanceLocked}"><i class="bi bi-pencil-square"></i> <span th:text="#{attendance.bulkEdit}">一括編集</span></button>
                     <a th:href="@{/attendance/export(year=${currentYear}, month=${currentMonth})}"
                        class="btn btn-success btn-sm rounded" th:title="#{attendance.export.title}">
                         <i class="bi bi-file-earmark-excel"></i> <span th:text="#{action.exportExcel}">Excel出力</span>
@@ -187,10 +179,12 @@
                 <tbody>
                     <tr th:each="day : ${calendarDays}" th:id="'row-' + ${day.day}" th:attr="data-date=${day.date},data-rest-day=${day.holiday}"
                         th:with="attendanceStatus=${day.attendance?.agreement36Status},
-                                 isNoInput=${attendanceStatus == null or #strings.isEmpty(attendanceStatus) or attendanceStatus == '-'}">
+                                 isNoInput=${attendanceStatus == null or #strings.isEmpty(attendanceStatus) or attendanceStatus == '-'}"
+                        th:classappend="|${isNoInput or day.attendance?.startTime == null ? 'no-times' : ''} ${day.holiday ? 'rest-day' : ''} ${day.attendance?.remarks == null or #strings.isEmpty(day.attendance?.remarks) ? 'no-remarks' : ''}|">
                         <td th:class="${day.sunday || day.holiday ? 'text-danger' : (day.saturday ? 'text-primary' : 'text-muted')}"
                             th:title="${day.holidayName}" th:text="${day.dateString}">05-01</td>
-                        <td th:class="${day.sunday || day.holiday ? 'text-danger' : (day.saturday ? 'text-primary' : '')}" th:text="${day.dayOfWeekName}">金</td>
+                        <td th:class="${day.sunday || day.holiday ? 'text-danger' : (day.saturday ? 'text-primary' : '')}"
+                            th:title="${day.holidayName}" th:text="${day.dayOfWeekName}">金</td>
                         <td>
                             <span class="display-mode" th:text="${isNoInput ? '-' : (day.attendance?.startTime != null ? day.attendance.startTime : '-')}">-</span>
                             <input type="time" class="form-control form-control-sm edit-mode" 
@@ -218,7 +212,7 @@
                         <td th:id="'workHours-' + ${day.day}" th:text="${isNoInput ? '0.00' : ((day.attendance?.workHours != null && day.attendance.workHours != 0) ? day.attendance.workHours : '0.00')}">0.00</td>
                         <td th:id="'overtimeHours-' + ${day.day}" th:text="${isNoInput ? '0.00' : ((day.attendance?.overtimeHours != null && day.attendance.overtimeHours != 0) ? day.attendance.overtimeHours : '0.00')}">0.00</td>
                         <td>
-                            <span class="display-mode" th:text="${attendanceStatus == '出社' ? #messages.msg('attendance.status.office') : (attendanceStatus == '在宅' ? #messages.msg('attendance.status.home') : (attendanceStatus == '有給' ? #messages.msg('attendance.status.paidLeave') : (attendanceStatus == '欠勤' ? #messages.msg('attendance.status.absent') : '-')))}">-</span>
+                            <span class="display-mode status-chip" th:classappend="${isNoInput} ? 'is-empty'" th:text="${attendanceStatus == '出社' ? #messages.msg('attendance.status.office') : (attendanceStatus == '在宅' ? #messages.msg('attendance.status.home') : (attendanceStatus == '有給' ? #messages.msg('attendance.status.paidLeave') : (attendanceStatus == '欠勤' ? #messages.msg('attendance.status.absent') : '-')))}">-</span>
                             <select class="form-select form-select-sm edit-mode" name="agreement36Status" th:id="'status-' + ${day.day}"
                                     th:disabled="${attendanceLocked}"
                                     th:onchange="'handleStatusChange(' + ${day.day} + ')'">

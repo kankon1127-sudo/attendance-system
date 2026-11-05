@@ -230,7 +230,7 @@
     <div class="alert alert-success" th:if="${databaseRestoreSuccess}" style="border-radius:12px;"
          th:text="#{database.restore.success}"></div>
 
-    <div class="card mb-4" th:if="${isAdmin}">
+    <div class="card mb-4 mobile-collapsible" th:if="${isAdmin}">
         <div class="card-header">
             <h5><i class="bi bi-database-fill-gear"></i> <span th:text="#{database.restore.title}">データベースのバックアップと復元</span></h5>
         </div>
@@ -255,7 +255,7 @@
     </div>
 
     <!-- 社員追加 -->
-    <div class="card mb-4">
+    <div class="card mb-4 mobile-collapsible">
         <div class="card-header">
             <h5><i class="bi bi-person-plus-fill"></i> <span th:text="#{user.add}">社員追加</span></h5>
         </div>
@@ -342,8 +342,9 @@
         </form>
     </div>
 
-    <!-- 検索条件 -->
-    <div class="card mb-4">
+    <!-- 検索条件（検索中はスマホでも開いたままにする） -->
+    <div class="card mb-4 mobile-collapsible"
+         th:attr="data-keep-open=${(searchName != null and !#strings.isEmpty(searchName)) or (searchDepartment != null and !#strings.isEmpty(searchDepartment))}">
         <div class="card-header">
             <h5><i class="bi bi-search-heart"></i> <span th:text="#{user.search}">検索条件</span></h5>
         </div>
