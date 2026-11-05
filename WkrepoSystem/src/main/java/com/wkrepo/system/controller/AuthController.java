@@ -121,6 +121,19 @@ public class AuthController {
         model.addAttribute("homeMonthlyTrend", monthlyTrend);
         model.addAttribute("homeAgreement36Overtime", monthlyOvertime);
         model.addAttribute("homeAgreement36", agreement36);
+        // 休日労働（日曜日）と、時間外＋休日労働（法定上限は月 100 時間未満）。80 時間以上で黄、100 時間以上で赤
+        BigDecimal monthlyHolidayWork = agreement36.monthlyHolidayWork();
+        BigDecimal monthlyTotalWork = monthlyOvertime.add(monthlyHolidayWork);
+        BigDecimal totalLimit = new BigDecimal("100");
+        model.addAttribute("homeHolidayWork", monthlyHolidayWork);
+        model.addAttribute("homeTotalWork", monthlyTotalWork);
+        model.addAttribute("homeTotalLimit", totalLimit);
+        model.addAttribute("homeTotalPercent", monthlyTotalWork
+                .multiply(BigDecimal.valueOf(100))
+                .divide(totalLimit, 0, RoundingMode.HALF_UP)
+                .min(BigDecimal.valueOf(100)));
+        model.addAttribute("homeTotalLevel", monthlyTotalWork.compareTo(totalLimit) >= 0 ? "danger"
+                : monthlyTotalWork.compareTo(new BigDecimal("80")) >= 0 ? "warning" : "success");
         model.addAttribute("homeOvertimePercent", overtimePercent);
         model.addAttribute("homeOvertimeLimit", overtimeLimit);
         model.addAttribute("homeOvertimeRemaining",
