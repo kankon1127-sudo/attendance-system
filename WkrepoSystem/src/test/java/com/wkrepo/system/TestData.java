@@ -3,12 +3,17 @@ package com.wkrepo.system;
 import com.wkrepo.system.config.Messages;
 import com.wkrepo.system.entity.Attendance;
 import com.wkrepo.system.entity.User;
+import com.wkrepo.system.repository.HolidayRepository;
+import com.wkrepo.system.service.CompanyHolidayCalendar;
+import com.wkrepo.system.service.HolidayService;
+import org.mockito.Mockito;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.context.support.ResourceBundleMessageSource;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.Locale;
 
 /** テストデータ生成ユーティリティ */
@@ -46,6 +51,13 @@ public final class TestData {
         source.setFallbackToSystemLocale(false);
         LocaleContextHolder.setLocale(Locale.JAPANESE);
         return new Messages(source);
+    }
+
+    /** 祝日テーブルが空（計算式で判定）、会社休日なしの HolidayService */
+    public static HolidayService holidayService() {
+        HolidayRepository repository = Mockito.mock(HolidayRepository.class);
+        Mockito.when(repository.findByDateBetweenOrderByDateAsc(Mockito.any(), Mockito.any())).thenReturn(List.of());
+        return new HolidayService(repository, CompanyHolidayCalendar.empty());
     }
 
     public static Attendance attendanceWithHours(User user, String date, String status,

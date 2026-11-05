@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'admin-holidays', '祝日管理')}">
+<head th:fragment="head">
+    <title th:text="${#messages.msg('page.admin-holidays') + ' - ' + #messages.msg('brand.name')}">祝日管理</title>
+    <style>
+        .holiday-card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 20px;
+                        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); }
+        .holiday-table td, .holiday-table th { vertical-align: middle; }
+        .weekday-sun { color: #dc2626; }
+        .weekday-sat { color: #2563eb; }
+    </style>
+</head>
+<body>
+<th:block th:fragment="main-content">
+    <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+    <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+    <!-- 年の切り替え -->
+    <div class="d-flex align-items-center gap-3 mb-3">
+        <a class="btn btn-outline-secondary btn-sm" th:href="@{/admin/holidays(year=${year - 1})}">
+            <i class="bi bi-chevron-left"></i>
+        </a>
+        <h4 class="mb-0 fw-bold" th:text="#{holiday.yearTitle(${'' + year})}">2026年</h4>
+        <a class="btn btn-outline-secondary btn-sm" th:href="@{/admin/holidays(year=${year + 1})}">
+            <i class="bi bi-chevron-right"></i>
+        </a>
+    </div>
+
+    <!-- 国民の祝日・休日（テーブルで管理） -->
+    <div class="holiday-card">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <h5 class="mb-0">
+                <span th:text="#{holiday.national}">国民の祝日・休日</span>
+                <span class="badge text-bg-secondary ms-1" th:text="${holidays.size()}">0</span>
+            </h5>
+            <form method="post" th:action="@{/admin/holidays/import}" class="d-inline">
+                <input type="hidden" name="year" th:value="${year}">
+                <button type="submit" class="btn btn-outline-primary btn-sm" th:title="#{holiday.importHint}">
+                    <i class="bi bi-cloud-download"></i> <span th:text="#{holiday.import}">CSV から不足分を取り込む</span>
+                </button>
+            </form>
+        </div>
+
+        <div class="alert alert-warning py-2" th:if="${holidays.isEmpty()}" th:text="#{holiday.none}">
+            この年の祝日は登録されていません。
+        </div>
+        <table class="table table-sm holiday-table" th:unless="${holidays.isEmpty()}">
+            <thead>
+            <tr>
+                <th th:text="#{holiday.date}">日付</th>
+                <th th:text="#{attendance.weekday}">曜日</th>
+                <th th:text="#{holiday.name}">名称</th>
+                <th class="text-end" th:text="#{common.operation}">操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="holiday : ${holidays}"
+                th:with="dow=${holiday.date.dayOfWeek.value}">
+                <td th:text="${#temporals.format(holiday.date, 'yyyy/MM/dd')}">2026/01/01</td>
+                <td th:classappend="${dow == 7 ? 'weekday-sun' : (dow == 6 ? 'weekday-sat' : '')}"
+                    th:text="${#temporals.format(holiday.date, 'E')}">木</td>
+                <td th:text="${holiday.name}">元日</td>
+                <td class="text-end">
+                    <form method="post" th:action="@{/admin/holidays/delete/{id}(id=${holiday.id})}" class="d-inline"
+                          th:data-confirm="#{common.deleteConfirm}" onsubmit="return confirm(this.dataset.confirm);">
+                        <input type="hidden" name="year" th:value="${year}">
+                        <button type="submit" class="btn btn-outline-danger btn-sm" th:text="#{common.delete}">削除</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <!-- 追加 -->
+        <form method="post" th:action="@{/admin/holidays/add}" class="row g-2 align-items-end mt-2">
+            <div class="col-sm-4">
+                <label class="form-label small" th:text="#{holiday.date}">日付</label>
+                <input type="date" name="date" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-sm-5">
+                <label class="form-label small" th:text="#{holiday.name}">名称</label>
+                <input type="text" name="name" class="form-control form-control-sm" maxlength="50" required>
+            </div>
+            <div class="col-sm-3">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-plus-lg"></i> <span th:text="#{holiday.add}">追加</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 会社休日（設定ファイルで管理、表示のみ） -->
+    <div class="holiday-card">
+        <h5 class="mb-2">
+            <span th:text="#{holiday.company}">会社休日</span>
+            <span class="badge text-bg-secondary ms-1" th:text="${companyHolidays.size()}">0</span>
+        </h5>
+        <p class="small text-muted" th:text="#{holiday.companyHint}">会社休日は設定ファイルで管理しています。</p>
+        <table class="table table-sm holiday-table mb-0" th:unless="${companyHolidays.isEmpty()}">
+            <tbody>
+            <tr th:each="entry : ${companyHolidays}">
+                <td style="width: 30%;" th:text="${#temporals.format(entry.key, 'yyyy/MM/dd')}">2026/12/29</td>
+                <td th:text="${entry.value}">年末休暇</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</th:block>
+</body>
+</html>

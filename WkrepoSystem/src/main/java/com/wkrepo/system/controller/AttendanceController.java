@@ -120,6 +120,7 @@ public class AttendanceController {
             dayMap.put("sunday", date.getDayOfWeek() == DayOfWeek.SUNDAY);
             dayMap.put("saturday", date.getDayOfWeek() == DayOfWeek.SATURDAY);
             dayMap.put("holiday", holidayService.isRestDay(date)); // 共通の休日判定ロジックを使用
+            dayMap.put("holidayName", holidayService.getHolidayName(date).orElse(null));
 
             // DB の実レコードを読み込む
             Attendance attendance = attendanceMap.get(date);

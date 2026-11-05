@@ -188,7 +188,8 @@
                     <tr th:each="day : ${calendarDays}" th:id="'row-' + ${day.day}" th:attr="data-date=${day.date},data-rest-day=${day.holiday}"
                         th:with="attendanceStatus=${day.attendance?.agreement36Status},
                                  isNoInput=${attendanceStatus == null or #strings.isEmpty(attendanceStatus) or attendanceStatus == '-'}">
-                        <td th:class="${day.sunday || day.holiday ? 'text-danger' : (day.saturday ? 'text-primary' : 'text-muted')}" th:text="${day.dateString}">05-01</td>
+                        <td th:class="${day.sunday || day.holiday ? 'text-danger' : (day.saturday ? 'text-primary' : 'text-muted')}"
+                            th:title="${day.holidayName}" th:text="${day.dateString}">05-01</td>
                         <td th:class="${day.sunday || day.holiday ? 'text-danger' : (day.saturday ? 'text-primary' : '')}" th:text="${day.dayOfWeekName}">金</td>
                         <td>
                             <span class="display-mode" th:text="${isNoInput ? '-' : (day.attendance?.startTime != null ? day.attendance.startTime : '-')}">-</span>

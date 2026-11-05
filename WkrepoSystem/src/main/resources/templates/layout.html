@@ -425,6 +425,12 @@
                         <span th:text="#{nav.users}">社員管理</span>
                     </a>
                 </th:block>
+                <!-- 祝日管理（管理者のみ） -->
+                <a th:if="${user.role == 'ADMIN'}" href="/admin/holidays" class="nav-item"
+                   th:classappend="${currentPage == 'admin-holidays' ? 'active' : ''}">
+                    <i class="bi bi-calendar-heart"></i>
+                    <span th:text="#{nav.holidays}">祝日管理</span>
+                </a>
             </nav>
         </div>
         

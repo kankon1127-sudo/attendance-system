@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
  * 旧バージョンの「休憩時間を差し引かない」「フロントエンドから送られた値をそのまま保存する」処理で残ったデータを修正する。結果が変わらないレコードは更新しない。
  */
 @Component
+@Order(10) // 祝日の取り込み（HolidayInitializer）の後に実行する
 public class AttendanceRecalculationRunner implements ApplicationRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(AttendanceRecalculationRunner.class);

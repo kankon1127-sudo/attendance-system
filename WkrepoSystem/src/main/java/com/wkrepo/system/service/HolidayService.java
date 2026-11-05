@@ -1,43 +1,128 @@
 package com.wkrepo.system.service;
 
+import com.wkrepo.system.entity.Holiday;
+import com.wkrepo.system.exception.BusinessException;
+import com.wkrepo.system.repository.HolidayRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 休日の判定。休日 = 土日 + 国民の祝日・休日 + 会社休日。
+ * <ul>
+ *   <li>国民の祝日・休日は holidays テーブル（祝日管理画面で管理）から判定する。</li>
+ *   <li>テーブルにその年のデータが 1 件もない場合だけ、従来の計算式（振替休日・国民の休日を含む）で判定する。</li>
+ *   <li>会社休日は設定ファイル（{@link CompanyHolidayCalendar}）から判定する。</li>
+ * </ul>
+ * 年ごとの祝日はメモリにキャッシュし、追加・削除・取り込みのたびにクリアする。
+ */
 @Service
 public class HolidayService {
 
-    /**
-     * 指定日が休日かどうかを判定する（週末・祝日・振替休日を含む）
-     */
-    public boolean isRestDay(LocalDate date) {
-        // 1. 週末の判定
-        if (date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY) {
-            return true;
-        }
+    private final HolidayRepository holidayRepository;
+    private final CompanyHolidayCalendar companyHolidays;
+    private final Map<Integer, Map<LocalDate, String>> registeredByYear = new ConcurrentHashMap<>();
 
-        // 2. 祝日の判定
-        if (isNationalHoliday(date)) {
-            return true;
-        }
-
-        // 3. 振替休日の判定
-        if (isSubstituteHoliday(date)) {
-            return true;
-        }
-
-        // 4. 国民の休日の判定（祝日に挟まれた日）
-        return isCitizensHoliday(date);
+    public HolidayService(HolidayRepository holidayRepository, CompanyHolidayCalendar companyHolidays) {
+        this.holidayRepository = holidayRepository;
+        this.companyHolidays = companyHolidays;
     }
 
     /**
-     * 祝日の定義（すべて計算で求める）
+     * 指定日が休日かどうか（土日・国民の祝日・休日・会社休日）
+     */
+    public boolean isRestDay(LocalDate date) {
+        if (date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            return true;
+        }
+        return isNationalHoliday(date) || companyHolidays.nameOf(date).isPresent();
+    }
+
+    /**
+     * 国民の祝日・休日（振替休日、国民の休日を含む）かどうか
      */
     public boolean isNationalHoliday(LocalDate date) {
+        Map<LocalDate, String> registered = registeredHolidays(date.getYear());
+        if (!registered.isEmpty()) {
+            return registered.containsKey(date);
+        }
+        return isCalculatedHoliday(date) || isSubstituteHoliday(date) || isCitizensHoliday(date);
+    }
+
+    /**
+     * 祝日名・会社休日名。土日、名前のない日（計算で判定した年の祝日）は空。
+     */
+    public Optional<String> getHolidayName(LocalDate date) {
+        String name = registeredHolidays(date.getYear()).get(date);
+        if (name != null) {
+            return Optional.of(name);
+        }
+        return companyHolidays.nameOf(date);
+    }
+
+    /** 祝日管理画面用：指定した年の登録済みの祝日 */
+    public List<Holiday> getRegisteredHolidays(int year) {
+        return holidayRepository.findByDateBetweenOrderByDateAsc(LocalDate.of(year, 1, 1), LocalDate.of(year, 12, 31));
+    }
+
+    /** 祝日管理画面用：指定した年の会社休日 */
+    public Map<LocalDate, String> getCompanyHolidays(int year) {
+        return companyHolidays.listFor(year);
+    }
+
+    @Transactional
+    public Holiday addHoliday(LocalDate date, String name) {
+        if (date == null) {
+            throw new IllegalArgumentException("holiday.error.dateRequired");
+        }
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("holiday.error.nameRequired");
+        }
+        if (holidayRepository.existsByDate(date)) {
+            throw new BusinessException("holiday.error.duplicate", date.toString());
+        }
+        Holiday saved = holidayRepository.save(new Holiday(date, name.strip()));
+        clearCache();
+        return saved;
+    }
+
+    @Transactional
+    public void deleteHoliday(Long id) {
+        holidayRepository.deleteById(id);
+        clearCache();
+    }
+
+    public void clearCache() {
+        registeredByYear.clear();
+    }
+
+    private Map<LocalDate, String> registeredHolidays(int year) {
+        return registeredByYear.computeIfAbsent(year, y -> {
+            Map<LocalDate, String> map = new LinkedHashMap<>();
+            for (Holiday holiday : getRegisteredHolidays(y)) {
+                map.put(holiday.getDate(), holiday.getName());
+            }
+            return map.isEmpty() ? Collections.emptyMap() : map;
+        });
+    }
+
+    // ===== 以下、テーブルにデータがない年のための計算式（近似） =====
+
+    /**
+     * 祝日の定義（計算で求める）
+     */
+    private boolean isCalculatedHoliday(LocalDate date) {
         int year = date.getYear();
         int month = date.getMonthValue();
         int day = date.getDayOfMonth();
-        DayOfWeek dow = date.getDayOfWeek();
 
         switch (month) {
             case 1:
@@ -106,7 +191,7 @@ public class HolidayService {
      */
     private boolean isCitizensHoliday(LocalDate date) {
         if (date.getDayOfWeek() == DayOfWeek.SUNDAY || date.getDayOfWeek() == DayOfWeek.SATURDAY) return false;
-        return isNationalHoliday(date.minusDays(1)) && isNationalHoliday(date.plusDays(1));
+        return isCalculatedHoliday(date.minusDays(1)) && isCalculatedHoliday(date.plusDays(1));
     }
 
     /**
@@ -121,14 +206,14 @@ public class HolidayService {
         }
 
         LocalDate checkDate = date.minusDays(1);
-        
+
         // 前日が祝日でなければ振替休日ではない
-        if (!isNationalHoliday(checkDate)) {
+        if (!isCalculatedHoliday(checkDate)) {
             return false;
         }
 
         // 連続する祝日をさかのぼり、起点となる日曜日があるかを探す
-        while (isNationalHoliday(checkDate)) {
+        while (isCalculatedHoliday(checkDate)) {
             if (checkDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
                 return true; // 見つかった（例：5月3日が日曜日のため5月6日が振替休日になる）
             }

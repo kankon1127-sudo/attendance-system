@@ -45,7 +45,7 @@ class AttendanceServiceTest {
     @Mock
     private PaidLeaveService paidLeaveService;
     @Spy
-    private HolidayService holidayService = new HolidayService();
+    private HolidayService holidayService = TestData.holidayService();
 
     @InjectMocks
     private AttendanceService attendanceService;
