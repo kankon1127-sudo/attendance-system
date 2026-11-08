@@ -7,14 +7,7 @@
             max-width: 800px;
             margin: 0 auto;
         }
-        .form-row {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 15px;
-            align-items: end;
-        }
         .form-group {
-            flex: 1;
             margin-bottom: 0;
         }
         .form-group label {
@@ -117,29 +110,30 @@
         <h3 class="mb-4" th:text="#{page.general-expense}">諸費用登録</h3>
         
         <!-- 月選択セクション -->
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <form method="GET" action="/general-expense" class="d-flex align-items-center gap-2">
-                    <label for="year" class="me-2 fw-bold" th:text="#{common.year} + ':'">年度:</label>
-                    <select name="year" id="year" class="form-select" style="width: auto;">
-                        <option th:each="yr : ${availableYears}"
-                                th:value="${yr}"
-                                th:text="${yr}"
-                                th:selected="${currentYear == yr}">2024</option>
-                    </select>
-                    
-                    <label for="month" class="me-2 fw-bold" th:text="#{common.month} + ':'">月度:</label>
-                    <select name="month" id="month" class="form-select" style="width: auto;">
-                        <option th:each="m : ${#numbers.sequence(1, 12)}"
-                                th:value="${m}"
-                                th:text="${m}"
-                                th:selected="${currentMonth == m}">1</option>
-                    </select>
-                    
-                    <button type="submit" class="btn btn-primary" th:text="#{common.show}">表示</button>
-                </form>
+        <!-- 年・月・表示ボタンは col-auto で並べ、幅が足りなければ折り返す -->
+        <form method="GET" action="/general-expense" class="row g-2 align-items-center mb-4 expense-month-selector">
+            <div class="col-auto d-flex align-items-center gap-1">
+                <label for="year" class="fw-bold text-nowrap" th:text="#{common.year} + ':'">年度:</label>
+                <select name="year" id="year" class="form-select" style="width: auto;">
+                    <option th:each="yr : ${availableYears}"
+                            th:value="${yr}"
+                            th:text="${yr}"
+                            th:selected="${currentYear == yr}">2024</option>
+                </select>
             </div>
-        </div>
+            <div class="col-auto d-flex align-items-center gap-1">
+                <label for="month" class="fw-bold text-nowrap" th:text="#{common.month} + ':'">月度:</label>
+                <select name="month" id="month" class="form-select" style="width: auto;">
+                    <option th:each="m : ${#numbers.sequence(1, 12)}"
+                            th:value="${m}"
+                            th:text="${m}"
+                            th:selected="${currentMonth == m}">1</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary text-nowrap" th:text="#{common.show}">表示</button>
+            </div>
+        </form>
         
         <!-- 登録フォーム -->
         <div class="expense-form">
@@ -148,12 +142,13 @@
                 <input type="hidden" name="month" th:value="${currentMonth}">
                 <fieldset class="border-0 p-0 m-0" th:disabled="${expenseLocked}">
                 
-                <div class="form-row">
-                    <div class="form-group">
+                <!-- スマホ（768px 未満）は 1 列、PC は 2 列 -->
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-md-6 form-group">
                         <label for="date"><span th:text="#{common.expenseDate}">費用年月</span> <span class="required">*</span></label>
                         <input type="date" id="date" name="date" required>
                     </div>
-                    <div class="form-group">
+                    <div class="col-12 col-md-6 form-group">
                         <label for="expenseType"><span th:text="#{common.category}">カテゴリ</span> <span class="required">*</span></label>
                         <select id="expenseType" name="expenseType" required>
                             <option value="" th:text="#{monthly.selectApprover}">選択してください</option>
@@ -165,21 +160,15 @@
                             <option value="その他" th:text="#{expense.category.other}">その他</option>
                         </select>
                     </div>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
+                    <div class="col-12 col-md-6 form-group">
                         <label for="summary"><span th:text="#{common.summary}">摘要</span> <span class="required">*</span></label>
                         <input type="text" id="summary" name="summary" th:placeholder="#{expense.summaryPlaceholder}" required>
                     </div>
-                    <div class="form-group">
+                    <div class="col-12 col-md-6 form-group">
                         <label for="amount"><span th:text="#{common.amount}">金額</span> <span class="required">*</span></label>
                         <input type="number" id="amount" name="amount" placeholder="0" min="0.01" step="0.01" th:max="${expenseMaxAmount}" required>
                     </div>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group" style="flex: 2;">
+                    <div class="col-12 form-group">
                         <label for="remarks" th:text="#{common.remarks}">備考</label>
                         <textarea id="remarks" name="remarks" th:placeholder="#{expense.remarksPlaceholder}"></textarea>
                     </div>

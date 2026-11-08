@@ -1248,11 +1248,15 @@
         max-width: none;
     }
 
-    .content-area .expense-form fieldset > .form-row:nth-of-type(-n+2) {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-        margin-bottom: 10px;
+    /* 諸経費の年月選択：col-auto の中なので、共通の select { width: 100% } を内容幅に戻す */
+    .content-area form.expense-month-selector select {
+        flex: none;
+        width: auto !important;
+        min-width: 4.5em;
+    }
+
+    .content-area form.expense-month-selector select#year {
+        min-width: 6.5em;
     }
 
     .content-area .expense-form label {
