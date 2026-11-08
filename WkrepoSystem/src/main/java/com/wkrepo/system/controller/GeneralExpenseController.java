@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -37,6 +38,15 @@ public class GeneralExpenseController {
 
     @Autowired
     private Messages messages;
+
+    /**
+     * 入力フォームの項目だけをバインドする（id・status・user をリクエストから設定させない）。
+     * 引数名ではなく型名から決まるモデル属性名 "generalExpense" に適用される。
+     */
+    @InitBinder("generalExpense")
+    public void restrictGeneralExpenseFields(WebDataBinder binder) {
+        binder.setAllowedFields("date", "expenseType", "summary", "amount", "remarks");
+    }
     
     @GetMapping
     public String showGeneralExpense(

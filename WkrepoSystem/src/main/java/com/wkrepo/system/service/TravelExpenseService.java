@@ -34,25 +34,34 @@ public class TravelExpenseService {
         return travelExpenseRepository.findByUserOrderByExpenseDateDesc(user);
     }
     
+    /**
+     * 新規申請の登録（既存データを編集する機能はない）。状態は常に「申請中」から始める。
+     * id や状態がリクエストから渡されても使わない（自分で承認済みにしたり他人のデータを上書きさせない）。
+     */
     public TravelExpense saveTravelExpense(TravelExpense travelExpense) {
-        validateEditableExpense(travelExpense);
-        if (travelExpense.getStatus() == null) {
-            travelExpense.setStatus(ApplicationStatus.PENDING);
+        if (travelExpense.getId() != null) {
+            throw new IllegalArgumentException("application.error.invalidRequest");
         }
+        attendanceService.ensureMonthEditable(travelExpense.getUser(), travelExpense.getExpenseDate());
+        travelExpense.setStatus(ApplicationStatus.PENDING);
         return travelExpenseRepository.save(travelExpense);
     }
-    
-    public TravelExpense updateTravelExpense(TravelExpense travelExpense) {
-        validateEditableExpense(travelExpense);
-        return travelExpenseRepository.save(travelExpense);
-    }
-    
+
+    /** 本人の、申請中または拒否された申請だけ削除できる（承認済みは変更不可） */
     public void deleteTravelExpense(Long id, User user) {
         TravelExpense existing = travelExpenseRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("expense.error.travelNotFound"));
         ensureOwner(existing.getUser(), user);
+        if (!isChangeable(existing.getStatus())) {
+            throw new IllegalStateException("expense.error.approvedNotEditable");
+        }
         attendanceService.ensureMonthEditable(existing.getUser(), existing.getExpenseDate());
         travelExpenseRepository.delete(existing);
+    }
+
+    /** 申請者が変更・削除できる状態か（申請中・拒否）。交通費・諸経費で共通 */
+    public static boolean isChangeable(ApplicationStatus status) {
+        return status == null || status == ApplicationStatus.PENDING || status == ApplicationStatus.REJECTED;
     }
     
     public TravelExpense findById(Long id) {
@@ -65,16 +74,6 @@ public class TravelExpenseService {
             te.setStatus(status);
             travelExpenseRepository.save(te);
         }
-    }
-
-    private void validateEditableExpense(TravelExpense expense) {
-        if (expense.getId() != null) {
-            TravelExpense existing = travelExpenseRepository.findById(expense.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("expense.error.travelNotFound"));
-            ensureOwner(existing.getUser(), expense.getUser());
-            attendanceService.ensureMonthEditable(existing.getUser(), existing.getExpenseDate());
-        }
-        attendanceService.ensureMonthEditable(expense.getUser(), expense.getExpenseDate());
     }
 
     private void ensureOwner(User owner, User currentUser) {

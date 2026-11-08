@@ -22,18 +22,27 @@ public class GeneralExpenseService {
     @Autowired
     private AttendanceService attendanceService;
     
+    /**
+     * 新規申請の登録（既存データを編集する機能はない）。状態は常に「申請中」から始める。
+     * id や状態がリクエストから渡されても使わない（自分で承認済みにしたり他人のデータを上書きさせない）。
+     */
     public GeneralExpense saveGeneralExpense(GeneralExpense expense) {
-        validateEditableExpense(expense);
-        if (expense.getStatus() == null) {
-            expense.setStatus(ApplicationStatus.PENDING);
+        if (expense.getId() != null) {
+            throw new IllegalArgumentException("application.error.invalidRequest");
         }
+        attendanceService.ensureMonthEditable(expense.getUser(), expense.getDate());
+        expense.setStatus(ApplicationStatus.PENDING);
         return generalExpenseRepository.save(expense);
     }
-    
+
+    /** 本人の、申請中または拒否された申請だけ削除できる（承認済みは変更不可） */
     public void deleteGeneralExpense(Long id, User user) {
         GeneralExpense existing = generalExpenseRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("expense.error.generalNotFound"));
         ensureOwner(existing.getUser(), user);
+        if (!TravelExpenseService.isChangeable(existing.getStatus())) {
+            throw new IllegalStateException("expense.error.approvedNotEditable");
+        }
         attendanceService.ensureMonthEditable(existing.getUser(), existing.getDate());
         generalExpenseRepository.delete(existing);
     }
@@ -56,16 +65,6 @@ public class GeneralExpenseService {
             ge.setStatus(status);
             generalExpenseRepository.save(ge);
         }
-    }
-
-    private void validateEditableExpense(GeneralExpense expense) {
-        if (expense.getId() != null) {
-            GeneralExpense existing = generalExpenseRepository.findById(expense.getId())
-                    .orElseThrow(() -> new IllegalArgumentException("expense.error.generalNotFound"));
-            ensureOwner(existing.getUser(), expense.getUser());
-            attendanceService.ensureMonthEditable(existing.getUser(), existing.getDate());
-        }
-        attendanceService.ensureMonthEditable(expense.getUser(), expense.getDate());
     }
 
     private void ensureOwner(User owner, User currentUser) {

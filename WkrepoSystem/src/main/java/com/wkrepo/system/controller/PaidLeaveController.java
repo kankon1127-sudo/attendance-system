@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -34,7 +35,16 @@ public class PaidLeaveController {
 
     @Autowired
     private MessageSource messageSource;
-    
+
+    /**
+     * 申請フォームから受け取る項目だけをバインドする。
+     * id・status・user・leaveDays をリクエストから設定できると、自分で承認済みにしたり他人の申請を上書きできてしまう。
+     */
+    @InitBinder("paidLeave")
+    public void restrictPaidLeaveFields(WebDataBinder binder) {
+        binder.setAllowedFields("startDate", "endDate", "leaveType", "remarks");
+    }
+
     @GetMapping
     public String showPaidLeave(
             @RequestParam(name = "year", required = false) Integer requestedYear,

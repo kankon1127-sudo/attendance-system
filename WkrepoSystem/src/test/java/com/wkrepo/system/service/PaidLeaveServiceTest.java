@@ -17,6 +17,7 @@ import org.mockito.quality.Strictness;
 
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -68,6 +69,27 @@ class PaidLeaveServiceTest {
         assertThatThrownBy(() -> paidLeaveService.deletePaidLeave(100L, owner))
                 .isInstanceOf(IllegalStateException.class);
         verify(paidLeaveRepository, never()).delete(any());
+    }
+
+    @Test
+    void newLeaveAlwaysStartsAsPendingEvenIfApprovedIsSent() {
+        when(paidLeaveRepository.save(any(PaidLeave.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        PaidLeave leave = new PaidLeave();
+        leave.setUser(owner);
+        leave.setStatus(ApplicationStatus.APPROVED);
+
+        assertThat(paidLeaveService.savePaidLeave(leave).getStatus()).isEqualTo(ApplicationStatus.PENDING);
+    }
+
+    @Test
+    void leaveWithIdIsRejectedSoOthersLeaveCannotBeOverwritten() {
+        PaidLeave leave = new PaidLeave();
+        leave.setId(100L);
+        leave.setUser(owner);
+
+        assertThatThrownBy(() -> paidLeaveService.savePaidLeave(leave))
+                .hasMessage("application.error.invalidRequest");
+        verify(paidLeaveRepository, never()).save(any());
     }
 
     @Test

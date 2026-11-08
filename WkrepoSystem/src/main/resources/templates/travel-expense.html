@@ -203,7 +203,7 @@
                                 <td th:text="${expense.summary}">通勤</td>
                                 <td th:text="${#numbers.formatInteger(#objects.nullSafe(expense.amount, 0), 0, 'COMMA')} + #{common.yenUnit}">1,000円</td>
                                 <td>
-                                    <form th:action="@{/travel-expense/delete/{id}(id=${expense.id})}" method="post" style="display:inline;" th:data-confirm="#{common.deleteConfirm}" onsubmit="return confirm(this.dataset.confirm);">
+                                    <form th:if="${expense.status == null or expense.status.name() == 'PENDING' or expense.status.name() == 'REJECTED'}" th:action="@{/travel-expense/delete/{id}(id=${expense.id})}" method="post" style="display:inline;" th:data-confirm="#{common.deleteConfirm}" onsubmit="return confirm(this.dataset.confirm);">
                                         <button type="submit" class="btn-delete" th:text="#{common.delete}" th:disabled="${expenseLocked}">削除</button>
                                     </form>
                                 </td>
@@ -276,7 +276,7 @@
                                 <td th:text="${expense.summary}">出張</td>
                                 <td th:text="${#numbers.formatInteger(#objects.nullSafe(expense.amount, 0), 0, 'COMMA')} + #{common.yenUnit}">1,000円</td>
                                 <td>
-                                    <form th:action="@{/travel-expense/delete/{id}(id=${expense.id})}" method="post" style="display:inline;" th:data-confirm="#{common.deleteConfirm}" onsubmit="return confirm(this.dataset.confirm);">
+                                    <form th:if="${expense.status == null or expense.status.name() == 'PENDING' or expense.status.name() == 'REJECTED'}" th:action="@{/travel-expense/delete/{id}(id=${expense.id})}" method="post" style="display:inline;" th:data-confirm="#{common.deleteConfirm}" onsubmit="return confirm(this.dataset.confirm);">
                                         <button type="submit" class="btn-delete" th:text="#{common.delete}" th:disabled="${expenseLocked}">削除</button>
                                     </form>
                                 </td>

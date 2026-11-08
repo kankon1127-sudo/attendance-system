@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -40,6 +41,15 @@ public class TravelExpenseController {
 
     @Autowired
     private Messages messages;
+
+    /**
+     * 入力フォームの項目だけをバインドする（id・status・user をリクエストから設定させない）。
+     * 引数名ではなく型名から決まるモデル属性名 "travelExpense" に適用される。
+     */
+    @InitBinder("travelExpense")
+    public void restrictTravelExpenseFields(WebDataBinder binder) {
+        binder.setAllowedFields("expenseDate", "type", "transportation", "route", "summary", "amount");
+    }
     
     @GetMapping
     public String showTravelExpense(

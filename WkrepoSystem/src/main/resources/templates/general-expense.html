@@ -223,7 +223,7 @@
                             <td th:text="${#numbers.formatInteger(#objects.nullSafe(expense.amount, 0), 0, 'COMMA')} + #{common.yenUnit}">1,000円</td>
                             <td th:text="${expense.remarks}">備考</td>
                             <td>
-                                <form th:action="@{/general-expense/delete/{id}(id=${expense.id})}" method="post" style="display: inline;">
+                                <form th:if="${expense.status == null or expense.status.name() == 'PENDING' or expense.status.name() == 'REJECTED'}" th:action="@{/general-expense/delete/{id}(id=${expense.id})}" method="post" style="display: inline;">
                                     <input type="hidden" name="year" th:value="${currentYear}">
                                     <input type="hidden" name="month" th:value="${currentMonth}">
                                     <button type="submit" class="btn-delete" th:disabled="${expenseLocked}" th:data-confirm="#{common.deleteConfirm}" onclick="return confirm(this.dataset.confirm);">

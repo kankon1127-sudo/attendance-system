@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -57,12 +58,15 @@ public class AuthController {
     }
     
     @PostMapping("/login")
-    public String login(@RequestParam String username, 
+    public String login(@RequestParam String username,
                        @RequestParam String password,
+                       HttpServletRequest request,
                        HttpSession session,
                        Model model) {
         try {
             User user = userService.login(username, password);
+            // セッション固定攻撃の対策：ログイン前のセッション ID を使い続けないよう、ログイン成功時に ID を変える
+            request.changeSessionId();
             session.setAttribute(SESSION_USER, user);
             return "redirect:/home";
         } catch (RuntimeException e) {

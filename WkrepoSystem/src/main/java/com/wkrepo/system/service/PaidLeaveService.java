@@ -52,10 +52,15 @@ public class PaidLeaveService {
         this.userRepository = userRepository;
     }
 
+    /**
+     * 新規の年休申請（既存の申請を編集する機能はない）。状態は常に「申請中」から始める。
+     * id や状態がリクエストから渡されても使わない（自分で承認済みにしたり他人の申請を上書きさせない）。
+     */
     public PaidLeave savePaidLeave(PaidLeave paidLeave) {
-        if (paidLeave.getStatus() == null) {
-            paidLeave.setStatus(ApplicationStatus.PENDING);
+        if (paidLeave.getId() != null) {
+            throw new IllegalArgumentException("application.error.invalidRequest");
         }
+        paidLeave.setStatus(ApplicationStatus.PENDING);
         return paidLeaveRepository.save(paidLeave);
     }
     
