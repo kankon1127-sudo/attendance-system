@@ -1264,6 +1264,33 @@
         font-size: 12.5px;
     }
 
+    /* 諸経費の入力欄：カードの枠からはみ出さないよう、親の幅に合わせる */
+    .content-area .expense-form .row > [class*="col-"] {
+        min-width: 0;
+    }
+
+    .content-area .expense-form input,
+    .content-area .expense-form select,
+    .content-area .expense-form textarea {
+        display: block;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box;
+    }
+
+    /* iOS Safari の日付欄はネイティブ表示の固有幅で width: 100% を超えるため、外観をリセットする */
+    .content-area .expense-form input[type="date"] {
+        -webkit-appearance: none;
+        appearance: none;
+        min-height: calc(1.5em + 1rem + 2px);
+        background-color: #fff;
+    }
+
+    .content-area .expense-form input[type="date"]::-webkit-date-and-time-value {
+        text-align: left;
+    }
+
     /* 諸経費：登録済みの一覧と合計を入力フォームより先に表示 */
     .content-area .card:has(> .expense-form) > .mt-5 {
         order: 1;

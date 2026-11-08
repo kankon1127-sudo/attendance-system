@@ -146,11 +146,11 @@
                 <div class="row g-3 mb-3">
                     <div class="col-12 col-md-6 form-group">
                         <label for="date"><span th:text="#{common.expenseDate}">費用年月</span> <span class="required">*</span></label>
-                        <input type="date" id="date" name="date" required>
+                        <input type="date" id="date" name="date" class="form-control" required>
                     </div>
                     <div class="col-12 col-md-6 form-group">
                         <label for="expenseType"><span th:text="#{common.category}">カテゴリ</span> <span class="required">*</span></label>
-                        <select id="expenseType" name="expenseType" required>
+                        <select id="expenseType" name="expenseType" class="form-select" required>
                             <option value="" th:text="#{monthly.selectApprover}">選択してください</option>
                             <option value="消耗品" th:text="#{expense.category.consumables}">消耗品</option>
                             <option value="交際費" th:text="#{expense.category.entertainment}">交際費</option>
@@ -162,15 +162,15 @@
                     </div>
                     <div class="col-12 col-md-6 form-group">
                         <label for="summary"><span th:text="#{common.summary}">摘要</span> <span class="required">*</span></label>
-                        <input type="text" id="summary" name="summary" th:placeholder="#{expense.summaryPlaceholder}" required>
+                        <input type="text" id="summary" name="summary" class="form-control" th:placeholder="#{expense.summaryPlaceholder}" required>
                     </div>
                     <div class="col-12 col-md-6 form-group">
                         <label for="amount"><span th:text="#{common.amount}">金額</span> <span class="required">*</span></label>
-                        <input type="number" id="amount" name="amount" placeholder="0" min="0.01" step="0.01" th:max="${expenseMaxAmount}" required>
+                        <input type="number" id="amount" name="amount" class="form-control" placeholder="0" min="0.01" step="0.01" th:max="${expenseMaxAmount}" required>
                     </div>
                     <div class="col-12 form-group">
                         <label for="remarks" th:text="#{common.remarks}">備考</label>
-                        <textarea id="remarks" name="remarks" th:placeholder="#{expense.remarksPlaceholder}"></textarea>
+                        <textarea id="remarks" name="remarks" class="form-control" th:placeholder="#{expense.remarksPlaceholder}"></textarea>
                     </div>
                 </div>
                 
