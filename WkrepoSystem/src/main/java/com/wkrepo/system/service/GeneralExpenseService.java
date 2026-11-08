@@ -21,7 +21,10 @@ public class GeneralExpenseService {
 
     @Autowired
     private AttendanceService attendanceService;
-    
+
+    @Autowired
+    private ExpenseAmountPolicy expenseAmountPolicy;
+
     /**
      * 新規申請の登録（既存データを編集する機能はない）。状態は常に「申請中」から始める。
      * id や状態がリクエストから渡されても使わない（自分で承認済みにしたり他人のデータを上書きさせない）。
@@ -30,6 +33,7 @@ public class GeneralExpenseService {
         if (expense.getId() != null) {
             throw new IllegalArgumentException("application.error.invalidRequest");
         }
+        expenseAmountPolicy.validate(expense.getAmount());
         attendanceService.ensureMonthEditable(expense.getUser(), expense.getDate());
         expense.setStatus(ApplicationStatus.PENDING);
         return generalExpenseRepository.save(expense);

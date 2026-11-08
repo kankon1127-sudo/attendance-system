@@ -2,7 +2,9 @@ package com.wkrepo.system.config;
 
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.entity.DefaultAttendanceSetting;
+import com.wkrepo.system.repository.PaidLeaveEntitlementRepository;
 import com.wkrepo.system.repository.UserRepository;
+import com.wkrepo.system.service.PaidLeaveService;
 import com.wkrepo.system.service.DefaultAttendanceSettingService;
 import com.wkrepo.system.service.UserService;
 import jakarta.annotation.PostConstruct;
@@ -42,6 +44,14 @@ public class DataInitializer {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private PaidLeaveService paidLeaveService;
+
+    @Autowired
+    private PaidLeaveEntitlementRepository entitlementRepository;
+
+    private static final java.math.BigDecimal DEMO_ANNUAL_LEAVE_DAYS = new java.math.BigDecimal("10");
+
     @PostConstruct
     public void init() {
         boolean devMode = environment.acceptsProfiles(Profiles.of("dev"));
@@ -73,6 +83,23 @@ public class DataInitializer {
         // 2. テストアカウントは dev モードでのみ作成
         if (devMode) {
             createTestAccounts();
+            grantDemoEntitlements();
+        }
+    }
+
+    /**
+     * dev モード：テストアカウントに今年の年休を 10 日付与する（未設定の場合のみ）。
+     * 年休申請は残日数を超えるとできないため、付与がないとデモで申請できない。
+     */
+    private void grantDemoEntitlements() {
+        int year = java.time.Year.now().getValue();
+        for (String username : new String[] {"admin", "manager", "employee1", "employee2", "soumu"}) {
+            userRepository.findByUsername(username).ifPresent(user -> {
+                if (entitlementRepository.findByUserIdAndYear(user.getId(), year).isEmpty()) {
+                    paidLeaveService.setAnnualEntitlement(user.getId(), year, DEMO_ANNUAL_LEAVE_DAYS);
+                    logger.info("【付与】テストアカウント {} に {} 年の年休 {} 日", username, year, DEMO_ANNUAL_LEAVE_DAYS);
+                }
+            });
         }
     }
 

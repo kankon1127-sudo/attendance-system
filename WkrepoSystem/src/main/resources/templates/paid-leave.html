@@ -277,7 +277,7 @@
     </div>
     <div class="alert alert-success" th:if="${entitlementSaved}" th:text="#{leave.entitlementSaved}"></div>
     <div class="alert alert-danger" th:if="${entitlementError}" th:text="${entitlementError}"></div>
-    <div class="alert alert-danger" th:if="${leaveError}" th:text="${#messages.msg(leaveError)}"></div>
+    <div class="alert alert-danger" th:if="${leaveError}" th:text="${leaveError}"></div>
     <div class="alert alert-success" th:if="${notificationStatus == 'SENT'}"
          th:text="${#messages.msg('notification.' + #strings.toLowerCase(notificationStatus))}"></div>
     <div class="alert alert-warning" th:if="${notificationStatus != null and notificationStatus != 'SENT' and notificationStatus != 'NOT_APPLICABLE'}"
@@ -468,16 +468,31 @@
             return;
         }
 
+        // 日数はサーバーで計算する（土日・祝日・会社休日を除いた勤務日だけを数える）
         dateValidationMessage.classList.add('d-none');
-        let days = 0.5;
-        if (!halfDay) {
-            const start = new Date(startDate + 'T00:00:00');
-            const end = new Date(endDate + 'T00:00:00');
-            days = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
-        }
-        calculatedDaysSpan.textContent = days + dayUnit;
-        submitBtn.disabled = false;
-        submitBtn.classList.add('active');
+        calculatedDaysSpan.textContent = '…';
+        const params = new URLSearchParams({ startDate: startDate, endDate: endDate, leaveType: leaveTypeInput.value });
+        fetch('/paid-leave/preview?' + params.toString(), { credentials: 'same-origin' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    calculatedDaysSpan.textContent = data.days !== undefined ? data.days + dayUnit : '—';
+                    dateValidationMessage.textContent = data.error;
+                    dateValidationMessage.classList.remove('d-none');
+                    submitBtn.disabled = true;
+                    submitBtn.classList.remove('active');
+                    return;
+                }
+                calculatedDaysSpan.textContent = data.days + dayUnit;
+                submitBtn.disabled = false;
+                submitBtn.classList.add('active');
+            })
+            .catch(() => {
+                // 計算できなくても申請は可能（サーバー側で改めてチェックする）
+                calculatedDaysSpan.textContent = '—';
+                submitBtn.disabled = false;
+                submitBtn.classList.add('active');
+            });
     }
     
     startDateInput.addEventListener('change', calculateDays);

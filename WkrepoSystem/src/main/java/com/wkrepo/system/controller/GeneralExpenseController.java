@@ -5,6 +5,7 @@ import com.wkrepo.system.entity.GeneralExpense;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.service.ApplicationNotificationService;
 import com.wkrepo.system.service.AttendanceService;
+import com.wkrepo.system.service.ExpenseAmountPolicy;
 import com.wkrepo.system.service.GeneralExpenseService;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
@@ -38,6 +39,15 @@ public class GeneralExpenseController {
 
     @Autowired
     private Messages messages;
+
+    @Autowired
+    private ExpenseAmountPolicy expenseAmountPolicy;
+
+    /** 金額入力欄の max 属性（上限なしの場合は null） */
+    @ModelAttribute("expenseMaxAmount")
+    public java.math.BigDecimal expenseMaxAmount() {
+        return expenseAmountPolicy.getMaxAmount();
+    }
 
     /**
      * 入力フォームの項目だけをバインドする（id・status・user をリクエストから設定させない）。

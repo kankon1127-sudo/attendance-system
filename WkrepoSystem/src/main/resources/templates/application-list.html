@@ -94,6 +94,19 @@
             background: #fee2e2;
             color: #dc2626;
         }
+
+        /* 一覧の拒否理由：列幅には影響させず（width:0 + min-width:100%）、はみ出す分は省略。
+           全文はツールチップと詳細画面で確認する */
+        .reject-reason {
+            width: 0;
+            min-width: 100%;
+            margin: 4px 0 0;
+            font-size: 12px;
+            color: #b91c1c;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
         
         .type-badge {
             display: inline-flex;
@@ -546,6 +559,9 @@
                             <span class="status-badge" 
                                   th:classappend="${stName == 'draft' ? ' status-draft' : (stName == 'submitted' or stName == 'pending' ? ' status-submitted' : (stName == 'manager_approved' or stName == 'approved' ? ' status-approved' : (stName == 'finalized' ? ' status-finalized' : ' status-rejected')))}"
                                   th:text="${#messages.msg('application.status.' + #strings.toUpperCase(stName))}">申請中</span>
+                            <div th:if="${app.rejectReason != null}" class="reject-reason"
+                                 th:title="${app.rejectReason}"
+                                 th:text="#{application.rejectReason} + '：' + ${app.rejectReason}">拒否理由：…</div>
                         </td>
                         <td style="text-align: right;">
                             <div class="action-buttons">
@@ -565,9 +581,9 @@
                                     <form method="POST" action="/application/reject" style="display: inline;">
                                         <input type="hidden" name="id" th:value="${app.id}">
                                         <input type="hidden" name="type" th:value="${app.applicationType}">
+                                        <input type="hidden" name="reason" value="">
                                         <button type="submit" class="btn-reject" th:text="#{application.reject}"
-                                                th:data-confirm="#{application.rejectConfirm}"
-                                                onclick="return confirm(this.dataset.confirm)">拒否</button>
+                                                onclick="return askRejectReason(this.form)">拒否</button>
                                     </form>
                                 </th:block>
                                 <form th:if="${app.canWithdraw}" method="POST" action="/application/withdraw" style="display: inline;">
@@ -696,7 +712,8 @@
             finalApproval: /*[[#{application.finalApproval}]]*/ '最終承認',
             reject: /*[[#{application.reject}]]*/ '拒否',
             approveConfirm: /*[[#{application.approveConfirm}]]*/ '承認してもよろしいですか？',
-            rejectConfirm: /*[[#{application.rejectConfirm}]]*/ '拒否してもよろしいですか？',
+            rejectReasonPrompt: /*[[#{application.rejectReasonPrompt}]]*/ '拒否理由を入力してください',
+            rejectReason: /*[[#{application.rejectReason}]]*/ '拒否理由',
             approveFailed: /*[[#{application.approveFailed}]]*/ '承認に失敗しました',
             rejectFailed: /*[[#{application.rejectFailed}]]*/ '拒否に失敗しました',
             approveRequestFailed: /*[[#{application.approveRequestFailed}]]*/ '承認リクエストに失敗しました：',
@@ -847,6 +864,12 @@
                     '</div>' +
                     '<div class="text-muted small">' + applicationMessages.statusTransition + ': ' +
                     escapeHtml(previous) + ' → ' + escapeHtml(next) + '</div>' +
+                    (entry.comment
+                        ? '<div class="small mt-1" style="white-space: pre-wrap;' +
+                          (entry.nextStatus === 'REJECTED' ? ' color: #b91c1c;' : '') + '">' +
+                          (entry.nextStatus === 'REJECTED' ? escapeHtml(applicationMessages.rejectReason) + ': ' : '') +
+                          escapeHtml(entry.comment) + '</div>'
+                        : '') +
                     '</div>';
             }
             return html + '</div>';
@@ -1241,13 +1264,30 @@
             });
         }
 
+        /** 拒否理由の入力（キャンセルで拒否しない）。入力値または null を返す */
+        function promptRejectReason() {
+            var reason = prompt(applicationMessages.rejectReasonPrompt, '');
+            if (reason === null) return null;
+            return reason.trim().slice(0, 500);
+        }
+
+        /** 一覧の「拒否」ボタン：理由をフォームに入れて送信する */
+        function askRejectReason(form) {
+            var reason = promptRejectReason();
+            if (reason === null) return false;
+            form.elements['reason'].value = reason;
+            return true;
+        }
+
         function rejectInModal() {
             if (!currentDetailId || !currentDetailType) return;
-            if (!confirm(applicationMessages.rejectConfirm)) return;
+            var reason = promptRejectReason();
+            if (reason === null) return;
 
             var fd = new FormData();
             fd.append('id', currentDetailId);
             fd.append('type', currentDetailType);
+            fd.append('reason', reason);
 
             fetch('/application/api/reject', {
                 method: 'POST',

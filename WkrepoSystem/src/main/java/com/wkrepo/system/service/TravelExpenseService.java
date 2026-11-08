@@ -21,7 +21,10 @@ public class TravelExpenseService {
 
     @Autowired
     private AttendanceService attendanceService;
-    
+
+    @Autowired
+    private ExpenseAmountPolicy expenseAmountPolicy;
+
     public List<TravelExpense> getTravelExpensesByUserAndDateRange(User user, LocalDate startDate, LocalDate endDate) {
         return travelExpenseRepository.findByUserAndExpenseDateBetweenOrderByExpenseDateAsc(user, startDate, endDate);
     }
@@ -42,6 +45,7 @@ public class TravelExpenseService {
         if (travelExpense.getId() != null) {
             throw new IllegalArgumentException("application.error.invalidRequest");
         }
+        expenseAmountPolicy.validate(travelExpense.getAmount());
         attendanceService.ensureMonthEditable(travelExpense.getUser(), travelExpense.getExpenseDate());
         travelExpense.setStatus(ApplicationStatus.PENDING);
         return travelExpenseRepository.save(travelExpense);

@@ -39,6 +39,18 @@ public class ApprovalHistory {
     @Column(name = "action_at", nullable = false, updatable = false)
     private LocalDateTime actionAt;
 
+    /** 承認者のコメント（拒否理由など。任意） */
+    @Column(name = "comment", length = 500)
+    private String comment;
+
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
+    }
+
     @PrePersist
     protected void onCreate() {
         if (actionAt == null) {

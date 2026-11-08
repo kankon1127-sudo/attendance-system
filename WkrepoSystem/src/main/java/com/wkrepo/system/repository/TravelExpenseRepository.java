@@ -12,6 +12,9 @@ import java.util.List;
 
 @Repository
 public interface TravelExpenseRepository extends JpaRepository<TravelExpense, Long> {
+
+    /** ホーム画面の「拒否された申請」件数用 */
+    long countByUserIdAndStatus(Long userId, com.wkrepo.system.enums.ApplicationStatus status);
     
     List<TravelExpense> findByUserAndExpenseDateBetweenOrderByExpenseDateAsc(User user, LocalDate startDate, LocalDate endDate);
     

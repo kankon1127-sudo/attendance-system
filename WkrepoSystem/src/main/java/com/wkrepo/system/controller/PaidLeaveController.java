@@ -1,6 +1,8 @@
 package com.wkrepo.system.controller;
 
+import com.wkrepo.system.config.Messages;
 import com.wkrepo.system.entity.PaidLeave;
+import com.wkrepo.system.exception.BusinessException;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.service.ApplicationNotificationService;
 import com.wkrepo.system.service.PaidLeaveService;
@@ -35,6 +37,9 @@ public class PaidLeaveController {
 
     @Autowired
     private MessageSource messageSource;
+
+    @Autowired
+    private Messages messages;
 
     /**
      * 申請フォームから受け取る項目だけをバインドする。
@@ -112,6 +117,26 @@ public class PaidLeaveController {
         return "redirect:/paid-leave?year=" + year;
     }
     
+    /** 「取得予定日数」の表示用。勤務日（土日・祝日・会社休日を除く）だけを数えた日数を返す */
+    @GetMapping("/preview")
+    @ResponseBody
+    public java.util.Map<String, Object> previewDays(
+            @RequestParam(name = "startDate", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(name = "endDate", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(name = "leaveType", required = false) String leaveType) {
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        try {
+            BigDecimal days = paidLeaveService.previewLeaveDays(startDate, endDate, leaveType);
+            result.put("days", days.toPlainString());
+            if (days.signum() == 0) {
+                result.put("error", messages.get("leave.application.noWorkingDay"));
+            }
+        } catch (IllegalArgumentException e) {
+            result.put("error", messages.of(e));
+        }
+        return result;
+    }
+
     @PostMapping("/save")
     public String savePaidLeave(PaidLeave paidLeave, HttpSession session, RedirectAttributes redirectAttributes) {
         
@@ -124,33 +149,18 @@ public class PaidLeaveController {
             return "redirect:/login";
         }
         
-        LocalDate startDate = paidLeave.getStartDate();
-        LocalDate endDate = paidLeave.getEndDate() == null ? startDate : paidLeave.getEndDate();
-        if (startDate == null || endDate == null || endDate.isBefore(startDate)) {
-            redirectAttributes.addFlashAttribute("leaveError", "leave.application.invalidDate");
-            return "redirect:/paid-leave";
-        }
-        boolean halfDay = "午前".equals(paidLeave.getLeaveType()) || "午後".equals(paidLeave.getLeaveType());
-        if (halfDay && !startDate.equals(endDate)) {
-            redirectAttributes.addFlashAttribute("leaveError", "leave.application.halfDaySingleDate");
-            return "redirect:/paid-leave";
-        }
-
-        paidLeave.setEndDate(endDate);
-        if (halfDay) {
-            paidLeave.setLeaveDays(new BigDecimal("0.5"));
-        } else {
-            long daysBetween = ChronoUnit.DAYS.between(startDate, endDate) + 1;
-            paidLeave.setLeaveDays(BigDecimal.valueOf(daysBetween));
-        }
-
+        // 日付・日数・重複・残日数のチェックはすべて PaidLeaveService で行う
         paidLeave.setUser(user);
         PaidLeave savedLeave;
         try {
             savedLeave = paidLeaveService.savePaidLeave(paidLeave);
+        } catch (BusinessException | IllegalArgumentException | IllegalStateException exception) {
+            logger.info("Rejected paid leave application userId={} ({})", user.getId(), exception.getMessage());
+            redirectAttributes.addFlashAttribute("leaveError", messages.of(exception));
+            return "redirect:/paid-leave";
         } catch (RuntimeException exception) {
             logger.error("Error saving paid leave", exception);
-            redirectAttributes.addFlashAttribute("leaveError", "leave.application.saveFailed");
+            redirectAttributes.addFlashAttribute("leaveError", messages.get("leave.application.saveFailed"));
             return "redirect:/paid-leave";
         }
 
@@ -190,10 +200,10 @@ public class PaidLeaveController {
             logger.info("Successfully deleted paid leave with ID: {}", id);
         } catch (IllegalArgumentException | IllegalStateException | SecurityException e) {
             logger.warn("Rejected deleting paid leave ID: {} by user: {} ({})", id, user.getId(), e.getMessage());
-            redirectAttributes.addFlashAttribute("leaveError", e.getMessage());
+            redirectAttributes.addFlashAttribute("leaveError", messages.of(e));
         } catch (RuntimeException e) {
             logger.error("Error deleting paid leave with ID: {}", id, e);
-            redirectAttributes.addFlashAttribute("leaveError", "leave.application.deleteFailed");
+            redirectAttributes.addFlashAttribute("leaveError", messages.get("leave.application.deleteFailed"));
         }
 
         return "redirect:/paid-leave";

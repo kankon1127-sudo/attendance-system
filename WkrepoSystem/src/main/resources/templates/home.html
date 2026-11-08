@@ -144,6 +144,13 @@
 </head>
 <body>
 <th:block th:fragment="main-content">
+    <!-- 拒否された本人の申請（削除・再提出すると消える） -->
+    <div th:if="${rejectedApplicationCount != null and rejectedApplicationCount > 0}"
+         class="alert alert-danger d-flex justify-content-between align-items-center gap-2 py-2" role="status">
+        <span><i class="bi bi-x-circle me-1"></i><span th:text="#{home.rejectedAlert(${rejectedApplicationCount})}">有 1 件申请被驳回</span></span>
+        <a class="btn btn-outline-danger btn-sm text-nowrap" th:href="@{/application/list(filterStatus='REJECTED')}"
+           th:text="#{home.rejectedView}">查看</a>
+    </div>
     <!-- 統計カード -->
     <div class="row mb-4 home-stat-row">
         <div class="col-12 col-md-3 mb-3">

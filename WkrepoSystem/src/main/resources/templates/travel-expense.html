@@ -173,7 +173,7 @@
                         </div>
                         <div class="form-group">
                             <label for="nonTaxableAmount" th:text="#{travel.amount}">金額</label>
-                            <input type="number" id="nonTaxableAmount" th:field="*{amount}" placeholder="0" min="0" required>
+                            <input type="number" id="nonTaxableAmount" th:field="*{amount}" placeholder="0" min="1" th:max="${expenseMaxAmount}" required>
                         </div>
                     </div>
                     <button type="submit" class="btn-add" th:text="#{travel.save}">追加</button>
@@ -246,7 +246,7 @@
                         </div>
                         <div class="form-group">
                             <label for="travelAmount" th:text="#{travel.amount}">金額</label>
-                            <input type="number" id="travelAmount" th:field="*{amount}" placeholder="0" min="0" required>
+                            <input type="number" id="travelAmount" th:field="*{amount}" placeholder="0" min="1" th:max="${expenseMaxAmount}" required>
                         </div>
                     </div>
                     <button type="submit" class="btn-add" th:text="#{travel.save}">追加</button>

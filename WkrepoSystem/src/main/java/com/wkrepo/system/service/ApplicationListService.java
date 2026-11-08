@@ -87,6 +87,21 @@ public class ApplicationListService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 本人の申請のうち、現在「拒否」になっている件数（ホーム画面の通知用）。
+     * 年休・経費は削除、月報は再提出すると件数から消える。
+     */
+    public long countOwnRejected(User user) {
+        if (user == null || user.getId() == null) {
+            return 0;
+        }
+        Long userId = user.getId();
+        return travelExpenseRepository.countByUserIdAndStatus(userId, ApplicationStatus.REJECTED)
+                + generalExpenseRepository.countByUserIdAndStatus(userId, ApplicationStatus.REJECTED)
+                + paidLeaveRepository.countByUserIdAndStatus(userId, ApplicationStatus.REJECTED)
+                + monthlyReportRepository.countByUserIdAndStatus(userId, ApplicationStatus.REJECTED);
+    }
+
     public List<ApplicationItem> getApplicationsForUser(User currentUser, String filterType, String filterStatus) {
         log.info("[ApplicationListService] getApplicationsForUser 開始 userId={}, name={}, role={}, filterType={}, filterStatus={}",
                 currentUser != null ? currentUser.getId() : null,

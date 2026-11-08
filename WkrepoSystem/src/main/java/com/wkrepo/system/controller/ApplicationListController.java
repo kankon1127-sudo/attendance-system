@@ -7,6 +7,7 @@ import com.wkrepo.system.entity.MonthlyReport;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.enums.ApplicationStatus;
 import com.wkrepo.system.service.ApplicationListService;
+import com.wkrepo.system.service.ApplicationNotificationService;
 import com.wkrepo.system.service.ApprovalHistoryService;
 import com.wkrepo.system.service.MonthlyReportService;
 import jakarta.servlet.http.HttpSession;
@@ -46,6 +47,9 @@ public class ApplicationListController {
     @Autowired
     private Messages messages;
 
+    @Autowired
+    private ApplicationNotificationService applicationNotificationService;
+
     @GetMapping("/list")
     public String getApplicationList(HttpSession session, Model model,
                                      @RequestParam(name = "filterType", required = false) String filterType,
@@ -65,7 +69,9 @@ public class ApplicationListController {
         int fromIndex = (currentPageNumber - 1) * PAGE_SIZE;
         int toIndex = Math.min(fromIndex + PAGE_SIZE, totalCount);
 
-        model.addAttribute("applications", applications.subList(fromIndex, toIndex));
+        List<ApplicationItem> pageItems = applications.subList(fromIndex, toIndex);
+        approvalHistoryService.fillRejectReasons(pageItems);
+        model.addAttribute("applications", pageItems);
         model.addAttribute("totalCount", totalCount);
         model.addAttribute("page", currentPageNumber);
         model.addAttribute("totalPages", totalPages);
@@ -96,7 +102,8 @@ public class ApplicationListController {
             return "redirect:/application/list";
         }
 
-        approvalHistoryService.transition(type, id, approvedStatus(type, id, user), user);
+        ApplicationStatus nextStatus = approvedStatus(type, id, user);
+        notifyApplicant(approvalHistoryService.transition(type, id, nextStatus, user), nextStatus, user, null);
 
         return "redirect:/application/list";
     }
@@ -104,7 +111,8 @@ public class ApplicationListController {
     @PostMapping("/reject")
     public String rejectApplication(@RequestParam("id") Long id,
                                   @RequestParam("type") String type,
-                                  HttpSession session) {
+                                  @RequestParam(name = "reason", required = false) String reason,
+                                  HttpSession session, RedirectAttributes redirectAttributes) {
         User user = (User) session.getAttribute("user");
         if (user == null) {
             return "redirect:/login";
@@ -115,7 +123,13 @@ public class ApplicationListController {
             return "redirect:/application/list";
         }
 
-        approvalHistoryService.transition(type, id, ApplicationStatus.REJECTED, user);
+        try {
+            ApprovalHistoryService.Transition transition =
+                    approvalHistoryService.transition(type, id, ApplicationStatus.REJECTED, user, reason);
+            notifyApplicant(transition, ApplicationStatus.REJECTED, user, reason);
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", messages.of(e));
+        }
 
         return "redirect:/application/list";
     }
@@ -198,7 +212,8 @@ public class ApplicationListController {
             return ResponseEntity.status(403).body(err);
         }
         try {
-            approvalHistoryService.transition(type, id, approvedStatus(type, id, user), user);
+            ApplicationStatus nextStatus = approvedStatus(type, id, user);
+            notifyApplicant(approvalHistoryService.transition(type, id, nextStatus, user), nextStatus, user, null);
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", messages.get("application.approvedMessage"));
@@ -216,6 +231,7 @@ public class ApplicationListController {
     @ResponseBody
     public ResponseEntity<?> rejectApplicationApi(@RequestParam("id") Long id,
                                                    @RequestParam("type") String type,
+                                                   @RequestParam(name = "reason", required = false) String reason,
                                                    HttpSession session) {
         User user = (User) session.getAttribute("user");
         if (user == null) {
@@ -233,17 +249,35 @@ public class ApplicationListController {
             return ResponseEntity.status(403).body(err);
         }
         try {
-            approvalHistoryService.transition(type, id, ApplicationStatus.REJECTED, user);
+            ApprovalHistoryService.Transition transition =
+                    approvalHistoryService.transition(type, id, ApplicationStatus.REJECTED, user, reason);
+            notifyApplicant(transition, ApplicationStatus.REJECTED, user, reason);
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", messages.get("application.rejectedMessage"));
             return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> err = new HashMap<>();
+            err.put("success", false);
+            err.put("message", messages.of(e));
+            return ResponseEntity.badRequest().body(err);
         } catch (Exception e) {
             log.error("[ApplicationListController] API拒否エラー id={}, type={}, userId={}", id, type, user.getId(), e);
             Map<String, Object> err = new HashMap<>();
             err.put("success", false);
             err.put("message", messages.get("application.error.rejectFailed", messages.of(e)));
             return ResponseEntity.status(500).body(err);
+        }
+    }
+
+    /** 承認・拒否の結果を申請者にメールで通知する。通知の失敗で承認・拒否自体は失敗させない */
+    private void notifyApplicant(ApprovalHistoryService.Transition transition, ApplicationStatus nextStatus,
+                                 User actor, String comment) {
+        try {
+            applicationNotificationService.notifyApplicant(
+                    transition.applicant(), transition.summary(), nextStatus, actor, comment);
+        } catch (RuntimeException e) {
+            log.error("[ApplicationListController] 申請結果の通知でエラー（承認・拒否は完了済み） status={}", nextStatus, e);
         }
     }
 

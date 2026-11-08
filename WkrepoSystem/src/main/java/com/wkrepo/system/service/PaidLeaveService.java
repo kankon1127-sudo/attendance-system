@@ -5,6 +5,7 @@ import com.wkrepo.system.entity.PaidLeave;
 import com.wkrepo.system.entity.PaidLeaveEntitlement;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.enums.ApplicationStatus;
+import com.wkrepo.system.exception.BusinessException;
 import com.wkrepo.system.repository.PaidLeaveEntitlementRepository;
 import com.wkrepo.system.repository.PaidLeaveRepository;
 import com.wkrepo.system.repository.UserRepository;
@@ -38,30 +39,126 @@ public class PaidLeaveService {
             ApplicationStatus.PENDING,
             ApplicationStatus.SUBMITTED);
 
+    private static final BigDecimal HALF_DAY = new BigDecimal("0.5");
+    private static final String FULL_DAY = "全日";
+    /** 1 件の申請の最大期間（暦日）。入力ミスで何年分もの日付を数えないようにする */
+    private static final long MAX_LEAVE_CALENDAR_DAYS = 366;
+
     private final PaidLeaveRepository paidLeaveRepository;
     private final PaidLeaveEntitlementRepository entitlementRepository;
     private final UserRepository userRepository;
+    private final HolidayService holidayService;
 
     @Autowired
     public PaidLeaveService(
             PaidLeaveRepository paidLeaveRepository,
             PaidLeaveEntitlementRepository entitlementRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            HolidayService holidayService) {
         this.paidLeaveRepository = paidLeaveRepository;
         this.entitlementRepository = entitlementRepository;
         this.userRepository = userRepository;
+        this.holidayService = holidayService;
     }
 
     /**
      * 新規の年休申請（既存の申請を編集する機能はない）。状態は常に「申請中」から始める。
      * id や状態がリクエストから渡されても使わない（自分で承認済みにしたり他人の申請を上書きさせない）。
+     * <ul>
+     *   <li>日数は勤務日（土日・祝日・会社休日を除く）だけを数える。午前・午後休は 0.5 日</li>
+     *   <li>拒否以外の既存の申請と日付が重なる申請はできない（同じ日の午前休と午後休は可）</li>
+     *   <li>年ごとに「付与 − 取得済み − 申請中」を超える申請はできない</li>
+     * </ul>
+     * 例外のメッセージは messages*.properties のキー（引数があるものは BusinessException）。
      */
     public PaidLeave savePaidLeave(PaidLeave paidLeave) {
         if (paidLeave.getId() != null) {
             throw new IllegalArgumentException("application.error.invalidRequest");
         }
+        BigDecimal days = previewLeaveDays(paidLeave.getStartDate(), paidLeave.getEndDate(), paidLeave.getLeaveType());
+        if (days.signum() == 0) {
+            throw new IllegalArgumentException("leave.application.noWorkingDay");
+        }
+        if (paidLeave.getEndDate() == null) {
+            paidLeave.setEndDate(paidLeave.getStartDate());
+        }
+        paidLeave.setLeaveDays(days);
+
+        ensureNoOverlap(paidLeave);
+        ensureEnoughBalance(paidLeave);
+
         paidLeave.setStatus(ApplicationStatus.PENDING);
         return paidLeaveRepository.save(paidLeave);
+    }
+
+    /** 申請画面の「取得予定日数」表示用：勤務日だけを数えた日数（入力が不正なら例外） */
+    public BigDecimal previewLeaveDays(LocalDate startDate, LocalDate endDate, String leaveType) {
+        if (!FULL_DAY.equals(leaveType) && !isHalfDay(leaveType)) {
+            throw new IllegalArgumentException("application.error.invalidRequest");
+        }
+        LocalDate end = endDate == null ? startDate : endDate;
+        if (startDate == null || end.isBefore(startDate)
+                || ChronoUnit.DAYS.between(startDate, end) >= MAX_LEAVE_CALENDAR_DAYS) {
+            throw new IllegalArgumentException("leave.application.invalidDate");
+        }
+        if (isHalfDay(leaveType)) {
+            if (!startDate.equals(end)) {
+                throw new IllegalArgumentException("leave.application.halfDaySingleDate");
+            }
+            return holidayService.isRestDay(startDate) ? BigDecimal.ZERO.setScale(1) : HALF_DAY;
+        }
+        return BigDecimal.valueOf(countWorkingDays(startDate, end)).setScale(1, RoundingMode.UNNECESSARY);
+    }
+
+    public static boolean isHalfDay(String leaveType) {
+        return "午前".equals(leaveType) || "午後".equals(leaveType);
+    }
+
+    /** 期間内の勤務日（土日・祝日・会社休日を除く）の日数 */
+    long countWorkingDays(LocalDate startDate, LocalDate endDate) {
+        long count = 0;
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            if (!holidayService.isRestDay(date)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /** 拒否以外の既存の申請と日付が重なっていないか（同じ日の午前休と午後休の組み合わせだけは可） */
+    private void ensureNoOverlap(PaidLeave newLeave) {
+        List<PaidLeave> overlapping = paidLeaveRepository.findByUserAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                newLeave.getUser(), newLeave.getEndDate(), newLeave.getStartDate());
+        for (PaidLeave existing : overlapping) {
+            if (existing.getStatus() == ApplicationStatus.REJECTED) {
+                continue;
+            }
+            boolean morningAndAfternoon = isHalfDay(existing.getLeaveType()) && isHalfDay(newLeave.getLeaveType())
+                    && !existing.getLeaveType().equals(newLeave.getLeaveType());
+            if (!morningAndAfternoon) {
+                throw new BusinessException("leave.application.overlap",
+                        existing.getStartDate().toString(), existing.getEndDate().toString());
+            }
+        }
+    }
+
+    /** 年ごとに「付与 − 取得済み − 申請中」を超えていないか（年をまたぐ申請は年ごとに分けて確認） */
+    private void ensureEnoughBalance(PaidLeave newLeave) {
+        for (int year = newLeave.getStartDate().getYear(); year <= newLeave.getEndDate().getYear(); year++) {
+            LocalDate yearStart = Year.of(year).atDay(1);
+            LocalDate yearEnd = YearMonth.of(year, 12).atEndOfMonth();
+            BigDecimal requested = daysWithinYear(newLeave, yearStart, yearEnd);
+            if (requested == null || requested.signum() == 0) {
+                continue;
+            }
+            Balance balance = getBalance(newLeave.getUser(), year);
+            BigDecimal available = balance.remainingDays().subtract(balance.pendingDays()).max(BigDecimal.ZERO);
+            if (requested.compareTo(available) > 0) {
+                throw new BusinessException("leave.application.insufficient", String.valueOf(year),
+                        available.setScale(1, RoundingMode.HALF_UP).toPlainString(),
+                        requested.setScale(1, RoundingMode.HALF_UP).toPlainString());
+            }
+        }
     }
     
     /**
@@ -221,11 +318,21 @@ public class PaidLeaveService {
         if (overlapEnd.isBefore(overlapStart)) {
             return null;
         }
-        long totalCalendarDays = ChronoUnit.DAYS.between(leave.getStartDate(), leave.getEndDate()) + 1;
-        long calendarDaysInYear = ChronoUnit.DAYS.between(overlapStart, overlapEnd) + 1;
+        // 年内に収まる申請はそのままの日数（大半はこれ）
+        if (overlapStart.equals(leave.getStartDate()) && overlapEnd.equals(leave.getEndDate())) {
+            return leave.getLeaveDays();
+        }
+        // 年をまたぐ申請は勤務日の割合で按分する（勤務日がない場合だけ暦日の割合）。
+        // 旧データ（暦日で数えた日数）も合計日数は変わらない
+        long totalWorkingDays = countWorkingDays(leave.getStartDate(), leave.getEndDate());
+        long workingDaysInYear = countWorkingDays(overlapStart, overlapEnd);
+        long total = totalWorkingDays > 0 ? totalWorkingDays
+                : ChronoUnit.DAYS.between(leave.getStartDate(), leave.getEndDate()) + 1;
+        long inYear = totalWorkingDays > 0 ? workingDaysInYear
+                : ChronoUnit.DAYS.between(overlapStart, overlapEnd) + 1;
         return leave.getLeaveDays()
-                .multiply(BigDecimal.valueOf(calendarDaysInYear))
-                .divide(BigDecimal.valueOf(totalCalendarDays), 1, RoundingMode.HALF_UP);
+                .multiply(BigDecimal.valueOf(inYear))
+                .divide(BigDecimal.valueOf(total), 1, RoundingMode.HALF_UP);
     }
 
     public record Balance(BigDecimal grantedDays, BigDecimal usedDays,

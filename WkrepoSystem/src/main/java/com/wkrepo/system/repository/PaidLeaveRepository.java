@@ -13,6 +13,9 @@ import java.util.List;
 
 @Repository
 public interface PaidLeaveRepository extends JpaRepository<PaidLeave, Long> {
+
+    /** ホーム画面の「拒否された申請」件数用 */
+    long countByUserIdAndStatus(Long userId, ApplicationStatus status);
     
     List<PaidLeave> findByUserAndStartDateBetweenOrderByStartDateAsc(User user, LocalDate startDate, LocalDate endDate);
     

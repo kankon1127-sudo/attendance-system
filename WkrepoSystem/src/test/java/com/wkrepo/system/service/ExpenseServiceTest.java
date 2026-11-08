@@ -5,12 +5,14 @@ import com.wkrepo.system.entity.GeneralExpense;
 import com.wkrepo.system.entity.TravelExpense;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.enums.ApplicationStatus;
+import com.wkrepo.system.exception.BusinessException;
 import com.wkrepo.system.repository.GeneralExpenseRepository;
 import com.wkrepo.system.repository.TravelExpenseRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -37,6 +39,8 @@ class ExpenseServiceTest {
     private GeneralExpenseRepository generalExpenseRepository;
     @Mock
     private AttendanceService attendanceService;
+    @Spy
+    private ExpenseAmountPolicy expenseAmountPolicy = new ExpenseAmountPolicy(new BigDecimal("50000"));
 
     @InjectMocks
     private TravelExpenseService travelExpenseService;
@@ -110,6 +114,65 @@ class ExpenseServiceTest {
         assertThatThrownBy(() -> generalExpenseService.deleteGeneralExpense(7L, owner))
                 .hasMessage("expense.error.approvedNotEditable");
         verify(generalExpenseRepository, never()).delete(any());
+    }
+
+    // ---------- 金額 ----------
+
+    @Test
+    void zeroNegativeOrMissingAmountIsRejected() {
+        for (String amount : new String[] {"0", "-100", null}) {
+            TravelExpense travel = travel(null, null);
+            travel.setAmount(amount == null ? null : new BigDecimal(amount));
+            assertThatThrownBy(() -> travelExpenseService.saveTravelExpense(travel))
+                    .hasMessage("expense.error.amountNotPositive");
+
+            GeneralExpense general = general(null, null);
+            general.setAmount(amount == null ? null : new BigDecimal(amount));
+            assertThatThrownBy(() -> generalExpenseService.saveGeneralExpense(general))
+                    .hasMessage("expense.error.amountNotPositive");
+        }
+        verify(travelExpenseRepository, never()).save(any());
+        verify(generalExpenseRepository, never()).save(any());
+    }
+
+    @Test
+    void amountOverLimitIsRejectedButLimitItselfIsAllowed() {
+        when(travelExpenseRepository.save(any(TravelExpense.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(generalExpenseRepository.save(any(GeneralExpense.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TravelExpense over = travel(null, null);
+        over.setAmount(new BigDecimal("50001"));
+        assertThatThrownBy(() -> travelExpenseService.saveTravelExpense(over))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("expense.error.amountTooLarge")
+                .satisfies(e -> assertThat(((BusinessException) e).getArgs()).containsExactly("50,000"));
+
+        GeneralExpense generalOver = general(null, null);
+        generalOver.setAmount(new BigDecimal("50000.01"));
+        assertThatThrownBy(() -> generalExpenseService.saveGeneralExpense(generalOver))
+                .hasMessage("expense.error.amountTooLarge");
+
+        TravelExpense atLimit = travel(null, null);
+        atLimit.setAmount(new BigDecimal("50000"));
+        assertThat(travelExpenseService.saveTravelExpense(atLimit)).isNotNull();
+    }
+
+    @Test
+    void moreThanTwoDecimalsIsRejected() {
+        GeneralExpense expense = general(null, null);
+        expense.setAmount(new BigDecimal("100.005"));
+
+        assertThatThrownBy(() -> generalExpenseService.saveGeneralExpense(expense))
+                .hasMessage("application.error.invalidRequest");
+    }
+
+    @Test
+    void zeroLimitMeansNoLimit() {
+        ExpenseAmountPolicy unlimited = new ExpenseAmountPolicy(BigDecimal.ZERO);
+
+        assertThat(unlimited.getMaxAmount()).isNull();
+        unlimited.validate(new BigDecimal("9999999"));
+        assertThatThrownBy(() -> unlimited.validate(BigDecimal.ZERO)).hasMessage("expense.error.amountNotPositive");
     }
 
     private TravelExpense travel(Long id, ApplicationStatus status) {

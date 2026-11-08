@@ -19,6 +19,15 @@ public class ApplicationItem {
     private ApplicationStatus status;
     private boolean canApprove;
     private boolean canWithdraw;
+    private String rejectReason; // 拒否された申請の最新の拒否理由（なければ null）
+
+    public String getRejectReason() {
+        return rejectReason;
+    }
+
+    public void setRejectReason(String rejectReason) {
+        this.rejectReason = rejectReason;
+    }
 
     public ApplicationItem() {}
 

@@ -89,6 +89,7 @@ public class AuthController {
         }
         model.addAttribute(SESSION_USER, user);
         model.addAttribute("currentPage", "home");
+        model.addAttribute("rejectedApplicationCount", applicationListService.countOwnRejected(user));
         List<ApplicationItem> pendingApprovals = applicationListService.getPendingApprovalsForUser(user);
         model.addAttribute("pendingApprovalCount", pendingApprovals.size());
         model.addAttribute("overdueApprovalCount",

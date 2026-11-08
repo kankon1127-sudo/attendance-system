@@ -14,6 +14,9 @@ import java.util.List;
 @Repository
 public interface MonthlyReportRepository extends JpaRepository<MonthlyReport, Long> {
 
+    /** ホーム画面の「拒否された申請」件数用 */
+    long countByUserIdAndStatus(Long userId, ApplicationStatus status);
+
     Optional<MonthlyReport> findByUserAndYearAndMonth(User user, int year, int month);
 
     Optional<MonthlyReport> findByUserIdAndYearAndMonth(Long userId, int year, int month);
