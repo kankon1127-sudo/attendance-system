@@ -181,8 +181,13 @@ public class AttendanceController {
         return "attendance";
     }
 
+    /**
+     * 月度勤怠・経費の Excel 出力（月度集計・出勤明細・交通費明細・諸経費明細）。
+     * ADMIN・SOUMU は全員、MANAGER は自部署、一般社員は本人のみ。
+     * 全員分でもメモリに載せないよう、SXSSF で一時ファイルに書き出し、そのファイルをストリームで返す（読み終わると削除）。
+     */
     @GetMapping("/export")
-    public ResponseEntity<byte[]> exportMonthlyAttendance(
+    public ResponseEntity<org.springframework.core.io.Resource> exportMonthlyAttendance(
             @RequestParam(name = "year", required = false) Integer year,
             @RequestParam(name = "month", required = false) Integer month,
             HttpSession session) {
@@ -212,10 +217,19 @@ public class AttendanceController {
         List<TravelExpense> travelExpenses = travelExpenseService.getAllTravelExpensesByDateRange(startDate, endDate);
         List<GeneralExpense> generalExpenses = generalExpenseService.getAllGeneralExpensesByDateRange(startDate, endDate);
 
+        java.nio.file.Path tempFile = null;
         try {
-            // 経費は visibleUsers で絞り込む（表示範囲は勤怠と同じ）
-            byte[] workbook = attendanceExcelExportService.exportMonthlyAttendance(
-                    visibleUsers, attendances, travelExpenses, generalExpenses, yearMonth);
+            tempFile = java.nio.file.Files.createTempFile("attendance-export-", ".xlsx");
+            // 勤怠・経費は visibleUsers のデータだけを出力する（表示範囲は勤怠画面と同じ）
+            try (java.io.OutputStream output = new java.io.BufferedOutputStream(
+                    java.nio.file.Files.newOutputStream(tempFile))) {
+                attendanceExcelExportService.writeMonthlyAttendance(
+                        visibleUsers, attendances, travelExpenses, generalExpenses, yearMonth, output);
+            }
+            long size = java.nio.file.Files.size(tempFile);
+            java.io.InputStream input = java.nio.file.Files.newInputStream(
+                    tempFile, java.nio.file.StandardOpenOption.DELETE_ON_CLOSE);
+
             String filename = "attendance-" + yearMonth + ".xlsx";
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType(
@@ -223,8 +237,16 @@ public class AttendanceController {
             headers.setContentDisposition(ContentDisposition.attachment()
                     .filename(filename, StandardCharsets.UTF_8)
                     .build());
-            return new ResponseEntity<>(workbook, headers, HttpStatus.OK);
+            headers.setContentLength(size);
+            return new ResponseEntity<>(new org.springframework.core.io.InputStreamResource(input), headers, HttpStatus.OK);
         } catch (IOException exception) {
+            if (tempFile != null) {
+                try {
+                    java.nio.file.Files.deleteIfExists(tempFile);
+                } catch (IOException ignored) {
+                    // 削除できなくても OS の一時フォルダなので致命的ではない
+                }
+            }
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Failed to generate the attendance workbook", exception);
         }
