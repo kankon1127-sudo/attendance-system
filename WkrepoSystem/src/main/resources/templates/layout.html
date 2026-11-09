@@ -761,6 +761,27 @@
                     input.value = document.getElementById(definition[1]).value;
                     input.id = 'mobile-' + definition[0];
                     field(row.closest('table').querySelector('thead th:nth-child(' + (index + 3) + ')').textContent.trim(), input);
+                    if (definition[0] === 'endTime') {
+                        // 退勤の下に「翌日」チェック（日をまたぐ勤務）
+                        var sourceNextDay = document.getElementById('endNextDay-' + day);
+                        var nextDayWrapper = document.createElement('div');
+                        nextDayWrapper.className = 'form-check mb-3';
+                        nextDayWrapper.style.marginTop = '-8px';
+                        var nextDay = document.createElement('input');
+                        nextDay.type = 'checkbox';
+                        nextDay.className = 'form-check-input';
+                        nextDay.name = 'endNextDay';
+                        nextDay.value = 'true';
+                        nextDay.id = 'mobile-endNextDay';
+                        nextDay.checked = sourceNextDay ? sourceNextDay.checked : false;
+                        var nextDayLabel = document.createElement('label');
+                        nextDayLabel.className = 'form-check-label';
+                        nextDayLabel.htmlFor = nextDay.id;
+                        nextDayLabel.textContent = sourceNextDay
+                                ? sourceNextDay.parentNode.querySelector('.form-check-label').textContent.trim() : '';
+                        nextDayWrapper.append(nextDay, nextDayLabel);
+                        form.appendChild(nextDayWrapper);
+                    }
                 });
 
                 var remarks = document.createElement('textarea');
@@ -771,7 +792,8 @@
                 field(row.closest('table').querySelector('thead th:nth-child(9)').textContent.trim(), remarks);
 
                 var hourValues = [];
-                [5, 6].forEach(function (columnIndex) {
+                // 実働・残業・深夜・休日（列番号は 0 始まり）
+                [5, 6, 9, 10].forEach(function (columnIndex) {
                     var wrapper = document.createElement('div');
                     wrapper.className = 'mb-3';
                     var label = document.createElement('div');
@@ -795,26 +817,21 @@
                 body.replaceChildren(form);
                 title.textContent = date;
 
-                function calculatedWorkHours() {
-                    var selectedStatus = status.value;
-                    var start = form.elements.namedItem('startTime').value;
-                    var end = form.elements.namedItem('endTime').value;
-                    var pause = form.elements.namedItem('breakTime').value || '00:00';
-                    if ((selectedStatus !== '出社' && selectedStatus !== '在宅') || !start || !end) return 0;
-                    var startDate = new Date('1970-01-01T' + start);
-                    var endDate = new Date('1970-01-01T' + end);
-                    if (endDate < startDate) endDate.setDate(endDate.getDate() + 1);
-                    var pauseParts = pause.split(':');
-                    var pauseMinutes = Number(pauseParts[0]) * 60 + Number(pauseParts[1] || 0);
-                    return Math.max(0, (endDate - startDate) / 3600000 - pauseMinutes / 60);
-                }
-
-                // プレビュー用。ルールはサーバー側の AttendanceService.calculateWorkHours と同じ（保存後はサーバー側の結果が正）
+                // プレビュー用。計算は attendance.html の calculateAttendancePreview（サーバー側と同じルール）
                 var isRestDay = row.getAttribute('data-rest-day') === 'true';
                 function updateHourPreview() {
-                    var hours = calculatedWorkHours();
-                    hourValues[0].textContent = hours.toFixed(2);
-                    hourValues[1].textContent = (isRestDay ? hours : Math.max(0, hours - 8)).toFixed(2);
+                    var result = window.calculateAttendancePreview(
+                            status.value,
+                            form.elements.namedItem('startTime').value,
+                            form.elements.namedItem('endTime').value,
+                            form.elements.namedItem('breakTime').value,
+                            form.elements.namedItem('endNextDay').checked,
+                            date,
+                            isRestDay);
+                    hourValues[0].textContent = result.error || result.work.toFixed(2);
+                    hourValues[1].textContent = result.overtime.toFixed(2);
+                    hourValues[2].textContent = result.night.toFixed(2);
+                    hourValues[3].textContent = result.holiday.toFixed(2);
                 }
 
                 form.addEventListener('input', updateHourPreview);
@@ -838,6 +855,14 @@
                         body: new FormData(form),
                         credentials: 'same-origin'
                     }).then(function (response) {
+                        if (response.status === 400) {
+                            // 入力エラー（退勤が出勤以前など）はサーバーの文言をそのまま表示する
+                            return response.json().then(function (data) {
+                                save.disabled = false;
+                                alert((data && data.message)
+                                        || row.closest('table').getAttribute('data-save-failed-message'));
+                            });
+                        }
                         if (!response.ok || response.url.indexOf('/login') !== -1) {
                             throw new Error('HTTP ' + response.status);
                         }

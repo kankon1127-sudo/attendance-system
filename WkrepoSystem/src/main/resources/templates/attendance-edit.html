@@ -229,7 +229,8 @@
                     <div class="alert alert-warning" th:if="${attendanceLocked}" th:text="#{attendance.locked}">
                         月報提出後のため、この月の勤怠はロックされています。変更する場合は申請一覧で月報を撤回してください。
                     </div>
-                    
+                    <div class="alert alert-danger" th:if="${attendanceError}" th:text="${attendanceError}"></div>
+
                     <form action="/attendance/edit" method="post">
                         <input type="hidden" name="date" th:value="${date}">
                         
@@ -245,6 +246,12 @@
                                 <input type="time" class="form-control" name="endTime" 
                                        th:disabled="${attendanceLocked}"
                                        th:value="${attendance != null && attendance.endTime != null ? attendance.endTime : (defaultSetting != null and defaultSetting.defaultEndTime != null ? #temporals.format(defaultSetting.defaultEndTime, 'HH:mm') : '18:00')}">
+                                <div class="form-check mt-1">
+                                    <input class="form-check-input" type="checkbox" name="endNextDay" value="true" id="endNextDay"
+                                           th:disabled="${attendanceLocked}"
+                                           th:checked="${attendance != null and attendance.endNextDay == true}">
+                                    <label class="form-check-label" for="endNextDay" th:text="#{attendance.endNextDay}">翌日</label>
+                                </div>
                             </div>
                         </div>
                         

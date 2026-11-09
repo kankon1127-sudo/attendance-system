@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 public class AttendanceExcelExportService {
     private static final List<String> SUMMARY_HEADERS = List.of(
             "社員番号", "氏名", "部署", "出勤日数", "実働時間（時間）", "残業時間（時間）",
+            "深夜労働（時間）", "休日労働（時間）",
             "非課税交通費", "旅費交通費", "諸経費", "経費合計");
     private static final List<String> TRAVEL_HEADERS = List.of(
             "日付", "社員番号", "氏名", "部署", "区分", "交通機関", "区間", "摘要", "金額", "状態");
@@ -120,10 +121,12 @@ public class AttendanceExcelExportService {
             row.createCell(3).setCellValue(totals.workDays());
             setNumber(row, 4, totals.workHours(), styles.hours);
             setNumber(row, 5, totals.overtimeHours(), styles.hours);
-            setNumber(row, 6, expenses.nonTaxableTravel, styles.amount);
-            setNumber(row, 7, expenses.travel, styles.amount);
-            setNumber(row, 8, expenses.general, styles.amount);
-            setNumber(row, 9, expenses.total(), styles.amount);
+            setNumber(row, 6, totals.nightHours(), styles.hours);
+            setNumber(row, 7, totals.holidayHours(), styles.hours);
+            setNumber(row, 8, expenses.nonTaxableTravel, styles.amount);
+            setNumber(row, 9, expenses.travel, styles.amount);
+            setNumber(row, 10, expenses.general, styles.amount);
+            setNumber(row, 11, expenses.total(), styles.amount);
         }
         finishSheet(sheet, SUMMARY_HEADERS.size(), rowNumber);
     }

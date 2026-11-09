@@ -57,8 +57,18 @@
         </div>
     </div>
 
+    <!-- 深夜・休日労働の月合計（割増賃金の計算用） -->
+    <div class="attendance-extra-totals small text-muted mb-3">
+        <span th:text="#{attendance.nightHoursTotal}">深夜労働</span>
+        <strong class="text-dark ms-1" id="totalNightHours" th:text="${totalNightHours}">0.00</strong>h
+        <span class="mx-2">／</span>
+        <span th:text="#{attendance.holidayHoursTotal}">休日労働（日曜）</span>
+        <strong class="text-dark ms-1" id="totalHolidayHours" th:text="${totalHolidayHours}">0.00</strong>h
+    </div>
+
     <div class="alert alert-light border mb-4 py-2 px-3 small text-muted">
         <span th:text="#{attendance.leaveNotice}">区分で「有給」を選択した日は、年休申請を行い、リーダー承認後に月報を提出できます。</span>
+        <br><span th:text="#{attendance.timeRuleNotice}">退勤が日をまたぐ場合は「翌日」にチェックしてください。休憩が法定の最低時間に満たない場合は自動で補正されます。</span>
     </div>
 
     <div class="alert alert-warning mb-4" th:if="${attendanceLocked}" th:text="#{attendance.locked}">
@@ -173,6 +183,8 @@
                         <th style="width: 80px;" th:text="#{attendance.overtimeHours}">残業</th>
                         <th style="width: 100px;" th:text="#{attendance.status}">区分</th>
                         <th style="width: 150px;" th:text="#{attendance.remarks}">備考</th>
+                        <th style="width: 70px;" th:text="#{attendance.nightHours}">深夜</th>
+                        <th style="width: 70px;" th:text="#{attendance.holidayHours}">休日</th>
                         <th style="width: 80px;" th:text="#{attendance.edit}">編集</th>
                     </tr>
                 </thead>
@@ -195,11 +207,22 @@
                         </td>
                         <td>
                             <span class="display-mode" th:text="${isNoInput ? '-' : (day.attendance?.endTime != null ? day.attendance.endTime : '-')}">-</span>
-                            <input type="time" class="form-control form-control-sm edit-mode" 
+                            <span class="display-mode badge text-bg-secondary ms-1 next-day-badge"
+                                  th:if="${!isNoInput and day.attendance?.endNextDay == true and day.attendance?.endTime != null}"
+                                  th:text="#{attendance.endNextDay}">翌日</span>
+                            <input type="time" class="form-control form-control-sm edit-mode"
                                    th:value="${isNoInput ? '' : (day.attendance?.endTime != null ? day.attendance.endTime : '18:00')}"
                                    th:id="'endTime-' + ${day.day}"
                                    th:disabled="${attendanceLocked}"
                                    th:onblur="'calculateWorkHours(' + ${day.day} + ')'">
+                            <label class="form-check edit-mode small text-nowrap mt-1 mb-0 next-day-check">
+                                <input type="checkbox" class="form-check-input"
+                                       th:id="'endNextDay-' + ${day.day}"
+                                       th:checked="${!isNoInput and day.attendance?.endNextDay == true}"
+                                       th:disabled="${attendanceLocked}"
+                                       th:onchange="'calculateWorkHours(' + ${day.day} + ')'">
+                                <span class="form-check-label" th:text="#{attendance.endNextDay}">翌日</span>
+                            </label>
                         </td>
                         <td>
                             <span class="display-mode" th:text="${isNoInput ? '-' : (day.attendance?.breakTime != null ? day.attendance.breakTime : '-')}">-</span>
@@ -231,6 +254,16 @@
                                    th:id="'remarks-' + ${day.day}"
                                    th:disabled="${attendanceLocked}">
                         </td>
+                        <td th:id="'nightHours-' + ${day.day}"
+                            th:with="nightHours=${isNoInput or day.attendance?.nightHours == null ? 0 : day.attendance.nightHours}"
+                            th:classappend="${nightHours == 0} ? 'is-zero'"
+                            th:attr="data-label=#{attendance.nightHours}"
+                            th:text="${#numbers.formatDecimal(nightHours, 1, 2)}">0.00</td>
+                        <td th:id="'holidayHours-' + ${day.day}"
+                            th:with="holidayHours=${isNoInput or day.attendance?.holidayHours == null ? 0 : day.attendance.holidayHours}"
+                            th:classappend="${holidayHours == 0} ? 'is-zero'"
+                            th:attr="data-label=#{attendance.holidayHours}"
+                            th:text="${#numbers.formatDecimal(holidayHours, 1, 2)}">0.00</td>
                         <td>
                             <button type="button" class="btn btn-sm btn-primary" th:onclick="'toggleEdit(event, ' + ${day.day} + ')'" th:id="'btn-' + ${day.day}" th:text="#{attendance.edit}" th:disabled="${attendanceLocked}">編集</button>
                         </td>
@@ -248,6 +281,8 @@
             bulkConfirm: /*[[#{attendance.bulkApplyConfirm}]]*/ '未入力日にデフォルト値を一括入力しますか？',
             bulkFailed: /*[[#{attendance.bulkApplyFailed}]]*/ '一括入力に失敗しました。',
             saveFailed: /*[[#{attendance.saveFailed}]]*/ '保存に失敗しました。',
+            endBeforeStart: /*[[#{attendance.error.endBeforeStart}]]*/ '退勤時刻は出勤時刻より後にしてください。',
+            shiftTooLong: /*[[#{attendance.error.shiftTooLong}]]*/ '勤務時間は 24 時間以内にしてください。',
             networkError: /*[[#{common.networkError}]]*/ '通信エラーが発生しました。'
         };
         let editingDay = null;
@@ -310,50 +345,79 @@
                 document.getElementById('startTime-' + day).value = '';
                 document.getElementById('endTime-' + day).value = '';
                 document.getElementById('breakTime-' + day).value = '';
+                document.getElementById('endNextDay-' + day).checked = false;
             }
             calculateWorkHours(day);
         }
 
-        function calculateWorkHours(day) {
-            const status = document.getElementById('status-' + day).value;
-            const startTime = document.getElementById('startTime-' + day).value;
-            const endTime = document.getElementById('endTime-' + day).value;
-            const breakTime = document.getElementById('breakTime-' + day).value || "00:00";
-            
-            const workHoursCell = document.getElementById('workHours-' + day);
-            const overtimeHoursCell = document.getElementById('overtimeHours-' + day);
+        function toMinutes(time) {
+            const parts = (time || '00:00').split(':');
+            return (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+        }
 
-            // 【未入力の処理】：ステータスが無効、または時刻が揃っていない場合は 0 を表示する
+        /**
+         * 勤務時間のプレビュー（スマホ用編集画面 layout.html からも使う）。
+         * ルールはサーバー側の AttendanceService.calculateWorkHours と同じ（保存後はサーバー側の結果が正）。
+         * 退勤が出勤以前で「翌日」がない場合は error を返す。
+         */
+        window.calculateAttendancePreview = function (status, startTime, endTime, breakTime, endNextDay, dateStr, isRestDay) {
+            const zero = { work: 0, overtime: 0, night: 0, holiday: 0, breakMinutes: toMinutes(breakTime), error: null };
             if (!status || status === '-' || status === '欠勤' || status === '有給' || !startTime || !endTime) {
-                workHoursCell.innerText = '0.00';
-                overtimeHoursCell.innerText = '0.00';
-                refreshTopPanel();
-                return;
+                return zero;
             }
-
-            try {
-                const d1 = new Date("1970-01-01T" + startTime);
-                let d2 = new Date("1970-01-01T" + endTime);
-                if (d2 < d1) d2.setDate(d2.getDate() + 1);
-
-                const bParts = breakTime.split(':');
-                const bMs = (parseInt(bParts[0]) * 60 + (parseInt(bParts[1]) || 0)) * 60000;
-                // プレビュー用。ルールはサーバー側の AttendanceService.calculateWorkHours と同じ（保存後はサーバー側の結果が正）
-                const workH = Math.max(0, (d2 - d1 - bMs) / 3600000);
-                const isRestDay = document.getElementById('row-' + day).getAttribute('data-rest-day') === 'true';
-                const overH = isRestDay ? workH : Math.max(0, workH - 8.0);
-
-                workHoursCell.innerText = workH.toFixed(2);
-                overtimeHoursCell.innerText = overH.toFixed(2);
-            } catch (e) {
-                workHoursCell.innerText = '0.00';
-                overtimeHoursCell.innerText = '0.00';
+            const start = toMinutes(startTime);
+            let end = toMinutes(endTime);
+            if (!endNextDay && end <= start) {
+                return Object.assign(zero, { error: attendanceMessages.endBeforeStart });
             }
+            if (endNextDay && end > start) {
+                return Object.assign(zero, { error: attendanceMessages.shiftTooLong });
+            }
+            if (endNextDay) end += 1440;
+            const shift = end - start;
+            const entered = toMinutes(breakTime);
+            // 法定の最低休憩：労働 6h 超 45 分、8h 超 60 分
+            const worked = shift - entered;
+            const required = worked > 480 ? 60 : (worked > 360 ? 45 : 0);
+            const breakMinutes = Math.max(entered, required);
+            const workMinutes = Math.max(0, shift - breakMinutes);
+            // 深夜：22:00〜翌 5:00 と重なる分（実働が上限）
+            let night = 0;
+            for (let d = 0; d <= 2; d++) {
+                night += Math.max(0, Math.min(end, d * 1440 + 300) - Math.max(start, d * 1440 - 120));
+            }
+            night = Math.min(night, workMinutes);
+            const work = workMinutes / 60;
+            const isSunday = new Date(dateStr + 'T00:00:00').getDay() === 0;
+            return {
+                work: work,
+                overtime: isRestDay ? work : Math.max(0, work - 8),
+                night: night / 60,
+                holiday: isSunday ? work : 0,
+                breakMinutes: breakMinutes,
+                error: null
+            };
+        };
+
+        function calculateWorkHours(day) {
+            const row = document.getElementById('row-' + day);
+            const result = window.calculateAttendancePreview(
+                    document.getElementById('status-' + day).value,
+                    document.getElementById('startTime-' + day).value,
+                    document.getElementById('endTime-' + day).value,
+                    document.getElementById('breakTime-' + day).value,
+                    document.getElementById('endNextDay-' + day).checked,
+                    row.getAttribute('data-date'),
+                    row.getAttribute('data-rest-day') === 'true');
+            document.getElementById('workHours-' + day).innerText = result.work.toFixed(2);
+            document.getElementById('overtimeHours-' + day).innerText = result.overtime.toFixed(2);
+            document.getElementById('nightHours-' + day).innerText = result.night.toFixed(2);
+            document.getElementById('holidayHours-' + day).innerText = result.holiday.toFixed(2);
             refreshTopPanel();
         }
 
         function refreshTopPanel() {
-            let totalDays = 0, totalWH = 0, totalOH = 0;
+            let totalDays = 0, totalWH = 0, totalOH = 0, totalNH = 0, totalHH = 0;
             document.querySelectorAll('tbody tr[id^="row-"]').forEach(tr => {
                 const dayId = tr.id.replace('row-', '');
                 const wh = parseFloat(document.getElementById('workHours-' + dayId).innerText) || 0;
@@ -363,12 +427,16 @@
                 // 実働時間を加算
                 totalWH += wh;
                 totalOH += oh;
+                totalNH += parseFloat(document.getElementById('nightHours-' + dayId).innerText) || 0;
+                totalHH += parseFloat(document.getElementById('holidayHours-' + dayId).innerText) || 0;
                 // "出社"または"在宅"で実働が 0 より大きい場合のみ出勤日数に数える
                 if ((status === '出社' || status === '在宅') && wh > 0) totalDays++;
             });
             document.getElementById('totalWorkDays').innerText = totalDays;
             document.getElementById('totalWorkHours').innerText = totalWH.toFixed(2);
             document.getElementById('totalOvertimeHours').innerText = totalOH.toFixed(2);
+            document.getElementById('totalNightHours').innerText = totalNH.toFixed(2);
+            document.getElementById('totalHolidayHours').innerText = totalHH.toFixed(2);
         }
 
         function applyDefaultValues() {
@@ -409,20 +477,20 @@
             formData.append('date', row.getAttribute('data-date'));
             formData.append('agreement36Status', status);
             formData.append('remarks', document.getElementById('remarks-' + day).value);
-            formData.append('year', document.getElementById('currentYear')?.value || '');
-            formData.append('month', document.getElementById('currentMonth')?.value || '');
 
-            // 出勤以外のステータスでは時刻をクリアする。実働時間と残業時間はサーバー側で計算するため送信しない
+            // 出勤以外のステータスでは時刻をクリアする。実働などの時間はサーバー側で計算するため送信しない
             if (!status || status === '-' || status === '欠勤' || status === '有給') {
                 formData.append('startTime', '');
                 formData.append('endTime', '');
                 formData.append('breakTime', '');
+                formData.append('endNextDay', 'false');
             } else {
                 formData.append('startTime', document.getElementById('startTime-' + day).value);
                 formData.append('endTime', document.getElementById('endTime-' + day).value);
                 formData.append('breakTime', document.getElementById('breakTime-' + day).value);
+                formData.append('endNextDay', document.getElementById('endNextDay-' + day).checked ? 'true' : 'false');
             }
-            
+
             fetch('/attendance/saveInline', {
                 method: 'POST',
                 body: formData
@@ -430,9 +498,12 @@
             .then(response => {
                 if (response.ok) {
                     window.location.reload();
-                } else {
-                    alert(attendanceMessages.saveFailed);
+                    return;
                 }
+                // 入力エラー（退勤が出勤以前など）はサーバーの文言を表示する
+                return response.json()
+                        .then(data => alert((data && data.message) || attendanceMessages.saveFailed))
+                        .catch(() => alert(attendanceMessages.saveFailed));
             })
             .catch(err => {
                 console.error('Save error:', err);

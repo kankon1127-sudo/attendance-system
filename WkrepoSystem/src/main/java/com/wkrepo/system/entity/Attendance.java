@@ -36,8 +36,48 @@ public class Attendance {
     @Column(name = "overtime_hours", precision = 5, scale = 2)
     private BigDecimal overtimeHours;
     
+    /** 退勤が翌日（日をまたぐ勤務）。false の場合、退勤は出勤より後でなければならない */
+    @Column(name = "end_next_day")
+    private Boolean endNextDay;
+
+    /** 深夜労働時間（22:00〜翌 5:00 に含まれる勤務時間。休憩は差し引かない） */
+    @Column(name = "night_hours", precision = 5, scale = 2)
+    private BigDecimal nightHours;
+
+    /** 休日労働時間（法定休日＝日曜日の実働時間） */
+    @Column(name = "holiday_hours", precision = 5, scale = 2)
+    private BigDecimal holidayHours;
+
     @Column(name = "agreement_36_status", length = 20)
     private String agreement36Status;
+
+    public boolean isEndNextDay() {
+        return Boolean.TRUE.equals(endNextDay);
+    }
+
+    public Boolean getEndNextDay() {
+        return endNextDay;
+    }
+
+    public void setEndNextDay(Boolean endNextDay) {
+        this.endNextDay = endNextDay;
+    }
+
+    public BigDecimal getNightHours() {
+        return nightHours;
+    }
+
+    public void setNightHours(BigDecimal nightHours) {
+        this.nightHours = nightHours;
+    }
+
+    public BigDecimal getHolidayHours() {
+        return holidayHours;
+    }
+
+    public void setHolidayHours(BigDecimal holidayHours) {
+        this.holidayHours = holidayHours;
+    }
     
     @Column(length = 500)
     private String remarks;

@@ -137,6 +137,8 @@ public class AttendanceController {
         model.addAttribute("totalWorkDays", statistics.workDays());
         model.addAttribute("totalWorkHours", statistics.workHours());
         model.addAttribute("totalOvertimeHours", statistics.overtimeHours());
+        model.addAttribute("totalNightHours", statistics.nightHours());
+        model.addAttribute("totalHolidayHours", statistics.holidayHours());
         model.addAttribute("attendanceAnomalies", anomalies);
         model.addAttribute("agreement36", agreement36Service.check(user, yearMonth));
         model.addAttribute("currentYear", currentYear);
@@ -243,47 +245,44 @@ public class AttendanceController {
      * 2. 保存処理：既存レコードを検索してから更新（UPDATE）し、不正なデータを残さない
      */
     @PostMapping("/saveInline")
-    public String saveInline(
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> saveInline(
             @RequestParam("date") String dateStr,
             @RequestParam(value = "startTime", required = false) String startTime,
             @RequestParam(value = "endTime", required = false) String endTime,
             @RequestParam(value = "breakTime", required = false) String breakTime,
+            @RequestParam(value = "endNextDay", defaultValue = "false") boolean endNextDay,
             @RequestParam(value = "agreement36Status", required = false) String status,
             @RequestParam(value = "remarks", required = false) String remarks,
-            @RequestParam(value = "year", required = false) Integer year,
-            @RequestParam(value = "month", required = false) Integer month,
             HttpSession session) {
 
         User user = (User) session.getAttribute("user");
         if (user == null) {
-            return "redirect:/login";
+            return ResponseEntity.status(401).body(Map.of("success", false,
+                    "message", messages.get("common.error.loginRequired")));
         }
 
-        LocalDate date = LocalDate.parse(dateStr);
-        if (attendanceService.isMonthLocked(user, date.getYear(), date.getMonthValue())) {
-            return "redirect:/attendance?year=" + date.getYear() + "&month=" + date.getMonthValue() + "&locked=true";
+        try {
+            LocalDate date = LocalDate.parse(dateStr);
+            Attendance attendance = attendanceService.getAttendanceByUserAndDate(user, date);
+            if (attendance == null) {
+                attendance = new Attendance(user, date);
+            }
+
+            // 実働・残業・深夜・休日の各時間はサーバー側で計算し、フロントエンドの値は受け取らない
+            attendance.setStartTime(startTime != null && !startTime.isEmpty() ? LocalTime.parse(startTime) : null);
+            attendance.setEndTime(endTime != null && !endTime.isEmpty() ? LocalTime.parse(endTime) : null);
+            attendance.setBreakTime(breakTime != null && !breakTime.isEmpty() ? LocalTime.parse(breakTime) : null);
+            attendance.setEndNextDay(endNextDay);
+            attendance.setAgreement36Status(status);
+            attendance.setRemarks(remarks);
+
+            attendanceService.updateAttendance(attendance);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (IllegalArgumentException | IllegalStateException | java.time.format.DateTimeParseException e) {
+            // 退勤が出勤以前・月がロック済み・日付の重複など。画面に理由を表示する
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", messages.of(e)));
         }
-        Attendance attendance = attendanceService.getAttendanceByUserAndDate(user, date);
-        if (attendance == null) {
-            attendance = new Attendance(user, date);
-        }
-
-        // 勤怠データを更新
-        attendance.setStartTime(startTime != null && !startTime.isEmpty() ? LocalTime.parse(startTime) : null);
-        attendance.setEndTime(endTime != null && !endTime.isEmpty() ? LocalTime.parse(endTime) : null);
-        attendance.setBreakTime(breakTime != null && !breakTime.isEmpty() ? LocalTime.parse(breakTime) : null);
-        attendance.setAgreement36Status(status);
-        attendance.setRemarks(remarks);
-        // 実働時間と残業時間はサーバー側で計算し、フロントエンドの値は受け取らない
-
-        attendanceService.updateAttendance(attendance);
-
-        String redirectUrl = "/attendance";
-        if (year != null && month != null) {
-            redirectUrl += "?year=" + year + "&month=" + month;
-        }
-
-        return "redirect:" + redirectUrl;
     }
 
     /**
@@ -318,8 +317,10 @@ public class AttendanceController {
             @RequestParam(value = "startTime", required = false) String startTime,
             @RequestParam(value = "endTime", required = false) String endTime,
             @RequestParam(value = "breakTime", required = false) String breakTime,
+            @RequestParam(value = "endNextDay", defaultValue = "false") boolean endNextDay,
             @RequestParam(value = "remarks", required = false) String remarks,
-            HttpSession session) {
+            HttpSession session,
+            org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
 
         User user = (User) session.getAttribute("user");
         if (user == null) {
@@ -338,9 +339,15 @@ public class AttendanceController {
         attendance.setStartTime(startTime != null && !startTime.isEmpty() ? LocalTime.parse(startTime) : null);
         attendance.setEndTime(endTime != null && !endTime.isEmpty() ? LocalTime.parse(endTime) : null);
         attendance.setBreakTime(breakTime != null && !breakTime.isEmpty() ? LocalTime.parse(breakTime) : null);
+        attendance.setEndNextDay(endNextDay);
         attendance.setRemarks(remarks);
 
-        attendanceService.updateAttendance(attendance);
+        try {
+            attendanceService.updateAttendance(attendance);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("attendanceError", messages.of(e));
+            return "redirect:/attendance/edit/" + dateStr;
+        }
 
         return "redirect:/attendance?year=" + date.getYear() + "&month=" + date.getMonthValue();
     }

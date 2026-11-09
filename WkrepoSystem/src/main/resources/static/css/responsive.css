@@ -1054,13 +1054,43 @@
     }
 
     .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(9) {
-        order: 10;
+        order: 12;
         flex-basis: 100%;
+    }
+
+    /* 深夜・休日：値がある日だけ残業の後に「深夜 2.00h」の形で表示 */
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(10),
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(11) {
+        margin-left: 8px;
+        color: #7c3aed;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(10) {
+        order: 10;
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(11) {
+        order: 11;
+        color: #dc2626;
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(10)::before,
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(11)::before {
+        margin-right: 3px;
+        content: attr(data-label);
+    }
+
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(10)::after,
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td:nth-child(11)::after {
+        content: "h";
     }
 
     /* 時刻のない日（未入力・有給・欠勤）は 1 行だけ */
     .content-area .js-mobile-attendance-table tbody tr.no-times:not(.no-data-row)::after,
     .content-area .js-mobile-attendance-table tbody tr.no-times:not(.no-data-row) > td:nth-child(n+3):nth-child(-n+7),
+    .content-area .js-mobile-attendance-table tbody tr:not(.no-data-row) > td.is-zero:nth-child(n+10):nth-child(-n+11),
     .content-area .js-mobile-attendance-table tbody tr.no-remarks:not(.no-data-row) > td:nth-child(9) {
         display: none;
     }

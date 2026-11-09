@@ -64,27 +64,65 @@ class AttendanceServiceTest {
 
     @ParameterizedTest(name = "{0}")
     @CsvSource({
-            // 説明,                         日付,        区分, 出勤,  退勤,  休憩,  期待実働, 期待残業
-            "'平日 9-18 休1h',              2026-11-02, 出社, 09:00, 18:00, 01:00, 8.00, 0.00",
-            "'平日 9-21 休1h 有加班',        2026-11-02, 在宅, 09:00, 21:00, 01:00, 11.00, 3.00",
-            "'周日 9-19 休1h 全部算加班',    2026-11-01, 出社, 09:00, 19:00, 01:00, 9.00, 9.00",
-            "'文化の日 9-12 全部算加班',     2026-11-03, 出社, 09:00, 12:00, 00:00, 3.00, 3.00",
-            "'跨零点 22-06 休1h',            2026-11-05, 出社, 22:00, 06:00, 01:00, 7.00, 0.00",
-            "'休息超过在岗时间',             2026-11-10, 出社, 09:00, 10:00, 02:00, 0.00, 0.00",
-            "'没有休息时间',                 2026-11-02, 出社, 09:00, 17:30, ,      8.50, 0.50",
-            "'有給 即使有时间也为 0',        2026-11-04, 有給, 09:00, 18:00, 01:00, 0.00, 0.00",
-            "'欠勤 为 0',                    2026-11-04, 欠勤, 09:00, 18:00, 01:00, 0.00, 0.00",
-            "'区分为 - 为 0',                2026-11-04, -,    09:00, 18:00, 01:00, 0.00, 0.00",
+            // 説明,                           日付,        区分, 出勤,  退勤,  翌日,  休憩,  実働,  残業, 深夜, 休日, 保存される休憩
+            "'平日 9-18 休1h',                2026-11-02, 出社, 09:00, 18:00, false, 01:00, 8.00, 0.00, 0.00, 0.00, 01:00",
+            "'平日 9-21 休1h 有加班',          2026-11-02, 在宅, 09:00, 21:00, false, 01:00, 11.00, 3.00, 0.00, 0.00, 01:00",
+            "'周日 9-19 休1h 全部算加班和休日', 2026-11-01, 出社, 09:00, 19:00, false, 01:00, 9.00, 9.00, 0.00, 9.00, 01:00",
+            "'周六 9-18 算加班不算休日',        2026-11-07, 出社, 09:00, 18:00, false, 01:00, 8.00, 8.00, 0.00, 0.00, 01:00",
+            "'文化の日 9-12 全部算加班',       2026-11-03, 出社, 09:00, 12:00, false, 00:00, 3.00, 3.00, 0.00, 0.00, 00:00",
+            "'跨零点 22-06 休1h 全部深夜',     2026-11-05, 出社, 22:00, 06:00, true,  01:00, 7.00, 0.00, 7.00, 0.00, 01:00",
+            "'18-24 深夜 2h',                 2026-11-05, 出社, 18:00, 00:00, true,  01:00, 5.00, 0.00, 2.00, 0.00, 01:00",
+            "'早朝 4-13 深夜 1h',             2026-11-05, 出社, 04:00, 13:00, false, 01:00, 8.00, 0.00, 1.00, 0.00, 01:00",
+            "'休息超过在岗时间',               2026-11-10, 出社, 09:00, 10:00, false, 02:00, 0.00, 0.00, 0.00, 0.00, 02:00",
+            "'没有休息 8.5h → 自动补 60 分',   2026-11-02, 出社, 09:00, 17:30, false, ,      7.50, 0.00, 0.00, 0.00, 01:00",
+            "'休息 45 分 9h → 补到 60 分',     2026-11-02, 出社, 09:00, 18:00, false, 00:45, 8.00, 0.00, 0.00, 0.00, 01:00",
+            "'没有休息 6.5h → 自动补 45 分',   2026-11-02, 出社, 09:00, 15:30, false, 00:00, 5.75, 0.00, 0.00, 0.00, 00:45",
+            "'刚好 6h 不需要休息',             2026-11-02, 出社, 09:00, 15:00, false, 00:00, 6.00, 0.00, 0.00, 0.00, 00:00",
+            "'刚好 8h + 45 分 不需要补',       2026-11-02, 出社, 09:00, 17:45, false, 00:45, 8.00, 0.00, 0.00, 0.00, 00:45",
+            "'有給 即使有时间也为 0',          2026-11-04, 有給, 09:00, 18:00, false, 01:00, 0.00, 0.00, 0.00, 0.00, 01:00",
+            "'欠勤 为 0',                      2026-11-04, 欠勤, 09:00, 18:00, false, 01:00, 0.00, 0.00, 0.00, 0.00, 01:00",
+            "'区分为 - 为 0',                  2026-11-04, -,    09:00, 18:00, false, 01:00, 0.00, 0.00, 0.00, 0.00, 01:00",
     })
-    void calculatesWorkAndOvertimeHours(String description, String date, String status,
-                                        String start, String end, String breakTime,
-                                        String expectedWork, String expectedOvertime) {
+    void calculatesWorkOvertimeNightAndHolidayHours(String description, String date, String status,
+                                                    String start, String end, boolean endNextDay, String breakTime,
+                                                    String expectedWork, String expectedOvertime,
+                                                    String expectedNight, String expectedHoliday,
+                                                    String expectedBreak) {
         Attendance attendance = TestData.attendance(user, date, status, start, end, breakTime);
+        attendance.setEndNextDay(endNextDay);
 
         Attendance saved = attendanceService.updateAttendance(attendance);
 
         assertThat(saved.getWorkHours()).isEqualByComparingTo(expectedWork);
         assertThat(saved.getOvertimeHours()).isEqualByComparingTo(expectedOvertime);
+        assertThat(saved.getNightHours()).isEqualByComparingTo(expectedNight);
+        assertThat(saved.getHolidayHours()).isEqualByComparingTo(expectedHoliday);
+        assertThat(saved.getBreakTime()).isEqualTo(java.time.LocalTime.parse(expectedBreak));
+    }
+
+    // ---------- 出勤・退勤の前後関係 ----------
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource({
+            "'退勤が出勤より前（翌日なし）', 18:00, 09:00, false, attendance.error.endBeforeStart",
+            "'退勤と出勤が同じ（翌日なし）', 09:00, 09:00, false, attendance.error.endBeforeStart",
+            "'翌日なのに退勤が出勤より後（24h 超）', 09:00, 10:00, true, attendance.error.shiftTooLong",
+    })
+    void rejectsInvalidTimeOrder(String description, String start, String end, boolean endNextDay, String messageKey) {
+        Attendance attendance = TestData.attendance(user, "2026-11-02", "出社", start, end, "01:00");
+        attendance.setEndNextDay(endNextDay);
+
+        assertThatThrownBy(() -> attendanceService.updateAttendance(attendance)).hasMessage(messageKey);
+        verify(attendanceRepository, never()).save(any());
+    }
+
+    @Test
+    void timeOrderIsNotCheckedForLeaveOrMissingTimes() {
+        Attendance leave = TestData.attendance(user, "2026-11-04", "有給", "18:00", "09:00", null);
+        Attendance noEnd = TestData.attendance(user, "2026-11-05", "出社", "09:00", null, null);
+
+        assertThat(attendanceService.updateAttendance(leave).getWorkHours()).isEqualByComparingTo("0");
+        assertThat(attendanceService.updateAttendance(noEnd).getWorkHours()).isEqualByComparingTo("0");
     }
 
     @Test
@@ -149,7 +187,11 @@ class AttendanceServiceTest {
 
     @Test
     void monthlyStatisticsCountOnlyWorkedOfficeAndRemoteDays() {
+        Attendance sunday = TestData.attendanceWithHours(user, "2026-11-01", "出社", "4.00", "4.00");
+        sunday.setHolidayHours(new BigDecimal("4.00"));
+        sunday.setNightHours(new BigDecimal("1.50"));
         List<Attendance> attendances = List.of(
+                sunday,
                 TestData.attendanceWithHours(user, "2026-11-02", "出社", "8.00", "0.00"),
                 TestData.attendanceWithHours(user, "2026-11-03", "在宅", "3.00", "3.00"),
                 TestData.attendanceWithHours(user, "2026-11-04", "有給", "8.00", "0.00"),  // スキップ
@@ -161,9 +203,11 @@ class AttendanceServiceTest {
         AttendanceService.MonthlyStatistics statistics =
                 attendanceService.calculateMonthlyStatistics(attendances, YearMonth.of(2026, 11));
 
-        assertThat(statistics.workDays()).isEqualTo(2);
-        assertThat(statistics.workHours()).isEqualByComparingTo("11.00");
-        assertThat(statistics.overtimeHours()).isEqualByComparingTo("3.00");
+        assertThat(statistics.workDays()).isEqualTo(3);
+        assertThat(statistics.workHours()).isEqualByComparingTo("15.00");
+        assertThat(statistics.overtimeHours()).isEqualByComparingTo("7.00");
+        assertThat(statistics.nightHours()).isEqualByComparingTo("1.50");
+        assertThat(statistics.holidayHours()).isEqualByComparingTo("4.00");
     }
 
     // ---------- 起動時の再計算 ----------
@@ -181,10 +225,43 @@ class AttendanceServiceTest {
 
         int changed = attendanceService.recalculateUnlockedAttendances();
 
-        assertThat(changed).isEqualTo(1);
+        // ロック済みも新しい項目（翌日・深夜・休日）を補うため保存されるが、実働・残業は変わらない
+        assertThat(changed).isEqualTo(2);
         assertThat(unlocked.getWorkHours()).isEqualByComparingTo("8.00");
         assertThat(locked.getWorkHours()).isEqualByComparingTo("9.00");
         assertThat(locked.getOvertimeHours()).isEqualByComparingTo("1.00");
+        assertThat(locked.getNightHours()).isEqualByComparingTo("0.00");
+        assertThat(locked.getEndNextDay()).isFalse();
+    }
+
+    @Test
+    void lockedMonthKeepsBreakEvenIfBelowLegalMinimum() {
+        // 承認済みの数値は変えない：休憩 0 分・実働 9 時間のまま
+        Attendance locked = TestData.attendance(user, "2026-10-05", "出社", "09:00", "18:00", "00:00");
+        locked.setWorkHours(new BigDecimal("9.00"));
+        locked.setOvertimeHours(new BigDecimal("1.00"));
+        when(attendanceRepository.findAll()).thenReturn(List.of(locked));
+        lockMonth(2026, 10, ApplicationStatus.SUBMITTED);
+
+        attendanceService.recalculateUnlockedAttendances();
+
+        assertThat(locked.getBreakTime()).isEqualTo(java.time.LocalTime.of(0, 0));
+        assertThat(locked.getWorkHours()).isEqualByComparingTo("9.00");
+    }
+
+    @Test
+    void legacyCrossMidnightRecordIsMarkedAsNextDay() {
+        // 「翌日」列ができる前のデータ：退勤が出勤より前なら日をまたぐ勤務だった
+        Attendance legacy = TestData.attendance(user, "2026-11-05", "出社", "22:00", "06:00", "01:00");
+        legacy.setWorkHours(new BigDecimal("7.00"));
+        legacy.setOvertimeHours(BigDecimal.ZERO);
+        when(attendanceRepository.findAll()).thenReturn(List.of(legacy));
+
+        attendanceService.recalculateUnlockedAttendances();
+
+        assertThat(legacy.getEndNextDay()).isTrue();
+        assertThat(legacy.getWorkHours()).isEqualByComparingTo("7.00");
+        assertThat(legacy.getNightHours()).isEqualByComparingTo("7.00");
     }
 
     @Test
@@ -192,6 +269,9 @@ class AttendanceServiceTest {
         Attendance correct = TestData.attendance(user, "2026-11-02", "出社", "09:00", "18:00", "01:00");
         correct.setWorkHours(new BigDecimal("8.00"));
         correct.setOvertimeHours(new BigDecimal("0.00"));
+        correct.setEndNextDay(false);
+        correct.setNightHours(new BigDecimal("0.00"));
+        correct.setHolidayHours(new BigDecimal("0.00"));
         when(attendanceRepository.findAll()).thenReturn(List.of(correct));
 
         assertThat(attendanceService.recalculateUnlockedAttendances()).isZero();
