@@ -108,6 +108,65 @@ public class ApplicationListController {
         return "redirect:/application/list";
     }
 
+    /**
+     * 一括承認。keys は「種類:ID」（例：PAID_LEAVE:12）。1 件ずつ権限を確認し、承認できないものは飛ばす。
+     * 1 件の失敗で残りを止めないよう、件ごとに処理する（各件は transition のトランザクション内）。
+     */
+    @PostMapping("/approve-bulk")
+    public String approveBulk(@RequestParam(name = "keys", required = false) List<String> keys,
+                              @RequestParam(name = "filterType", required = false) String filterType,
+                              @RequestParam(name = "filterStatus", required = false) String filterStatus,
+                              HttpSession session, RedirectAttributes redirectAttributes) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return "redirect:/login";
+        }
+        int approved = 0;
+        int skipped = 0;
+        for (String key : keys == null ? List.<String>of() : keys) {
+            String[] parts = key == null ? new String[0] : key.split(":", 2);
+            Long id = parts.length == 2 ? parseId(parts[1]) : null;
+            String type = parts.length == 2 ? parts[0] : null;
+            if (id == null || !applicationListService.canApproveApplication(id, type, user)) {
+                skipped++;
+                continue;
+            }
+            try {
+                ApplicationStatus nextStatus = approvedStatus(type, id, user);
+                notifyApplicant(approvalHistoryService.transition(type, id, nextStatus, user), nextStatus, user, null);
+                approved++;
+            } catch (RuntimeException e) {
+                log.error("[ApplicationListController] 一括承認でエラー id={}, type={}, userId={}", id, type, user.getId(), e);
+                skipped++;
+            }
+        }
+        if (approved > 0) {
+            redirectAttributes.addFlashAttribute("bulkMessage", messages.get("application.bulkApproved", approved));
+        }
+        if (skipped > 0) {
+            redirectAttributes.addFlashAttribute("errorMessage", messages.get("application.bulkSkipped", skipped));
+        }
+        // 絞り込み条件を保ったまま一覧に戻る（値は英大文字と _ のみ受け付ける）
+        StringBuilder redirect = new StringBuilder("redirect:/application/list");
+        String separator = "?";
+        if (filterType != null && filterType.matches("[A-Z_]{1,30}")) {
+            redirect.append(separator).append("filterType=").append(filterType);
+            separator = "&";
+        }
+        if (filterStatus != null && filterStatus.matches("[A-Z_]{1,30}")) {
+            redirect.append(separator).append("filterStatus=").append(filterStatus);
+        }
+        return redirect.toString();
+    }
+
+    private static Long parseId(String value) {
+        try {
+            return Long.valueOf(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     @PostMapping("/reject")
     public String rejectApplication(@RequestParam("id") Long id,
                                   @RequestParam("type") String type,

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'team', 'チーム')}">
+<head th:fragment="head">
+    <title th:text="${#messages.msg('page.team') + ' - ' + #messages.msg('brand.name')}">チーム</title>
+    <style>
+        .team-card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 20px;
+                     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); }
+        .member-attendance td, .member-attendance th { vertical-align: middle; white-space: nowrap; }
+        .member-attendance td.num { text-align: right; font-variant-numeric: tabular-nums; }
+        .member-attendance tr.rest-day td { background: #f8fafc; }
+        .member-stats { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+        .member-stats div span { font-weight: 700; margin-left: 4px; }
+    </style>
+</head>
+<body>
+<th:block th:fragment="main-content">
+    <div class="team-card">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <a class="btn btn-outline-secondary btn-sm" th:href="@{/team(year=${year},month=${month})}">
+                    <i class="bi bi-arrow-left"></i> <span th:text="#{team.back}">チーム一覧</span>
+                </a>
+                <h5 class="mb-0 fw-bold">
+                    <span th:text="${member.name}">山田太郎</span>
+                    <small class="text-muted fw-normal" th:text="${member.employeeId + ' / ' + member.department}">EMP003 / 開発部</small>
+                </h5>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a class="btn btn-outline-secondary btn-sm"
+                   th:href="@{/team/attendance(userId=${member.id},year=${prevYear},month=${prevMonth})}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+                <span class="fw-bold" th:text="#{team.monthTitle(${'' + year}, ${month})}">2026年11月</span>
+                <a class="btn btn-outline-secondary btn-sm" th:if="${hasNext}"
+                   th:href="@{/team/attendance(userId=${member.id},year=${nextYear},month=${nextMonth})}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+        <p class="small text-muted mb-2">
+            <span th:text="#{team.readOnly}">参照のみ（編集は本人が行います）。</span>
+            <span class="badge text-bg-secondary ms-1" th:if="${monthLocked}" th:text="#{team.monthLocked}">月報提出済み</span>
+        </p>
+
+        <div class="member-stats small mb-3">
+            <div><span th:text="#{attendance.daysWorked}">出勤日数</span><span th:text="${statistics.workDays()}">20</span></div>
+            <div><span th:text="#{attendance.workHours}">実働</span><span th:text="${#numbers.formatDecimal(statistics.workHours(), 1, 2) + 'h'}">160.00h</span></div>
+            <div><span th:text="#{team.overtime}">時間外</span><span th:text="${#numbers.formatDecimal(agreement36.monthlyOvertime(), 1, 2) + 'h'}">12.00h</span></div>
+            <div><span th:text="#{team.holidayWork}">休日労働</span><span th:text="${#numbers.formatDecimal(agreement36.monthlyHolidayWork(), 1, 2) + 'h'}">0.00h</span></div>
+            <div><span th:text="#{attendance.nightHours}">深夜</span><span th:text="${#numbers.formatDecimal(statistics.nightHours(), 1, 2) + 'h'}">0.00h</span></div>
+        </div>
+
+        <div class="alert py-2" th:unless="${agreement36Messages.isEmpty()}"
+             th:classappend="${agreement36.hasErrors()} ? 'alert-danger' : 'alert-warning'">
+            <div class="fw-bold mb-1" th:text="#{agreement36.title}">36協定チェック</div>
+            <ul class="mb-0 ps-3"><li th:each="message : ${agreement36Messages}" th:text="${message}">警告</li></ul>
+        </div>
+        <div class="alert alert-warning py-2" th:unless="${anomalyMessages.isEmpty()}">
+            <div class="fw-bold mb-1" th:text="#{attendance.anomaly.title}">勤怠の異常</div>
+            <ul class="mb-0 ps-3"><li th:each="message : ${anomalyMessages}" th:text="${message}">異常</li></ul>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm member-attendance">
+                <thead>
+                <tr>
+                    <th th:text="#{attendance.date}">日付</th>
+                    <th th:text="#{attendance.weekday}">曜日</th>
+                    <th th:text="#{attendance.status}">区分</th>
+                    <th th:text="#{attendance.startTime}">出勤</th>
+                    <th th:text="#{attendance.endTime}">退勤</th>
+                    <th th:text="#{attendance.breakTime}">休憩</th>
+                    <th class="text-end" th:text="#{attendance.workHours}">実働</th>
+                    <th class="text-end" th:text="#{attendance.overtimeHours}">残業</th>
+                    <th class="text-end" th:text="#{attendance.nightHours}">深夜</th>
+                    <th class="text-end" th:text="#{attendance.holidayHours}">休日</th>
+                    <th th:text="#{attendance.remarks}">備考</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="d : ${days}" th:classappend="${d.restDay} ? 'rest-day'"
+                    th:with="a=${d.attendance}, st=${d.attendance?.agreement36Status},
+                             hasStatus=${st != null and !#strings.isEmpty(st) and st != '-'}">
+                    <td th:text="${#temporals.format(d.date, 'MM/dd')}">11/02</td>
+                    <td th:classappend="${d.sunday or (d.restDay and !d.saturday)} ? 'text-danger' : (${d.saturday} ? 'text-primary' : '')"
+                        th:title="${d.holidayName}" th:text="${d.weekday}">月</td>
+                    <td th:text="${hasStatus} ? ${st == '出社' ? #messages.msg('attendance.status.office') : (st == '在宅' ? #messages.msg('attendance.status.home') : (st == '有給' ? #messages.msg('attendance.status.paidLeave') : (st == '欠勤' ? #messages.msg('attendance.status.absent') : st)))} : '-'">出社</td>
+                    <td th:text="${hasStatus and a.startTime != null} ? ${a.startTime} : '-'">09:00</td>
+                    <td>
+                        <span th:text="${hasStatus and a.endTime != null} ? ${a.endTime} : '-'">18:00</span>
+                        <span class="badge text-bg-secondary ms-1" th:if="${hasStatus and a.endNextDay == true}"
+                              th:text="#{attendance.endNextDay}">翌日</span>
+                    </td>
+                    <td th:text="${hasStatus and a.breakTime != null} ? ${a.breakTime} : '-'">01:00</td>
+                    <td class="num" th:text="${hasStatus and a.workHours != null} ? ${#numbers.formatDecimal(a.workHours, 1, 2)} : '-'">8.00</td>
+                    <td class="num" th:text="${hasStatus and a.overtimeHours != null} ? ${#numbers.formatDecimal(a.overtimeHours, 1, 2)} : '-'">0.00</td>
+                    <td class="num" th:text="${hasStatus and a.nightHours != null} ? ${#numbers.formatDecimal(a.nightHours, 1, 2)} : '-'">0.00</td>
+                    <td class="num" th:text="${hasStatus and a.holidayHours != null} ? ${#numbers.formatDecimal(a.holidayHours, 1, 2)} : '-'">0.00</td>
+                    <td th:text="${a?.remarks}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</th:block>
+</body>
+</html>

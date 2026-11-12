@@ -95,6 +95,20 @@
             color: #dc2626;
         }
 
+        /* 一括承認のバー */
+        .bulk-approve-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 12px;
+            padding: 10px 14px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 10px;
+        }
+
         /* 一覧の拒否理由：列幅には影響させず（width:0 + min-width:100%）、はみ出す分は省略。
            全文はツールチップと詳細画面で確認する */
         .reject-reason {
@@ -493,11 +507,66 @@
             function resetFilter() {
                 window.location.href = '/application/list';
             }
+
+            /* ---- 一括承認 ---- */
+            function selectedBulkKeys() {
+                return Array.prototype.map.call(document.querySelectorAll('.bulk-select:checked'), function (box) {
+                    return box.value;
+                });
+            }
+
+            function refreshBulkCount() {
+                var count = selectedBulkKeys().length;
+                var counter = document.getElementById('bulkSelectedCount');
+                var button = document.getElementById('bulkApproveButton');
+                if (counter) counter.textContent = count;
+                if (button) button.disabled = count === 0;
+                var all = document.querySelector('.bulk-select-all');
+                var boxes = document.querySelectorAll('.bulk-select');
+                if (all) all.checked = boxes.length > 0 && count === boxes.length;
+            }
+
+            function toggleAllBulk(source) {
+                document.querySelectorAll('.bulk-select').forEach(function (box) { box.checked = source.checked; });
+                refreshBulkCount();
+            }
+
+            /* 行ごとに承認・拒否のフォームがあるため、チェックした値は送信時にフォームへ追加する */
+            function submitBulkApprove(button) {
+                var keys = selectedBulkKeys();
+                if (keys.length === 0) return false;
+                if (!confirm(button.dataset.confirm.replace('{0}', keys.length))) return false;
+                var form = document.getElementById('bulkApproveForm');
+                form.querySelectorAll('input[name="keys"]').forEach(function (input) { input.remove(); });
+                keys.forEach(function (key) {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'keys';
+                    input.value = key;
+                    form.appendChild(input);
+                });
+                return true;
+            }
         </script>
 
         <div class="alert alert-success" th:if="${successMessage}" th:text="${#messages.msg(successMessage)}"></div>
         <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
-        
+        <div class="alert alert-success" th:if="${bulkMessage}" th:text="${bulkMessage}"></div>
+
+        <!-- 一括承認（PC のみ。チェックした申請を 1 件ずつ権限確認して承認する） -->
+        <form method="POST" action="/application/approve-bulk" id="bulkApproveForm" class="bulk-approve-bar desktop-only"
+              th:if="${applications.?[canApprove].size() > 0}">
+            <input type="hidden" name="filterType" th:value="${filterType}">
+            <input type="hidden" name="filterStatus" th:value="${filterStatus}">
+            <span class="small text-muted" th:text="#{application.bulkHint}">承認できる申請にチェックを入れて、まとめて承認できます。</span>
+            <button type="submit" class="btn btn-success btn-sm" id="bulkApproveButton" disabled
+                    th:data-confirm="#{application.bulkConfirm}"
+                    onclick="return submitBulkApprove(this)">
+                <i class="bi bi-check2-all"></i> <span th:text="#{application.bulkApprove}">選択した申請を一括承認</span>
+                (<span id="bulkSelectedCount">0</span>)
+            </button>
+        </form>
+
         <div class="table-card">
             <div class="table-responsive">
                 <table class="table js-mobile-card-table js-mobile-application-table">
@@ -513,7 +582,11 @@
                 </colgroup>
                 <thead>
                     <tr>
-                        <th style="text-align: center;" th:text="#{application.number}">申請番号</th>
+                        <th style="text-align: center;">
+                            <input type="checkbox" class="form-check-input me-1 bulk-select-all" th:title="#{application.bulkSelectAll}"
+                                   th:if="${applications.?[canApprove].size() > 0}" onchange="toggleAllBulk(this)">
+                            <span th:text="#{application.number}">申請番号</span>
+                        </th>
                         <th style="text-align: left;" th:text="#{application.applicant}">申請者</th>
                         <th style="text-align: left;" th:text="#{user.department}">部署</th>
                         <th style="text-align: center;" th:text="#{application.type}">申請種別</th>
@@ -536,7 +609,11 @@
                         th:attr="data-application-id=${app.id},data-application-type=${app.applicationType}"
                         th:with="stName=${app.status != null ? #strings.toLowerCase(app.status.name()) : 'pending'},
                                  isPending=${stName == 'pending' or stName == 'submitted' or stName == 'draft' or stName == 'manager_approved'}">
-                        <td style="text-align: center;" th:text="'#' + ${pageOffset + iterStat.index + 1}">#1</td>
+                        <td style="text-align: center;">
+                            <input type="checkbox" class="form-check-input me-1 bulk-select" th:if="${isPending and app.canApprove}"
+                                   th:value="${app.applicationType + ':' + app.id}" onchange="refreshBulkCount()">
+                            <span th:text="'#' + ${pageOffset + iterStat.index + 1}">#1</span>
+                        </td>
                         <td style="text-align: left;" th:text="${app.applicantName}">山田太郎</td>
                         <td style="text-align: left;" th:text="${app.applicantDepartment}">開発部</td>
                         <td style="text-align: center;">

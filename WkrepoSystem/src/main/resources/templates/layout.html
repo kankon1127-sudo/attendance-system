@@ -425,6 +425,12 @@
                         <span th:text="#{nav.users}">社員管理</span>
                     </a>
                 </th:block>
+                <!-- チーム一覧（部長・管理者） -->
+                <a th:if="${user.role == 'ADMIN' or user.role == 'MANAGER'}" href="/team" class="nav-item"
+                   th:classappend="${currentPage == 'team' ? 'active' : ''}">
+                    <i class="bi bi-people-fill"></i>
+                    <span th:text="#{nav.team}">チーム</span>
+                </a>
                 <!-- 代理承認者の設定（部長・管理者） -->
                 <a th:if="${user.role == 'ADMIN' or user.role == 'MANAGER'}" href="/approval-delegate" class="nav-item"
                    th:classappend="${currentPage == 'approval-delegate' ? 'active' : ''}">

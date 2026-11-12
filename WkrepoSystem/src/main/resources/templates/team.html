@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'team', 'チーム')}">
+<head th:fragment="head">
+    <title th:text="${#messages.msg('page.team') + ' - ' + #messages.msg('brand.name')}">チーム</title>
+    <style>
+        .team-card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 20px;
+                     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); }
+        .team-table td, .team-table th { vertical-align: middle; white-space: nowrap; }
+        .team-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+        .team-table tr.needs-attention td:first-child { box-shadow: inset 4px 0 0 #f59e0b; }
+        .team-month-nav { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .team-indirect { color: #64748b; font-size: 12px; }
+    </style>
+</head>
+<body>
+<th:block th:fragment="main-content">
+    <div class="alert alert-danger" th:if="${param.error != null}" th:text="#{team.error.notMember}">チームの一員ではありません。</div>
+
+    <div class="team-card">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div class="team-month-nav">
+                <a class="btn btn-outline-secondary btn-sm" th:href="@{/team(year=${prevYear},month=${prevMonth},attention=${attentionOnly})}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+                <h5 class="mb-0 fw-bold" th:text="#{team.monthTitle(${'' + year}, ${month})}">2026年11月</h5>
+                <a class="btn btn-outline-secondary btn-sm" th:if="${hasNext}"
+                   th:href="@{/team(year=${nextYear},month=${nextMonth},attention=${attentionOnly})}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge text-bg-warning" th:if="${attentionCount > 0}"
+                      th:text="#{team.attentionCount(${attentionCount})}">要確認 2 名</span>
+                <a class="btn btn-sm" th:classappend="${attentionOnly} ? 'btn-primary' : 'btn-outline-primary'"
+                   th:href="@{/team(year=${year},month=${month},attention=${!attentionOnly})}"
+                   th:text="${attentionOnly} ? #{team.showAll} : #{team.showAttentionOnly}">要確認のみ</a>
+            </div>
+        </div>
+        <p class="small text-muted mb-3" th:text="#{team.hint}">直属・間接の部下の今月の勤怠です。</p>
+
+        <div class="alert alert-light border" th:if="${summaries.isEmpty()}" th:text="#{team.none}">対象の部下がいません。</div>
+
+        <div class="table-responsive" th:unless="${summaries.isEmpty()}">
+            <table class="table table-sm team-table js-mobile-card-table">
+                <thead>
+                <tr>
+                    <th th:text="#{team.member}">氏名</th>
+                    <th th:text="#{user.department}">部署</th>
+                    <th class="text-end" th:text="#{attendance.daysWorked}">出勤日数</th>
+                    <th class="text-end" th:text="#{attendance.workHours}">実働</th>
+                    <th class="text-end" th:text="#{team.overtime}">時間外</th>
+                    <th class="text-end" th:text="#{team.holidayWork}">休日労働</th>
+                    <th class="text-center" th:text="#{team.agreement36}">36協定</th>
+                    <th class="text-center" th:text="#{team.anomalies}">異常</th>
+                    <th class="text-center" th:text="#{team.missingDays}">未入力</th>
+                    <th class="text-center" th:text="#{team.reportStatus}">月報</th>
+                    <th class="text-end" th:text="#{common.operation}">操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="s : ${summaries}" th:classappend="${s.needsAttention()} ? 'needs-attention'">
+                    <td>
+                        <div class="fw-semibold" th:text="${s.member().name}">山田太郎</div>
+                        <div class="team-indirect" th:unless="${s.direct()}"
+                             th:text="#{team.indirect(${s.managerName()})}">間接（上司：佐藤）</div>
+                    </td>
+                    <td th:text="${s.member().department}">開発部</td>
+                    <td class="num" th:text="${s.workDays()}">20</td>
+                    <td class="num" th:text="${#numbers.formatDecimal(s.workHours(), 1, 2)}">160.00</td>
+                    <td class="num" th:classappend="${s.overtimeHours() > 45} ? 'text-danger fw-bold' : (${s.overtimeHours() >= 40} ? 'text-warning fw-bold' : '')"
+                        th:text="${#numbers.formatDecimal(s.overtimeHours(), 1, 2)}">12.00</td>
+                    <td class="num" th:text="${#numbers.formatDecimal(s.holidayWorkHours(), 1, 2)}">0.00</td>
+                    <td class="text-center">
+                        <span th:if="${s.agreement36Alerts() == 0}" class="text-muted">-</span>
+                        <span th:if="${s.agreement36Alerts() > 0}" class="badge"
+                              th:classappend="${s.agreement36Error()} ? 'text-bg-danger' : 'text-bg-warning'"
+                              th:text="${s.agreement36Alerts()}">1</span>
+                    </td>
+                    <td class="text-center">
+                        <span th:if="${s.anomalies() == 0}" class="text-muted">-</span>
+                        <span th:if="${s.anomalies() > 0}" class="badge text-bg-warning" th:text="${s.anomalies()}">2</span>
+                    </td>
+                    <td class="text-center">
+                        <span th:if="${s.missingDays() == 0}" class="text-muted">-</span>
+                        <span th:if="${s.missingDays() > 0}" class="badge text-bg-secondary" th:text="${s.missingDays()}">3</span>
+                    </td>
+                    <td class="text-center"
+                        th:text="${s.reportStatus() == null} ? #{team.reportNone} : ${#messages.msg('application.status.' + s.reportStatus().name())}">未作成</td>
+                    <td class="text-end">
+                        <a class="btn btn-outline-primary btn-sm"
+                           th:href="@{/team/attendance(userId=${s.member().id},year=${year},month=${month})}"
+                           th:text="#{team.viewAttendance}">勤怠を見る</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="small text-muted" th:text="#{team.legend}">時間外は 36 協定の集計（日曜日の休日労働を除く）。45 時間超は赤、40 時間以上は黄色。</div>
+    </div>
+</th:block>
+</body>
+</html>
