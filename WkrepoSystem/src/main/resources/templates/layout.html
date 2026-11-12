@@ -816,6 +816,29 @@
                 status.value = sourceStatus.value;
                 field(row.closest('table').querySelector('thead th:nth-child(8)').textContent.trim(), status);
 
+                // 振休・代休：休日出勤日の選択（区分が振休・代休のときだけ表示）
+                var sourceSubstitute = document.getElementById('substituteDate-' + day);
+                var substituteWrapper = null;
+                if (sourceSubstitute) {
+                    var substitute = sourceSubstitute.cloneNode(true);
+                    substitute.className = 'form-select';
+                    substitute.name = 'substituteDate';
+                    substitute.id = 'mobile-substituteDate';
+                    substitute.value = sourceSubstitute.value;
+                    substituteWrapper = document.createElement('div');
+                    substituteWrapper.className = 'mb-3';
+                    substituteWrapper.appendChild(substitute);
+                    form.appendChild(substituteWrapper);
+                }
+                function refreshMobileSubstitute() {
+                    if (!substituteWrapper) return;
+                    var show = window.isSubstituteAttendanceStatus && window.isSubstituteAttendanceStatus(status.value);
+                    substituteWrapper.style.display = show ? '' : 'none';
+                    substituteWrapper.querySelector('select').disabled = !show;
+                }
+                status.addEventListener('change', refreshMobileSubstitute);
+                refreshMobileSubstitute();
+
                 fields.forEach(function (definition, index) {
                     var input = document.createElement('input');
                     input.type = definition[2];
@@ -905,7 +928,7 @@
                     var selectedStatus = status.value;
                     var start = form.elements.namedItem('startTime').value;
                     var end = form.elements.namedItem('endTime').value;
-                    if (selectedStatus === '出社' || selectedStatus === '在宅') {
+                    if (['出社', '在宅', '午前休', '午後休'].indexOf(selectedStatus) >= 0) {
                         if (!start || !end) {
                             event.preventDefault();
                             alert(row.closest('table').getAttribute('data-required-time-message'));

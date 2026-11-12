@@ -226,6 +226,18 @@ public class PaidLeaveService {
         return findLeavesCoveringDate(user, date).stream().anyMatch(this::isPendingApproval);
     }
 
+    /** 指定日に、指定した半休（午前 / 午後）のリーダー承認済みの年休があるか */
+    public boolean isHalfDayLeaveApproved(User user, LocalDate date, String halfDayType) {
+        return findLeavesCoveringDate(user, date).stream()
+                .anyMatch(leave -> halfDayType.equals(leave.getLeaveType()) && isLeaderApproved(leave));
+    }
+
+    /** 指定日に、指定した半休（午前 / 午後）の申請中の年休があるか */
+    public boolean hasPendingHalfDayLeave(User user, LocalDate date, String halfDayType) {
+        return findLeavesCoveringDate(user, date).stream()
+                .anyMatch(leave -> halfDayType.equals(leave.getLeaveType()) && isPendingApproval(leave));
+    }
+
     public boolean isLeaderApproved(PaidLeave paidLeave) {
         if (paidLeave == null || paidLeave.getStatus() == null) {
             return false;

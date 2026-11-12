@@ -84,7 +84,11 @@
                     <td th:text="${#temporals.format(d.date, 'MM/dd')}">11/02</td>
                     <td th:classappend="${d.sunday or (d.restDay and !d.saturday)} ? 'text-danger' : (${d.saturday} ? 'text-primary' : '')"
                         th:title="${d.holidayName}" th:text="${d.weekday}">月</td>
-                    <td th:text="${hasStatus} ? ${st == '出社' ? #messages.msg('attendance.status.office') : (st == '在宅' ? #messages.msg('attendance.status.home') : (st == '有給' ? #messages.msg('attendance.status.paidLeave') : (st == '欠勤' ? #messages.msg('attendance.status.absent') : st)))} : '-'">出社</td>
+                    <td>
+                        <span th:text="${hasStatus} ? (${statusLabels.containsKey(st)} ? ${#messages.msg(statusLabels.get(st))} : ${st}) : '-'">出社</span>
+                        <small class="text-muted d-block" th:if="${hasStatus and a.substituteDate != null}"
+                               th:text="#{attendance.substituteFor(${#temporals.format(a.substituteDate, 'MM/dd')})}">（11/08 分）</small>
+                    </td>
                     <td th:text="${hasStatus and a.startTime != null} ? ${a.startTime} : '-'">09:00</td>
                     <td>
                         <span th:text="${hasStatus and a.endTime != null} ? ${a.endTime} : '-'">18:00</span>

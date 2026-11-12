@@ -37,6 +37,23 @@ class Agreement36ServiceTest {
         assertThat(hours.holidayWork).isEqualByComparingTo("6.00");
     }
 
+    @Test
+    void substitutedSundayCountsAsOvertimeAndLeaveStatusesAreIgnored() {
+        // 振休で振り替えた日曜日：休日労働 0、平日扱いの残業 1 → 時間外として数える
+        var substitutedSunday = TestData.attendanceWithHours(user, "2026-11-08", "出社", "9.00", "1.00");
+        substitutedSunday.setHolidayHours(BigDecimal.ZERO);
+        var sunday = TestData.attendanceWithHours(user, "2026-11-15", "出社", "4.00", "4.00");
+        sunday.setHolidayHours(new BigDecimal("4.00"));
+
+        Agreement36Service.MonthlyHours hours = service.aggregate(List.of(substitutedSunday, sunday,
+                TestData.attendanceWithHours(user, "2026-11-10", "代休", "8.00", "8.00"),        // 対象外
+                TestData.attendanceWithHours(user, "2026-11-11", "特別休暇", "8.00", "8.00")))   // 対象外
+                .get(NOV);
+
+        assertThat(hours.overtime).isEqualByComparingTo("1.00");
+        assertThat(hours.holidayWork).isEqualByComparingTo("4.00");
+    }
+
     // ---------- 月度 ----------
 
     @Test

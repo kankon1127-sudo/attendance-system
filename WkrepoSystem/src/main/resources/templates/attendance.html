@@ -25,6 +25,15 @@
         .editing .display-mode {
             display: none;
         }
+        /* 振休・代休以外では休日出勤日の選択を隠す */
+        .editing .edit-mode.substitute-hidden {
+            display: none;
+        }
+        .substitute-note {
+            display: block;
+            font-size: 11px;
+            color: #64748b;
+        }
     </style>
 </head>
 <body>
@@ -235,15 +244,26 @@
                         <td th:id="'workHours-' + ${day.day}" th:text="${isNoInput ? '0.00' : ((day.attendance?.workHours != null && day.attendance.workHours != 0) ? day.attendance.workHours : '0.00')}">0.00</td>
                         <td th:id="'overtimeHours-' + ${day.day}" th:text="${isNoInput ? '0.00' : ((day.attendance?.overtimeHours != null && day.attendance.overtimeHours != 0) ? day.attendance.overtimeHours : '0.00')}">0.00</td>
                         <td>
-                            <span class="display-mode status-chip" th:classappend="${isNoInput} ? 'is-empty'" th:text="${attendanceStatus == '出社' ? #messages.msg('attendance.status.office') : (attendanceStatus == '在宅' ? #messages.msg('attendance.status.home') : (attendanceStatus == '有給' ? #messages.msg('attendance.status.paidLeave') : (attendanceStatus == '欠勤' ? #messages.msg('attendance.status.absent') : '-')))}">-</span>
+                            <span class="display-mode status-chip" th:classappend="${isNoInput} ? 'is-empty'"
+                                  th:text="${isNoInput} ? '-' : (${statusLabels.containsKey(attendanceStatus)} ? ${#messages.msg(statusLabels.get(attendanceStatus))} : ${attendanceStatus})">-</span>
+                            <!-- 振休・代休：対応する休日出勤日 -->
+                            <span class="display-mode substitute-note" th:if="${!isNoInput and day.attendance?.substituteDate != null}"
+                                  th:text="#{attendance.substituteFor(${#temporals.format(day.attendance.substituteDate, 'MM/dd')})}">（11/08 分）</span>
                             <select class="form-select form-select-sm edit-mode" name="agreement36Status" th:id="'status-' + ${day.day}"
                                     th:disabled="${attendanceLocked}"
                                     th:onchange="'handleStatusChange(' + ${day.day} + ')'">
                                 <option value="">-</option>
-                                <option value="出社" th:selected="${day.attendance?.agreement36Status == '出社'}" th:text="#{attendance.status.office}">出社</option>
-                                <option value="在宅" th:selected="${day.attendance?.agreement36Status == '在宅'}" th:text="#{attendance.status.home}">在宅</option>
-                                <option value="有給" th:selected="${day.attendance?.agreement36Status == '有給'}" th:text="#{attendance.status.paidLeave}">有給</option>
-                                <option value="欠勤" th:selected="${day.attendance?.agreement36Status == '欠勤'}" th:text="#{attendance.status.absent}">欠勤</option>
+                                <option th:each="entry : ${statusLabels}" th:value="${entry.key}"
+                                        th:selected="${day.attendance?.agreement36Status == entry.key}"
+                                        th:text="${#messages.msg(entry.value)}">出社</option>
+                            </select>
+                            <select class="form-select form-select-sm edit-mode substitute-select mt-1" th:id="'substituteDate-' + ${day.day}"
+                                    th:disabled="${attendanceLocked}"
+                                    th:attr="data-current=${day.attendance?.substituteDate}">
+                                <option value="" th:text="#{attendance.substituteSelect}">休日出勤日を選択</option>
+                                <option th:each="candidate : ${substituteCandidates}" th:value="${candidate.key}"
+                                        th:selected="${day.attendance?.substituteDate == candidate.key}"
+                                        th:text="${#temporals.format(candidate.key, 'MM/dd(E)') + (candidate.value != null and candidate.value != day.date ? ' ' + #messages.msg('attendance.substituteUsed', #temporals.format(candidate.value, 'MM/dd')) : '')}">11/08(日)</option>
                             </select>
                         </td>
                         <td>
@@ -338,17 +358,41 @@
             }
         }
 
+        /** 勤務しない区分（時刻を入力しない）：サーバー側の AttendanceService.isNonWorkingStatus と同じ */
+        window.isNonWorkingAttendanceStatus = function (status) {
+            return !status || ['-', '欠勤', '有給', '有休', '特別休暇', '振休', '代休'].indexOf(status) >= 0;
+        };
+
+        /** 振休・代休（休日出勤日の指定が必要） */
+        window.isSubstituteAttendanceStatus = function (status) {
+            return status === '振休' || status === '代休';
+        };
+
+        function refreshSubstituteSelect(day) {
+            const select = document.getElementById('substituteDate-' + day);
+            if (!select) return;
+            const status = document.getElementById('status-' + day).value;
+            select.classList.toggle('substitute-hidden', !window.isSubstituteAttendanceStatus(status));
+        }
+
         function handleStatusChange(day) {
             const status = document.getElementById('status-' + day).value;
-            // 【未入力の鉄則】：リセット系のステータスを選んだ場合は入力欄をクリアする
-            if (!status || status === '-' || status === '欠勤' || status === '有給') {
+            // 【未入力の鉄則】：勤務しない区分を選んだ場合は時刻の入力欄をクリアする
+            if (window.isNonWorkingAttendanceStatus(status)) {
                 document.getElementById('startTime-' + day).value = '';
                 document.getElementById('endTime-' + day).value = '';
                 document.getElementById('breakTime-' + day).value = '';
                 document.getElementById('endNextDay-' + day).checked = false;
             }
+            refreshSubstituteSelect(day);
             calculateWorkHours(day);
         }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('select[id^="status-"]').forEach(function (select) {
+                refreshSubstituteSelect(select.id.substring('status-'.length));
+            });
+        });
 
         function toMinutes(time) {
             const parts = (time || '00:00').split(':');
@@ -362,7 +406,7 @@
          */
         window.calculateAttendancePreview = function (status, startTime, endTime, breakTime, endNextDay, dateStr, isRestDay) {
             const zero = { work: 0, overtime: 0, night: 0, holiday: 0, breakMinutes: toMinutes(breakTime), error: null };
-            if (!status || status === '-' || status === '欠勤' || status === '有給' || !startTime || !endTime) {
+            if (window.isNonWorkingAttendanceStatus(status) || !startTime || !endTime) {
                 return zero;
             }
             const start = toMinutes(startTime);
@@ -429,8 +473,8 @@
                 totalOH += oh;
                 totalNH += parseFloat(document.getElementById('nightHours-' + dayId).innerText) || 0;
                 totalHH += parseFloat(document.getElementById('holidayHours-' + dayId).innerText) || 0;
-                // "出社"または"在宅"で実働が 0 より大きい場合のみ出勤日数に数える
-                if ((status === '出社' || status === '在宅') && wh > 0) totalDays++;
+                // 出社・在宅・半休で実働が 0 より大きい場合のみ出勤日数に数える（サーバー側と同じ）
+                if (['出社', '在宅', '午前休', '午後休'].indexOf(status) >= 0 && wh > 0) totalDays++;
             });
             document.getElementById('totalWorkDays').innerText = totalDays;
             document.getElementById('totalWorkHours').innerText = totalWH.toFixed(2);
@@ -479,7 +523,10 @@
             formData.append('remarks', document.getElementById('remarks-' + day).value);
 
             // 出勤以外のステータスでは時刻をクリアする。実働などの時間はサーバー側で計算するため送信しない
-            if (!status || status === '-' || status === '欠勤' || status === '有給') {
+            const substituteSelect = document.getElementById('substituteDate-' + day);
+            formData.append('substituteDate', window.isSubstituteAttendanceStatus(status) && substituteSelect
+                    ? substituteSelect.value : '');
+            if (window.isNonWorkingAttendanceStatus(status)) {
                 formData.append('startTime', '');
                 formData.append('endTime', '');
                 formData.append('breakTime', '');

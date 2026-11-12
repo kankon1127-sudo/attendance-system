@@ -43,6 +43,14 @@ public class AttendanceService {
     
     @Autowired
     private PaidLeaveService paidLeaveService;
+
+    /** 代休：休日出勤日から何日以内に取るか */
+    @org.springframework.beans.factory.annotation.Value("${app.attendance.compensatory-leave-days:60}")
+    private int compensatoryValidityDays = 60;
+
+    /** 振休：休日出勤日の前後何日以内に振り替えるか */
+    @org.springframework.beans.factory.annotation.Value("${app.attendance.substitute-holiday-days:28}")
+    private int substituteWindowDays = 28;
     
     private static final BigDecimal STANDARD_WORK_HOURS = new BigDecimal("8.0");
     private static final BigDecimal OVERTIME_THRESHOLD = new BigDecimal("8.0");
@@ -66,11 +74,85 @@ public class AttendanceService {
         validateAttendance(attendance);
         calculateWorkHours(attendance);
         determineAgreement36Status(attendance);
-        return attendanceRepository.save(attendance);
+        Attendance saved = attendanceRepository.save(attendance);
+        recalculateLinkedRestDays(saved);
+        return saved;
+    }
+
+    /**
+     * 振休を設定・変更・解除したとき、対応する休日出勤日を再計算する
+     * （振り替えた休日は平日として計算するため、休日出勤日の残業・休日労働が変わる）。
+     */
+    private void recalculateLinkedRestDays(Attendance saved) {
+        java.util.Set<LocalDate> dates = new java.util.LinkedHashSet<>();
+        if (saved.getLoadedSubstituteDate() != null) {
+            dates.add(saved.getLoadedSubstituteDate());
+        }
+        if (saved.getSubstituteDate() != null) {
+            dates.add(saved.getSubstituteDate());
+        }
+        for (LocalDate date : dates) {
+            attendanceRepository.findByUserAndDate(saved.getUser(), date).ifPresent(restDay -> {
+                if (isMonthLocked(restDay.getUser(), date.getYear(), date.getMonthValue())) {
+                    return; // 提出済みの月の数値は変えない
+                }
+                calculateWorkHours(restDay);
+                attendanceRepository.save(restDay);
+            });
+        }
     }
 
     public static boolean isPaidLeaveStatus(String status) {
         return "有給".equals(status) || "有休".equals(status);
+    }
+
+    // ---- 勤務区分 ----
+    public static final String STATUS_MORNING_OFF = "午前休";
+    public static final String STATUS_AFTERNOON_OFF = "午後休";
+    public static final String STATUS_SPECIAL_LEAVE = "特別休暇";
+    public static final String STATUS_SUBSTITUTE_HOLIDAY = "振休";
+    public static final String STATUS_COMPENSATORY_LEAVE = "代休";
+
+    /** 画面に出す勤務区分（保存値 → 画面の文言キー）。選択肢の順番もこの順 */
+    public static final Map<String, String> STATUS_LABEL_KEYS;
+    static {
+        Map<String, String> labels = new java.util.LinkedHashMap<>();
+        labels.put("出社", "attendance.status.office");
+        labels.put("在宅", "attendance.status.home");
+        labels.put(STATUS_MORNING_OFF, "attendance.status.morningOff");
+        labels.put(STATUS_AFTERNOON_OFF, "attendance.status.afternoonOff");
+        labels.put("有給", "attendance.status.paidLeave");
+        labels.put(STATUS_SPECIAL_LEAVE, "attendance.status.specialLeave");
+        labels.put(STATUS_SUBSTITUTE_HOLIDAY, "attendance.status.substituteHoliday");
+        labels.put(STATUS_COMPENSATORY_LEAVE, "attendance.status.compensatoryLeave");
+        labels.put("欠勤", "attendance.status.absent");
+        STATUS_LABEL_KEYS = java.util.Collections.unmodifiableMap(labels);
+    }
+
+    /** 半休（午前休・午後休）：半日は年休、残りの半日は勤務する */
+    public static boolean isHalfDayOffStatus(String status) {
+        return STATUS_MORNING_OFF.equals(status) || STATUS_AFTERNOON_OFF.equals(status);
+    }
+
+    /** 半休の区分に対応する年休申請の区分（午前休 → 午前、午後休 → 午後） */
+    public static String halfDayLeaveType(String status) {
+        return STATUS_MORNING_OFF.equals(status) ? "午前" : (STATUS_AFTERNOON_OFF.equals(status) ? "午後" : null);
+    }
+
+    /** 振休・代休（対応する休日出勤日が必要） */
+    public static boolean isSubstituteStatus(String status) {
+        return STATUS_SUBSTITUTE_HOLIDAY.equals(status) || STATUS_COMPENSATORY_LEAVE.equals(status);
+    }
+
+    /** 勤務しない区分（時刻を入力しない、実働 0）：-・欠勤・有給・特別休暇・振休・代休 */
+    public static boolean isNonWorkingStatus(String status) {
+        return "-".equals(status) || "欠勤".equals(status) || isPaidLeaveStatus(status)
+                || STATUS_SPECIAL_LEAVE.equals(status) || isSubstituteStatus(status);
+    }
+
+    /** 出勤日数に数える区分：出社・在宅・半休 */
+    public static boolean isWorkDayStatus(String status) {
+        return "出社".equals(status) || "在宅".equals(status) || isHalfDayOffStatus(status);
     }
 
     public boolean isMonthLocked(User user, int year, int month) {
@@ -102,10 +184,24 @@ public class AttendanceService {
         List<LocalDate> unapprovedDates = new java.util.ArrayList<>();
 
         for (Attendance attendance : attendances) {
-            if (!isPaidLeaveStatus(attendance.getAgreement36Status())) {
+            String status = attendance.getAgreement36Status();
+            LocalDate date = attendance.getDate();
+            // 半休（午前休・午後休）は、同じ日の同じ半日の年休申請が承認済みであること
+            if (isHalfDayOffStatus(status)) {
+                String halfDayType = halfDayLeaveType(status);
+                if (paidLeaveService.isHalfDayLeaveApproved(user, date, halfDayType)) {
+                    continue;
+                }
+                if (paidLeaveService.hasPendingHalfDayLeave(user, date, halfDayType)) {
+                    unapprovedDates.add(date);
+                } else {
+                    missingApplicationDates.add(date);
+                }
                 continue;
             }
-            LocalDate date = attendance.getDate();
+            if (!isPaidLeaveStatus(status)) {
+                continue;
+            }
             if (paidLeaveService.isPaidLeaveApproved(user, date)) {
                 continue;
             }
@@ -164,8 +260,7 @@ public class AttendanceService {
                 continue;
             }
             String status = attendance.getAgreement36Status();
-            boolean excludedStatus = "-".equals(status) || "欠勤".equals(status) || isPaidLeaveStatus(status);
-            if (excludedStatus || status == null || status.isBlank()) {
+            if (isNonWorkingStatus(status) || status == null || status.isBlank()) {
                 continue;
             }
 
@@ -182,8 +277,7 @@ public class AttendanceService {
                 totalHolidayHours = totalHolidayHours.add(attendance.getHolidayHours());
             }
 
-            if (("出社".equals(status) || "在宅".equals(status))
-                    && workHours.compareTo(BigDecimal.ZERO) > 0) {
+            if (isWorkDayStatus(status) && workHours.compareTo(BigDecimal.ZERO) > 0) {
                 totalWorkDays++;
             }
         }
@@ -256,7 +350,24 @@ public class AttendanceService {
                 continue;
             }
 
-            if ("出社".equals(status) || "在宅".equals(status)) {
+            if (isHalfDayOffStatus(status)) {
+                // 半休：同じ日の同じ半日の年休申請が承認済みであること
+                String halfDayType = halfDayLeaveType(status);
+                if (!paidLeaveService.isHalfDayLeaveApproved(user, date, halfDayType)) {
+                    anomalies.add(new AttendanceAnomaly(date,
+                            paidLeaveService.hasPendingHalfDayLeave(user, date, halfDayType)
+                                    ? "attendance.anomaly.paidLeavePending" : "attendance.anomaly.halfDayLeaveMissing"));
+                }
+            }
+            if (isSubstituteStatus(status) && attendance.getSubstituteDate() == null) {
+                anomalies.add(new AttendanceAnomaly(date, "attendance.anomaly.substituteDateMissing"));
+            }
+            if (STATUS_SPECIAL_LEAVE.equals(status)
+                    && (attendance.getRemarks() == null || attendance.getRemarks().isBlank())) {
+                anomalies.add(new AttendanceAnomaly(date, "attendance.anomaly.specialLeaveNoReason"));
+            }
+
+            if (isWorkDayStatus(status)) {
                 if (attendance.getStartTime() == null || attendance.getEndTime() == null) {
                     anomalies.add(new AttendanceAnomaly(date, "attendance.anomaly.missingTime"));
                 } else if (attendance.getBreakTime() != null) {
@@ -384,13 +495,94 @@ public class AttendanceService {
                 throw new IllegalArgumentException("attendance.error.shiftTooLong");
             }
         }
+
+        String status = attendance.getAgreement36Status();
+        if (STATUS_SPECIAL_LEAVE.equals(status)
+                && (attendance.getRemarks() == null || attendance.getRemarks().isBlank())) {
+            throw new IllegalArgumentException("attendance.error.specialLeaveReasonRequired");
+        }
+        if (isSubstituteStatus(status)) {
+            validateSubstituteDate(attendance);
+        } else {
+            attendance.setSubstituteDate(null);
+        }
+    }
+
+    /**
+     * 振休・代休の休日出勤日のチェック。
+     * <ul>
+     *   <li>本人がその日（休日）に出社・在宅で実際に勤務していること</li>
+     *   <li>振休：休日出勤日の前後 {@code substituteWindowDays} 日以内（事前に振り替える制度のため前後どちらも可）</li>
+     *   <li>代休：休日出勤日より後で、{@code compensatoryValidityDays} 日以内</li>
+     *   <li>1 つの休日出勤日は、振休・代休のどちらか 1 日にしか使えない</li>
+     * </ul>
+     */
+    private void validateSubstituteDate(Attendance attendance) {
+        LocalDate substituteDate = attendance.getSubstituteDate();
+        LocalDate date = attendance.getDate();
+        if (substituteDate == null) {
+            throw new IllegalArgumentException("attendance.error.substituteDateRequired");
+        }
+        Attendance holidayWork = attendanceRepository.findByUserAndDate(attendance.getUser(), substituteDate).orElse(null);
+        boolean worked = holidayWork != null && isWorkDayStatus(holidayWork.getAgreement36Status())
+                && holidayWork.getWorkHours() != null && holidayWork.getWorkHours().compareTo(BigDecimal.ZERO) > 0;
+        if (substituteDate.equals(date) || !holidayService.isRestDay(substituteDate) || !worked) {
+            throw new BusinessException("attendance.error.substituteNotHolidayWork", substituteDate.toString());
+        }
+        long days = ChronoUnit.DAYS.between(substituteDate, date);
+        if (STATUS_COMPENSATORY_LEAVE.equals(attendance.getAgreement36Status())) {
+            if (days <= 0 || days > compensatoryValidityDays) {
+                throw new BusinessException("attendance.error.compensatoryOutOfRange", compensatoryValidityDays);
+            }
+        } else if (Math.abs(days) > substituteWindowDays) {
+            throw new BusinessException("attendance.error.substituteOutOfRange", substituteWindowDays);
+        }
+        for (Attendance other : attendanceRepository.findByUserAndSubstituteDate(attendance.getUser(), substituteDate)) {
+            if (!java.util.Objects.equals(other.getId(), attendance.getId())
+                    && isSubstituteStatus(other.getAgreement36Status())) {
+                throw new BusinessException("attendance.error.substituteAlreadyUsed",
+                        substituteDate.toString(), other.getDate().toString());
+            }
+        }
+    }
+
+    /**
+     * 振休・代休に使える休日出勤日の候補（指定月の画面用）：対象期間内に本人が休日に勤務した日。
+     * 値は、その日を既に使っている振休・代休の日（未使用なら null）。
+     */
+    public Map<LocalDate, LocalDate> substituteCandidates(User user, YearMonth month) {
+        LocalDate from = month.atDay(1).minusDays(Math.max(compensatoryValidityDays, substituteWindowDays));
+        LocalDate to = month.atEndOfMonth().plusDays(substituteWindowDays);
+        List<Attendance> records = getAttendancesByUserAndDateRange(user, from, to);
+        Map<LocalDate, LocalDate> usedBy = new HashMap<>();
+        for (Attendance record : records) {
+            if (isSubstituteStatus(record.getAgreement36Status()) && record.getSubstituteDate() != null) {
+                usedBy.put(record.getSubstituteDate(), record.getDate());
+            }
+        }
+        Map<LocalDate, LocalDate> candidates = new java.util.TreeMap<>();
+        for (Attendance record : records) {
+            if (record.getDate() != null && holidayService.isRestDay(record.getDate())
+                    && isWorkDayStatus(record.getAgreement36Status())
+                    && record.getWorkHours() != null && record.getWorkHours().compareTo(BigDecimal.ZERO) > 0) {
+                candidates.put(record.getDate(), usedBy.get(record.getDate()));
+            }
+        }
+        return candidates;
     }
 
     /** 時刻から勤務時間を計算する対象か（-/欠勤/有給 以外で、出勤・退勤が両方ある） */
     private static boolean isWorkingRecord(Attendance attendance) {
         String status = attendance.getAgreement36Status();
-        return !("-".equals(status) || "欠勤".equals(status) || isPaidLeaveStatus(status))
+        return !isNonWorkingStatus(status)
                 && attendance.getStartTime() != null && attendance.getEndTime() != null;
+    }
+
+    /** この休日出勤日が振休で振り替えられているか（振り替えた休日は平日として計算する） */
+    private boolean isSubstitutedRestDay(Attendance attendance) {
+        return attendance.getUser() != null && attendance.getDate() != null
+                && attendanceRepository.existsByUserAndSubstituteDateAndAgreement36Status(
+                        attendance.getUser(), attendance.getDate(), STATUS_SUBSTITUTE_HOLIDAY);
     }
 
     /** 拘束時間（分）。翌日退勤なら 24 時間を加える。旧データで翌日指定がなく退勤が出勤より前の場合も日またぎとみなす */
@@ -466,10 +658,13 @@ public class AttendanceService {
 
         long startMinute = attendance.getStartTime().toSecondOfDay() / 60;
         attendance.setNightHours(toHours(Math.min(minutes, nightMinutes(startMinute, startMinute + shift))));
-        attendance.setHolidayHours(attendance.getDate().getDayOfWeek() == DayOfWeek.SUNDAY
+        // 振休で振り替えた休日は平日として扱う（休日労働にも、全時間の残業にもしない）
+        boolean restDay = holidayService.isRestDay(attendance.getDate());
+        boolean substituted = restDay && isSubstitutedRestDay(attendance);
+        attendance.setHolidayHours(attendance.getDate().getDayOfWeek() == DayOfWeek.SUNDAY && !substituted
                 ? hours : BigDecimal.ZERO.setScale(2));
 
-        if (holidayService.isRestDay(attendance.getDate())) {
+        if (restDay && !substituted) {
             attendance.setOvertimeHours(hours);
         } else {
             BigDecimal overtime = hours.subtract(STANDARD_WORK_HOURS);

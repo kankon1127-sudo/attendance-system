@@ -20,6 +20,12 @@ public class LayoutModelAdvice {
         this.notificationService = notificationService;
     }
 
+    /** 勤務区分の保存値 → 画面の文言キー（勤怠・チーム・月報の画面で使う） */
+    @ModelAttribute("statusLabels")
+    public java.util.Map<String, String> statusLabels() {
+        return com.wkrepo.system.service.AttendanceService.STATUS_LABEL_KEYS;
+    }
+
     @ModelAttribute("unreadNotificationCount")
     public long unreadNotificationCount(HttpServletRequest request) {
         HttpSession session = request.getSession(false);

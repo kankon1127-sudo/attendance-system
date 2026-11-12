@@ -140,6 +140,8 @@ public class AttendanceController {
         model.addAttribute("totalNightHours", statistics.nightHours());
         model.addAttribute("totalHolidayHours", statistics.holidayHours());
         model.addAttribute("attendanceAnomalies", anomalies);
+        // 振休・代休に使える休日出勤日（値はその日を既に使っている日）
+        model.addAttribute("substituteCandidates", attendanceService.substituteCandidates(user, yearMonth));
         model.addAttribute("agreement36", agreement36Service.check(user, yearMonth));
         model.addAttribute("currentYear", currentYear);
         model.addAttribute("currentMonth", currentMonth);
@@ -276,6 +278,7 @@ public class AttendanceController {
             @RequestParam(value = "endNextDay", defaultValue = "false") boolean endNextDay,
             @RequestParam(value = "agreement36Status", required = false) String status,
             @RequestParam(value = "remarks", required = false) String remarks,
+            @RequestParam(value = "substituteDate", required = false) String substituteDate,
             HttpSession session) {
 
         User user = (User) session.getAttribute("user");
@@ -298,10 +301,13 @@ public class AttendanceController {
             attendance.setEndNextDay(endNextDay);
             attendance.setAgreement36Status(status);
             attendance.setRemarks(remarks);
+            // 振休・代休の休日出勤日（それ以外の区分では Service 側で空にする）
+            attendance.setSubstituteDate(substituteDate != null && !substituteDate.isBlank()
+                    ? LocalDate.parse(substituteDate) : null);
 
             attendanceService.updateAttendance(attendance);
             return ResponseEntity.ok(Map.of("success", true));
-        } catch (IllegalArgumentException | IllegalStateException | java.time.format.DateTimeParseException e) {
+        } catch (IllegalArgumentException | IllegalStateException | com.wkrepo.system.exception.BusinessException | java.time.format.DateTimeParseException e) {
             // 退勤が出勤以前・月がロック済み・日付の重複など。画面に理由を表示する
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", messages.of(e)));
         }
@@ -366,7 +372,7 @@ public class AttendanceController {
 
         try {
             attendanceService.updateAttendance(attendance);
-        } catch (IllegalArgumentException | IllegalStateException e) {
+        } catch (IllegalArgumentException | IllegalStateException | com.wkrepo.system.exception.BusinessException e) {
             redirectAttributes.addFlashAttribute("attendanceError", messages.of(e));
             return "redirect:/attendance/edit/" + dateStr;
         }

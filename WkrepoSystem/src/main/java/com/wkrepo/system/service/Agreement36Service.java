@@ -57,11 +57,16 @@ public class Agreement36Service {
             String status = attendance.getAgreement36Status();
             LocalDate date = attendance.getDate();
             if (date == null || status == null || status.isBlank() || "-".equals(status)
-                    || "欠勤".equals(status) || AttendanceService.isPaidLeaveStatus(status)) {
+                    || AttendanceService.isNonWorkingStatus(status)) {
                 continue;
             }
             MonthlyHours hours = byMonth.computeIfAbsent(YearMonth.from(date), MonthlyHours::new);
-            if (date.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            // 休日労働時間が計算済みならそれを使う（振休で振り替えた日曜日は 0 になり、時間外として数える）。
+            // 計算前の古いデータは日曜日かどうかで判定する
+            boolean holidayWork = attendance.getHolidayHours() != null
+                    ? attendance.getHolidayHours().compareTo(BigDecimal.ZERO) > 0
+                    : date.getDayOfWeek() == DayOfWeek.SUNDAY;
+            if (holidayWork) {
                 hours.holidayWork = hours.holidayWork.add(valueOrZero(attendance.getWorkHours()));
             } else {
                 hours.overtime = hours.overtime.add(valueOrZero(attendance.getOvertimeHours()));

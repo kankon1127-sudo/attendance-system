@@ -51,6 +51,31 @@ public class Attendance {
     @Column(name = "agreement_36_status", length = 20)
     private String agreement36Status;
 
+    /** 振休・代休：対応する休日出勤の日（その日の勤怠は本人の休日の出勤であること） */
+    @Column(name = "substitute_date")
+    private java.time.LocalDate substituteDate;
+
+    /** DB から読み込んだ時点の substituteDate（変更・解除されたとき、元の休日出勤日を再計算するため） */
+    @Transient
+    private java.time.LocalDate loadedSubstituteDate;
+
+    @PostLoad
+    protected void rememberLoadedValues() {
+        loadedSubstituteDate = substituteDate;
+    }
+
+    public java.time.LocalDate getSubstituteDate() {
+        return substituteDate;
+    }
+
+    public void setSubstituteDate(java.time.LocalDate substituteDate) {
+        this.substituteDate = substituteDate;
+    }
+
+    public java.time.LocalDate getLoadedSubstituteDate() {
+        return loadedSubstituteDate;
+    }
+
     public boolean isEndNextDay() {
         return Boolean.TRUE.equals(endNextDay);
     }

@@ -116,6 +116,138 @@ class AttendanceServiceTest {
         verify(attendanceRepository, never()).save(any());
     }
 
+    // ---------- #39 勤務区分：半休・特別休暇・振休・代休 ----------
+
+    @Test
+    void halfDayOffCountsAsWorkDayWithHours() {
+        Attendance morningOff = TestData.attendance(user, "2026-11-02", "午前休", "13:00", "18:00", "00:00");
+
+        Attendance saved = attendanceService.updateAttendance(morningOff);
+
+        assertThat(saved.getWorkHours()).isEqualByComparingTo("5.00");
+        assertThat(attendanceService.calculateMonthlyStatistics(List.of(saved), YearMonth.of(2026, 11)).workDays())
+                .isEqualTo(1);
+    }
+
+    @Test
+    void leaveStatusesHaveNoHoursEvenWithTimes() {
+        Attendance special = TestData.attendance(user, "2026-11-02", "特別休暇", "09:00", "18:00", "01:00");
+        special.setRemarks("慶弔（結婚）");
+
+        Attendance saved = attendanceService.updateAttendance(special);
+
+        assertThat(saved.getWorkHours()).isEqualByComparingTo("0");
+        assertThat(attendanceService.calculateMonthlyStatistics(List.of(saved), YearMonth.of(2026, 11)).workDays())
+                .isZero();
+    }
+
+    @Test
+    void specialLeaveRequiresReason() {
+        Attendance special = TestData.attendance(user, "2026-11-02", "特別休暇", null, null, null);
+
+        assertThatThrownBy(() -> attendanceService.updateAttendance(special))
+                .hasMessage("attendance.error.specialLeaveReasonRequired");
+    }
+
+    @Test
+    void substituteHolidayNeedsWorkedRestDay() {
+        Attendance holidayWork = sundayWork("2026-11-08");
+
+        Attendance noDate = TestData.attendance(user, "2026-11-10", "振休", null, null, null);
+        assertThatThrownBy(() -> attendanceService.updateAttendance(noDate))
+                .hasMessage("attendance.error.substituteDateRequired");
+
+        Attendance weekday = TestData.attendance(user, "2026-11-10", "振休", null, null, null);
+        weekday.setSubstituteDate(java.time.LocalDate.of(2026, 11, 9)); // 月曜日（休日ではない）
+        assertThatThrownBy(() -> attendanceService.updateAttendance(weekday))
+                .hasMessage("attendance.error.substituteNotHolidayWork");
+
+        Attendance ok = TestData.attendance(user, "2026-11-10", "振休", null, null, null);
+        ok.setSubstituteDate(holidayWork.getDate());
+        assertThat(attendanceService.updateAttendance(ok).getSubstituteDate()).isEqualTo(holidayWork.getDate());
+    }
+
+    @Test
+    void compensatoryLeaveMustBeAfterHolidayWorkWithinPeriod() {
+        sundayWork("2026-11-08");
+
+        Attendance before = TestData.attendance(user, "2026-11-06", "代休", null, null, null);
+        before.setSubstituteDate(java.time.LocalDate.of(2026, 11, 8));
+        assertThatThrownBy(() -> attendanceService.updateAttendance(before))
+                .hasMessage("attendance.error.compensatoryOutOfRange");
+
+        Attendance tooLate = TestData.attendance(user, "2027-01-15", "代休", null, null, null);
+        tooLate.setSubstituteDate(java.time.LocalDate.of(2026, 11, 8));
+        assertThatThrownBy(() -> attendanceService.updateAttendance(tooLate))
+                .hasMessage("attendance.error.compensatoryOutOfRange");
+    }
+
+    @Test
+    void holidayWorkCanBeUsedOnlyOnce() {
+        sundayWork("2026-11-08");
+        Attendance used = TestData.attendance(user, "2026-11-10", "代休", null, null, null);
+        used.setId(50L);
+        used.setSubstituteDate(java.time.LocalDate.of(2026, 11, 8));
+        when(attendanceRepository.findByUserAndSubstituteDate(user, java.time.LocalDate.of(2026, 11, 8)))
+                .thenReturn(List.of(used));
+
+        Attendance second = TestData.attendance(user, "2026-11-11", "代休", null, null, null);
+        second.setSubstituteDate(java.time.LocalDate.of(2026, 11, 8));
+        assertThatThrownBy(() -> attendanceService.updateAttendance(second))
+                .hasMessage("attendance.error.substituteAlreadyUsed");
+    }
+
+    @Test
+    void substitutedSundayIsCalculatedAsWorkday() {
+        when(attendanceRepository.existsByUserAndSubstituteDateAndAgreement36Status(
+                user, java.time.LocalDate.of(2026, 11, 8), "振休")).thenReturn(true);
+        Attendance sunday = TestData.attendance(user, "2026-11-08", "出社", "09:00", "19:00", "01:00");
+
+        Attendance saved = attendanceService.updateAttendance(sunday);
+
+        assertThat(saved.getWorkHours()).isEqualByComparingTo("9.00");
+        assertThat(saved.getOvertimeHours()).isEqualByComparingTo("1.00"); // 平日扱い：8 時間超のみ
+        assertThat(saved.getHolidayHours()).isEqualByComparingTo("0");     // 休日労働にしない
+    }
+
+    @Test
+    void savingSubstituteHolidayRecalculatesTheHolidayWork() {
+        Attendance holidayWork = sundayWork("2026-11-08");
+        when(attendanceRepository.existsByUserAndSubstituteDateAndAgreement36Status(
+                user, holidayWork.getDate(), "振休")).thenReturn(true);
+        Attendance substitute = TestData.attendance(user, "2026-11-10", "振休", null, null, null);
+        substitute.setSubstituteDate(holidayWork.getDate());
+
+        attendanceService.updateAttendance(substitute);
+
+        verify(attendanceRepository).save(holidayWork);
+        assertThat(holidayWork.getHolidayHours()).isEqualByComparingTo("0");
+        assertThat(holidayWork.getOvertimeHours()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    void halfDayOffNeedsApprovedHalfDayLeaveToSubmitMonth() {
+        when(attendanceRepository.findByUserAndDateBetweenOrderByDateAsc(eq(user), any(), any()))
+                .thenReturn(List.of(TestData.attendance(user, "2026-11-02", "午前休", "13:00", "18:00", null)));
+        when(paidLeaveService.isHalfDayLeaveApproved(user, java.time.LocalDate.of(2026, 11, 2), "午前")).thenReturn(false);
+
+        assertThatThrownBy(() -> attendanceService.validatePaidLeaveApprovedForMonthlySubmit(user, 2026, 11))
+                .hasMessage("monthly.error.paidLeaveNotApproved");
+
+        when(paidLeaveService.isHalfDayLeaveApproved(user, java.time.LocalDate.of(2026, 11, 2), "午前")).thenReturn(true);
+        attendanceService.validatePaidLeaveApprovedForMonthlySubmit(user, 2026, 11);
+    }
+
+    /** 日曜日の休日出勤（9-18、実働 8 時間）を登録済みにする */
+    private Attendance sundayWork(String date) {
+        Attendance work = TestData.attendance(user, date, "出社", "09:00", "18:00", "01:00");
+        work.setWorkHours(new BigDecimal("8.00"));
+        work.setOvertimeHours(new BigDecimal("8.00"));
+        work.setHolidayHours(new BigDecimal("8.00"));
+        when(attendanceRepository.findByUserAndDate(user, java.time.LocalDate.parse(date))).thenReturn(Optional.of(work));
+        return work;
+    }
+
     @Test
     void timeOrderIsNotCheckedForLeaveOrMissingTimes() {
         Attendance leave = TestData.attendance(user, "2026-11-04", "有給", "18:00", "09:00", null);
