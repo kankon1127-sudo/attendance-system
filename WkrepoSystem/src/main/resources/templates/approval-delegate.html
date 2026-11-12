@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'approval-delegate', '代理承認者')}">
+<head th:fragment="head">
+    <title th:text="${#messages.msg('page.approval-delegate') + ' - ' + #messages.msg('brand.name')}">代理承認者</title>
+    <style>
+        .delegate-card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 20px;
+                         box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); max-width: 720px; }
+    </style>
+</head>
+<body>
+<th:block th:fragment="main-content">
+    <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+    <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+    <div class="delegate-card">
+        <h5 class="mb-1" th:text="#{delegate.title}">代理承認者</h5>
+        <p class="small text-muted" th:text="#{delegate.hint}">
+            不在の期間、指定した部長・管理者があなたの代わりに部下の申請（年休・経費・月報の 1 次承認）を承認できます。
+        </p>
+
+        <!-- 現在の設定 -->
+        <div class="alert py-2" th:classappend="${delegateActive} ? 'alert-info' : 'alert-light border'" th:if="${delegate != null}">
+            <i class="bi bi-person-check me-1"></i>
+            <span th:text="#{delegate.current(${delegate.name}, ${#temporals.format(current.approvalDelegateFrom, 'yyyy/MM/dd')}, ${#temporals.format(current.approvalDelegateTo, 'yyyy/MM/dd')})}">
+                山田部長（2026/11/10〜2026/11/14）
+            </span>
+            <span class="badge ms-1" th:classappend="${delegateActive} ? 'text-bg-primary' : 'text-bg-secondary'"
+                  th:text="${delegateActive} ? #{delegate.activeNow} : #{delegate.notActiveNow}">有効</span>
+        </div>
+        <div class="alert alert-light border py-2" th:if="${delegate == null}" th:text="#{delegate.none}">代理承認者は設定されていません。</div>
+
+        <form method="post" th:action="@{/approval-delegate}" class="row g-3">
+            <div class="col-12">
+                <label class="form-label" for="delegateId" th:text="#{delegate.person}">代理承認者</label>
+                <select id="delegateId" name="delegateId" class="form-select" required>
+                    <option value="" th:text="#{delegate.select}">選択してください</option>
+                    <option th:each="candidate : ${candidates}" th:value="${candidate.id}"
+                            th:selected="${current.approvalDelegateId == candidate.id}"
+                            th:text="${candidate.name + '（' + candidate.department + '）'}">山田部長（開発部）</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="from" th:text="#{delegate.from}">開始日</label>
+                <input type="date" id="from" name="from" class="form-control" required
+                       th:value="${current.approvalDelegateFrom != null ? current.approvalDelegateFrom : today}">
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="to" th:text="#{delegate.to}">終了日</label>
+                <input type="date" id="to" name="to" class="form-control" required
+                       th:value="${current.approvalDelegateTo}">
+            </div>
+            <div class="col-12 d-flex gap-2">
+                <button type="submit" class="btn btn-primary" th:text="#{common.save}">保存</button>
+            </div>
+        </form>
+        <form method="post" th:action="@{/approval-delegate/clear}" class="mt-2" th:if="${delegate != null}">
+            <button type="submit" class="btn btn-outline-secondary btn-sm" th:text="#{delegate.clear}">代理承認者を解除</button>
+        </form>
+    </div>
+
+    <!-- 自分が代理承認者に指定されている上司 -->
+    <div class="delegate-card" th:unless="${delegators.isEmpty()}">
+        <h6 class="mb-2" th:text="#{delegate.asDelegate}">あなたを代理承認者に指定している上司</h6>
+        <ul class="mb-0 ps-3">
+            <li th:each="delegator : ${delegators}">
+                <span th:text="${delegator.name + '（' + delegator.department + '）'}">佐藤部長（開発部）</span>
+                <span class="text-muted small"
+                      th:text="${#temporals.format(delegator.approvalDelegateFrom, 'yyyy/MM/dd') + '〜' + #temporals.format(delegator.approvalDelegateTo, 'yyyy/MM/dd')}">2026/11/10〜2026/11/14</span>
+                <span class="badge text-bg-primary ms-1" th:if="${delegator.isApprovalDelegateActiveOn(today)}"
+                      th:text="#{delegate.activeNow}">有効</span>
+            </li>
+        </ul>
+    </div>
+</th:block>
+</body>
+</html>

@@ -16,6 +16,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,7 +44,8 @@ class ApplicationNotificationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ApplicationNotificationService(userRepository, mailSenderProvider, "noreply@example.com");
+        service = new ApplicationNotificationService(userRepository, mailSenderProvider, "noreply@example.com",
+                new ApprovalRouteService(userRepository));
         applicant.setName("山田太郎");
         manager.setName("佐藤部长");
         when(mailSenderProvider.getIfAvailable()).thenReturn(mailSender);
@@ -103,6 +105,42 @@ class ApplicationNotificationServiceTest {
         assertThat(service.notifyApplicant(applicant, "x", ApplicationStatus.APPROVED, applicant, null))
                 .isEqualTo(ApplicationNotificationService.Result.NOT_APPLICABLE);
         verify(mailSender, never()).send(any(SimpleMailMessage.class));
+    }
+
+    @Test
+    void applicationIsNotifiedToManagerAndActiveDelegate() {
+        User employee = TestData.user(20L, "GENERAL", "開発部");
+        employee.setName("社員");
+        employee.setManagerId(manager.getId());
+        User delegate = TestData.user(3L, "MANAGER", "営業部");
+        delegate.setEmail("delegate@example.com");
+        manager.setEmail("manager@example.com");
+        manager.setApprovalDelegateId(delegate.getId());
+        manager.setApprovalDelegateFrom(java.time.LocalDate.now());
+        manager.setApprovalDelegateTo(java.time.LocalDate.now());
+        when(userRepository.findById(manager.getId())).thenReturn(Optional.of(manager));
+        when(userRepository.findById(delegate.getId())).thenReturn(Optional.of(delegate));
+
+        assertThat(service.notifyManager(employee, "件名", "内容")).isEqualTo(ApplicationNotificationService.Result.SENT);
+
+        ArgumentCaptor<SimpleMailMessage> mail = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mailSender, org.mockito.Mockito.times(2)).send(mail.capture());
+        assertThat(mail.getAllValues()).flatExtracting(message -> List.of(message.getTo()))
+                .containsExactly("manager@example.com", "delegate@example.com");
+    }
+
+    @Test
+    void managersOwnApplicationIsNotifiedToTheirManagerToo() {
+        User boss = TestData.user(1L, "ADMIN", "管理部");
+        boss.setEmail("boss@example.com");
+        manager.setManagerId(boss.getId());
+        when(userRepository.findById(boss.getId())).thenReturn(Optional.of(boss));
+
+        assertThat(service.notifyManager(manager, "件名", "内容")).isEqualTo(ApplicationNotificationService.Result.SENT);
+
+        User adminWithoutBoss = TestData.user(9L, "ADMIN", "管理部");
+        assertThat(service.notifyManager(adminWithoutBoss, "件名", "内容"))
+                .isEqualTo(ApplicationNotificationService.Result.NOT_APPLICABLE);
     }
 
     private void withEmail(String email) {

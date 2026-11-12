@@ -42,6 +42,8 @@ class UserManagementControllerTest {
     private DefaultAttendanceSettingService defaultAttendanceSettingService;
     @Spy
     private Messages messages = TestData.messages();
+    @Mock
+    private com.wkrepo.system.service.DepartmentService departmentService;
 
     @InjectMocks
     private UserManagementController controller;
@@ -160,6 +162,34 @@ class UserManagementControllerTest {
 
         assertThat(redirect.getFlashAttributes()).containsKey("successMessage");
         verify(userRepository).save(employee);
+    }
+
+    // ---------- #44 部署は部署マスタから ----------
+
+    @Test
+    void departmentOutsideMasterIsRejected() {
+        when(departmentService.requireAssignable("存在しない部", "开发部"))
+                .thenThrow(new IllegalArgumentException("department.error.unknown"));
+        RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
+
+        controller.updateUser(employee.getId(), null, null, null, null, null, "存在しない部", null, null,
+                null, null, sessionOf(admin), redirect);
+
+        assertThat(redirect.getFlashAttributes()).containsKey("errorMessage");
+        assertThat(employee.getDepartment()).isEqualTo("开发部");
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void registeredDepartmentIsSaved() {
+        when(departmentService.requireAssignable(" 営業部 ", "开发部")).thenReturn("営業部");
+        RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
+
+        controller.updateUser(employee.getId(), null, null, null, null, null, " 営業部 ", null, null,
+                null, null, sessionOf(admin), redirect);
+
+        assertThat(redirect.getFlashAttributes()).containsKey("successMessage");
+        assertThat(employee.getDepartment()).isEqualTo("営業部");
     }
 
     @Test

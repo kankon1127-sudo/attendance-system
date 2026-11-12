@@ -28,6 +28,9 @@ public interface GeneralExpenseRepository extends JpaRepository<GeneralExpense, 
     @Query("SELECT g FROM GeneralExpense g JOIN FETCH g.user")
     List<GeneralExpense> findAllWithUser();
 
-    @Query("SELECT g FROM GeneralExpense g JOIN FETCH g.user u WHERE u.id = :userId OR u.department = :department")
-    List<GeneralExpense> findByUserIdOrDepartment(@Param("userId") Long userId, @Param("department") String department);
+    /** 部長用：自分・自部署・承認対象の申請者（代理承認中の部下を含む）の申請。applicantIds は空にしない */
+    @Query("SELECT g FROM GeneralExpense g JOIN FETCH g.user u"
+            + " WHERE u.id = :userId OR u.department = :department OR u.id IN :applicantIds")
+    List<GeneralExpense> findForManager(@Param("userId") Long userId, @Param("department") String department,
+                                        @Param("applicantIds") java.util.Collection<Long> applicantIds);
 }

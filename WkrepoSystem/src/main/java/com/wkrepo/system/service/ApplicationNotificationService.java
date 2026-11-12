@@ -13,6 +13,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -22,47 +23,62 @@ public class ApplicationNotificationService {
     private final UserRepository userRepository;
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
     private final String fromAddress;
+    private final ApprovalRouteService approvalRouteService;
 
     public ApplicationNotificationService(
             UserRepository userRepository,
             ObjectProvider<JavaMailSender> mailSenderProvider,
-            @Value("${app.notifications.from:}") String fromAddress) {
+            @Value("${app.notifications.from:}") String fromAddress,
+            ApprovalRouteService approvalRouteService) {
         this.userRepository = userRepository;
         this.mailSenderProvider = mailSenderProvider;
         this.fromAddress = fromAddress;
+        this.approvalRouteService = approvalRouteService;
     }
 
+    /**
+     * 申請を承認者にメールで通知する。宛先は承認経路（直属の上司と、今日有効な代理承認者）。
+     * 上司が設定されていない ADMIN の申請は通知しない。
+     */
     public Result notifyManager(User applicant, String subject, String details) {
-        if (!"GENERAL".equals(applicant.getRole())) {
+        if ("ADMIN".equals(applicant.getRole()) && applicant.getManagerId() == null) {
             return Result.NOT_APPLICABLE;
         }
         if (applicant.getManagerId() == null) {
             return Result.NO_MANAGER;
         }
 
-        User manager;
+        List<User> approvers;
         try {
-            manager = userRepository.findById(applicant.getManagerId()).orElse(null);
+            approvers = approvalRouteService.notificationTargets(applicant);
         } catch (DataAccessException exception) {
-            logger.error("申請者 {} の上司を取得できませんでした", applicant.getId(), exception);
+            logger.error("申請者 {} の承認者を取得できませんでした", applicant.getId(), exception);
             return Result.FAILED;
         }
-        if (manager == null) {
-            logger.warn("申請者 {} の上司 {} が見つかりません", applicant.getId(), applicant.getManagerId());
+        if (approvers.isEmpty()) {
+            logger.warn("申請者 {} の上司 {} が見つからないか停止中です", applicant.getId(), applicant.getManagerId());
             return Result.NO_MANAGER;
         }
-        if (manager.getEmail() == null || manager.getEmail().isBlank()) {
+        List<User> withEmail = approvers.stream()
+                .filter(approver -> approver.getEmail() != null && !approver.getEmail().isBlank())
+                .toList();
+        if (withEmail.isEmpty()) {
             return Result.NO_MANAGER_EMAIL;
         }
 
         String text = "上司各位\n\n"
                 + applicant.getName() + " さんから申請が提出されました。\n"
                 + details + "\n\nシステムにログインして内容をご確認ください。";
-        Result result = send(manager.getEmail(), subject, text);
-        if (result == Result.SENT) {
-            logger.info("申請者 {} の申請を上司 {} にメールで通知しました", applicant.getId(), manager.getId());
-        } else if (result == Result.SMTP_NOT_CONFIGURED) {
-            logger.warn("SMTP が未設定のため、申請者 {} の申請通知を送信しませんでした", applicant.getId());
+        Result result = Result.FAILED;
+        for (User approver : withEmail) {
+            Result sent = send(approver.getEmail(), subject, text);
+            if (sent == Result.SENT) {
+                logger.info("申請者 {} の申請を承認者 {} にメールで通知しました", applicant.getId(), approver.getId());
+                result = Result.SENT;
+            } else if (sent == Result.SMTP_NOT_CONFIGURED) {
+                logger.warn("SMTP が未設定のため、申請者 {} の申請通知を送信しませんでした", applicant.getId());
+                return Result.SMTP_NOT_CONFIGURED;
+            }
         }
         return result;
     }

@@ -36,7 +36,10 @@ public class UserManagementController {
 
     @Autowired
     private Messages messages;
-    
+
+    @Autowired
+    private com.wkrepo.system.service.DepartmentService departmentService;
+
     @GetMapping("/user-management")
     public String userManagement(
             @RequestParam(name = "searchName", required = false) String searchName,
@@ -128,6 +131,9 @@ public class UserManagementController {
         model.addAttribute("isManager", isManager);
         model.addAttribute("canManageAll", canViewAll);
         model.addAttribute("canEdit", true);
+        // 部署の選択肢（部署マスタの有効な部署）。絞り込みは無効な部署も含める
+        model.addAttribute("departmentOptions", departmentService.findActive());
+        model.addAttribute("allDepartments", departmentService.findAll());
         return "user-management";
     }
 
@@ -169,6 +175,8 @@ public class UserManagementController {
         }
 
         try {
+            // 部長は自部署固定（自部署が無効化されていても登録できる）
+            department = departmentService.requireAssignable(department, isManager ? currentUser.getDepartment() : null);
             User newUser = new User();
             newUser.setUsername(username == null ? "" : username.trim());
             newUser.setPassword(password);
@@ -228,7 +236,16 @@ public class UserManagementController {
             return buildListRedirect(searchName, searchDepartment);
         }
 
-        String finalDept = (department != null && !department.trim().isEmpty()) ? department : targetUser.getDepartment();
+        String finalDept;
+        try {
+            // 部署マスタにある有効な部署か、現在の所属部署のみ受け付ける
+            finalDept = (department != null && !department.trim().isEmpty())
+                    ? departmentService.requireAssignable(department, targetUser.getDepartment())
+                    : targetUser.getDepartment();
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", messages.of(e));
+            return buildListRedirect(searchName, searchDepartment);
+        }
         String finalRole = (role != null && !role.trim().isEmpty()) ? role : targetUser.getRole();
 
         if (isManager) {

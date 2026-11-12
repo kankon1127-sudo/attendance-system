@@ -39,6 +39,9 @@ public interface PaidLeaveRepository extends JpaRepository<PaidLeave, Long> {
     @Query("SELECT p FROM PaidLeave p JOIN FETCH p.user")
     List<PaidLeave> findAllWithUser();
 
-    @Query("SELECT p FROM PaidLeave p JOIN FETCH p.user u WHERE u.id = :userId OR u.department = :department")
-    List<PaidLeave> findByUserIdOrDepartment(@Param("userId") Long userId, @Param("department") String department);
+    /** 部長用：自分・自部署・承認対象の申請者（代理承認中の部下を含む）の申請。applicantIds は空にしない */
+    @Query("SELECT p FROM PaidLeave p JOIN FETCH p.user u"
+            + " WHERE u.id = :userId OR u.department = :department OR u.id IN :applicantIds")
+    List<PaidLeave> findForManager(@Param("userId") Long userId, @Param("department") String department,
+                                   @Param("applicantIds") java.util.Collection<Long> applicantIds);
 }

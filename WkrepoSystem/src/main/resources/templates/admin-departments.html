@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'admin-departments', '部署管理')}">
+<head th:fragment="head">
+    <title th:text="${#messages.msg('page.admin-departments') + ' - ' + #messages.msg('brand.name')}">部署管理</title>
+    <style>
+        .department-card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 20px;
+                           box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); }
+        .department-table td, .department-table th { vertical-align: middle; }
+        .department-table .rename-form { display: flex; gap: 6px; max-width: 320px; }
+        .department-table tr.inactive td { color: #94a3b8; }
+    </style>
+</head>
+<body>
+<th:block th:fragment="main-content">
+    <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+    <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+    <div class="department-card">
+        <h5 class="mb-1">
+            <span th:text="#{department.title}">部署マスタ</span>
+            <span class="badge text-bg-secondary ms-1" th:text="${departments.size()}">0</span>
+        </h5>
+        <p class="small text-muted" th:text="#{department.hint}">
+            社員の部署はここに登録した部署から選びます。部署名を変更すると、所属する社員の部署もまとめて変わります。
+        </p>
+
+        <div class="table-responsive">
+            <table class="table table-sm department-table">
+                <thead>
+                <tr>
+                    <th th:text="#{department.name}">部署名</th>
+                    <th class="text-center" th:text="#{department.userCount}">所属人数</th>
+                    <th class="text-center" th:text="#{department.status}">状態</th>
+                    <th class="text-end" th:text="#{common.operation}">操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="department : ${departments}" th:classappend="${department.active} ? '' : 'inactive'"
+                    th:with="count=${userCounts.get(department.id)}">
+                    <td>
+                        <form method="post" th:action="@{/admin/departments/{id}/rename(id=${department.id})}" class="rename-form">
+                            <input type="text" name="name" class="form-control form-control-sm" maxlength="50" required
+                                   th:value="${department.name}">
+                            <button type="submit" class="btn btn-outline-primary btn-sm text-nowrap"
+                                    th:text="#{department.rename}">名称変更</button>
+                        </form>
+                    </td>
+                    <td class="text-center" th:text="${count}">0</td>
+                    <td class="text-center">
+                        <span class="badge" th:classappend="${department.active} ? 'text-bg-success' : 'text-bg-secondary'"
+                              th:text="${department.active} ? #{department.active} : #{department.inactive}">有効</span>
+                    </td>
+                    <td class="text-end text-nowrap">
+                        <form method="post" th:action="@{/admin/departments/{id}/toggle(id=${department.id})}" class="d-inline">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm"
+                                    th:text="${department.active} ? #{department.deactivate} : #{department.activate}">無効化</button>
+                        </form>
+                        <form method="post" th:action="@{/admin/departments/{id}/delete(id=${department.id})}" class="d-inline"
+                              th:if="${count == 0}"
+                              th:data-confirm="#{common.deleteConfirm}" onsubmit="return confirm(this.dataset.confirm);">
+                            <button type="submit" class="btn btn-outline-danger btn-sm" th:text="#{common.delete}">削除</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 追加 -->
+        <form method="post" th:action="@{/admin/departments/add}" class="row g-2 align-items-end mt-2">
+            <div class="col-sm-8">
+                <label class="form-label small" th:text="#{department.name}">部署名</label>
+                <input type="text" name="name" class="form-control form-control-sm" maxlength="50" required>
+            </div>
+            <div class="col-sm-4">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-plus-lg"></i> <span th:text="#{department.add}">追加</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</th:block>
+</body>
+</html>

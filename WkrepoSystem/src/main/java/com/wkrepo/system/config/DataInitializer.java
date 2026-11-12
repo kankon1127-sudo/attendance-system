@@ -50,6 +50,9 @@ public class DataInitializer {
     @Autowired
     private PaidLeaveEntitlementRepository entitlementRepository;
 
+    @Autowired
+    private com.wkrepo.system.service.DepartmentService departmentService;
+
     private static final java.math.BigDecimal DEMO_ANNUAL_LEAVE_DAYS = new java.math.BigDecimal("10");
 
     @PostConstruct
@@ -84,6 +87,12 @@ public class DataInitializer {
         if (devMode) {
             createTestAccounts();
             grantDemoEntitlements();
+        }
+
+        // 3. 部署マスタ：ユーザーが使っている部署名でマスタにないものを登録する（マスタ導入前のデータ用）
+        int addedDepartments = departmentService.registerMissingDepartments();
+        if (addedDepartments > 0) {
+            logger.info("部署マスタに {} 件の部署を登録しました", addedDepartments);
         }
     }
 
@@ -134,17 +143,17 @@ public class DataInitializer {
         Optional<User> managerOpt = userRepository.findByUsername("manager");
         Long managerId;
         if (managerOpt.isEmpty()) {
-            managerId = createTestUser("manager", "佐藤部长", "EMP002", "开发部", "MANAGER", adminId);
+            managerId = createTestUser("manager", "佐藤部长", "EMP002", "開発部", "MANAGER", adminId);
         } else {
             managerId = managerOpt.get().getId();
         }
 
         // 一般社員
         if (!userRepository.existsByUsername("employee1")) {
-            createTestUser("employee1", "山田太郎", "EMP003", "开发部", "GENERAL", managerId);
+            createTestUser("employee1", "山田太郎", "EMP003", "開発部", "GENERAL", managerId);
         }
         if (!userRepository.existsByUsername("employee2")) {
-            createTestUser("employee2", "田中花子", "EMP004", "开发部", "GENERAL", managerId);
+            createTestUser("employee2", "田中花子", "EMP004", "開発部", "GENERAL", managerId);
         }
 
         // 総務（月報最終承認）

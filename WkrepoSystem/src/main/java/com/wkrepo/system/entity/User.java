@@ -39,6 +39,47 @@ public class User {
 
     @Column(name = "status", length = 20)
     private String status;
+
+    /** 代理承認者（不在時にこの人の代わりに承認する部長・管理者）。期間外は無効 */
+    @Column(name = "approval_delegate_id")
+    private Long approvalDelegateId;
+
+    @Column(name = "approval_delegate_from")
+    private java.time.LocalDate approvalDelegateFrom;
+
+    @Column(name = "approval_delegate_to")
+    private java.time.LocalDate approvalDelegateTo;
+
+    public Long getApprovalDelegateId() {
+        return approvalDelegateId;
+    }
+
+    public void setApprovalDelegateId(Long approvalDelegateId) {
+        this.approvalDelegateId = approvalDelegateId;
+    }
+
+    public java.time.LocalDate getApprovalDelegateFrom() {
+        return approvalDelegateFrom;
+    }
+
+    public void setApprovalDelegateFrom(java.time.LocalDate approvalDelegateFrom) {
+        this.approvalDelegateFrom = approvalDelegateFrom;
+    }
+
+    public java.time.LocalDate getApprovalDelegateTo() {
+        return approvalDelegateTo;
+    }
+
+    public void setApprovalDelegateTo(java.time.LocalDate approvalDelegateTo) {
+        this.approvalDelegateTo = approvalDelegateTo;
+    }
+
+    /** 指定日に代理承認が有効か（代理人が設定され、期間内） */
+    public boolean isApprovalDelegateActiveOn(java.time.LocalDate date) {
+        return approvalDelegateId != null && date != null
+                && (approvalDelegateFrom == null || !date.isBefore(approvalDelegateFrom))
+                && (approvalDelegateTo == null || !date.isAfter(approvalDelegateTo));
+    }
     
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

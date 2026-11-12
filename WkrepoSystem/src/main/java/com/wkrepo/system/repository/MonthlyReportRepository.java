@@ -33,8 +33,12 @@ public interface MonthlyReportRepository extends JpaRepository<MonthlyReport, Lo
     @Query("SELECT m FROM MonthlyReport m JOIN FETCH m.user")
     List<MonthlyReport> findAllWithUser();
 
-    /** 部長用：自分の月報、自部署の月報、および自分が承認者に指定された承認待ち（SUBMITTED）の月報 */
+    /**
+     * 部長用：自分の月報、自部署の月報、および自分（または代理中の上司）が承認者に指定された承認待ち（SUBMITTED）の月報。
+     * approverIds は空にしない（本人の ID を必ず含める）
+     */
     @Query("SELECT m FROM MonthlyReport m JOIN FETCH m.user u WHERE u.id = :userId OR u.department = :department"
-            + " OR (m.approverId = :userId AND m.status = com.wkrepo.system.enums.ApplicationStatus.SUBMITTED)")
-    List<MonthlyReport> findForManager(@Param("userId") Long userId, @Param("department") String department);
+            + " OR (m.approverId IN :approverIds AND m.status = com.wkrepo.system.enums.ApplicationStatus.SUBMITTED)")
+    List<MonthlyReport> findForManager(@Param("userId") Long userId, @Param("department") String department,
+                                       @Param("approverIds") java.util.Collection<Long> approverIds);
 }

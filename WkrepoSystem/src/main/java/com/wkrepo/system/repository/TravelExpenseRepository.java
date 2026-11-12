@@ -28,6 +28,9 @@ public interface TravelExpenseRepository extends JpaRepository<TravelExpense, Lo
     @Query("SELECT t FROM TravelExpense t JOIN FETCH t.user")
     List<TravelExpense> findAllWithUser();
 
-    @Query("SELECT t FROM TravelExpense t JOIN FETCH t.user u WHERE u.id = :userId OR u.department = :department")
-    List<TravelExpense> findByUserIdOrDepartment(@Param("userId") Long userId, @Param("department") String department);
+    /** 部長用：自分・自部署・承認対象の申請者（代理承認中の部下を含む）の申請。applicantIds は空にしない */
+    @Query("SELECT t FROM TravelExpense t JOIN FETCH t.user u"
+            + " WHERE u.id = :userId OR u.department = :department OR u.id IN :applicantIds")
+    List<TravelExpense> findForManager(@Param("userId") Long userId, @Param("department") String department,
+                                       @Param("applicantIds") java.util.Collection<Long> applicantIds);
 }

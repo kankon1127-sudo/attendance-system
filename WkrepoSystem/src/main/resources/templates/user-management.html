@@ -295,16 +295,12 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label" th:text="#{user.department}">部署</label>
+                <!-- 部署マスタの有効な部署から選ぶ -->
                 <select name="department" class="form-select" th:if="${canManageAll}">
-                    <option value="管理部" th:text="#{user.departments.admin}">管理部</option>
-                    <option value="开发部" th:text="#{user.departments.development}">開発部</option>
-                    <option value="営業部" th:text="#{user.departments.sales}">営業部</option>
-                    <option value="経理部" th:text="#{user.departments.accounting}">経理部</option>
-                    <option value="総務部" th:text="#{user.departments.generalAffairs}">総務部</option>
+                    <option th:each="dept : ${departmentOptions}" th:value="${dept.name}" th:text="${dept.name}">開発部</option>
                 </select>
                 <select name="department" class="form-select" th:if="${isManager}">
-                    <option th:value="${user.department}"
-                            th:text="${user.department == '管理部' ? #messages.msg('user.departments.admin') : (user.department == '开发部' ? #messages.msg('user.departments.development') : (user.department == '営業部' ? #messages.msg('user.departments.sales') : (user.department == '経理部' ? #messages.msg('user.departments.accounting') : (user.department == '総務部' ? #messages.msg('user.departments.generalAffairs') : user.department))))}" selected></option>
+                    <option th:value="${user.department}" th:text="${user.department}" selected></option>
                 </select>
             </div>
             <div class="col-md-3">
@@ -361,15 +357,11 @@
                 <label class="form-label" th:text="#{user.department}">部署</label>
                 <select name="searchDepartment" class="form-select" th:if="${canManageAll}" onkeydown="onSearchKeyDown(event)">
                     <option value="" th:text="#{user.departmentFilter}">すべての部署</option>
-                    <option value="管理部" th:selected="${searchDepartment == '管理部'}" th:text="#{user.departments.admin}">管理部</option>
-                    <option value="开发部" th:selected="${searchDepartment == '开发部'}" th:text="#{user.departments.development}">開発部</option>
-                    <option value="営業部" th:selected="${searchDepartment == '営業部'}" th:text="#{user.departments.sales}">営業部</option>
-                    <option value="経理部" th:selected="${searchDepartment == '経理部'}" th:text="#{user.departments.accounting}">経理部</option>
-                    <option value="総務部" th:selected="${searchDepartment == '総務部'}" th:text="#{user.departments.generalAffairs}">総務部</option>
+                    <option th:each="dept : ${allDepartments}" th:value="${dept.name}"
+                            th:selected="${searchDepartment == dept.name}" th:text="${dept.name}">開発部</option>
                 </select>
                 <select name="searchDepartment" class="form-select" th:if="${isManager}" disabled>
-                    <option th:value="${user.department}"
-                            th:text="${user.department == '管理部' ? #messages.msg('user.departments.admin') : (user.department == '开发部' ? #messages.msg('user.departments.development') : (user.department == '営業部' ? #messages.msg('user.departments.sales') : (user.department == '経理部' ? #messages.msg('user.departments.accounting') : (user.department == '総務部' ? #messages.msg('user.departments.generalAffairs') : user.department))))}" selected></option>
+                    <option th:value="${user.department}" th:text="${user.department}" selected></option>
                 </select>
             </div>
             <div class="col-md-2 d-flex align-items-end gap-2">
@@ -435,7 +427,7 @@
                             <div class="um-name-secondary">@<span th:text="${u.username}">yamada</span></div>
                         </td>
                         <td style="text-align:center; font-weight:600; color:#475569;"
-                            th:text="${u.department == '管理部' ? #messages.msg('user.departments.admin') : (u.department == '开发部' ? #messages.msg('user.departments.development') : (u.department == '営業部' ? #messages.msg('user.departments.sales') : (u.department == '経理部' ? #messages.msg('user.departments.accounting') : (u.department == '総務部' ? #messages.msg('user.departments.generalAffairs') : u.department))))}">開発部</td>
+                            th:text="${u.department}">開発部</td>
                         <td style="text-align:center;">
                             <span class="type-badge-um"
                                   th:classappend="${u.role == 'ADMIN' ? ' role-admin' : (u.role == 'MANAGER' ? ' role-manager' : (u.role == 'SOUMU' ? ' role-soumu' : ' role-general'))}"
@@ -527,15 +519,13 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label" th:text="#{user.department}">部署</label>
+                                <!-- 無効化された部署も表示する（現在の所属部署のまま保存できるように。他の人を無効な部署に移すことはサーバー側で拒否） -->
                                 <select name="department" id="editDepartment" class="form-select" th:if="${canManageAll}" onchange="refreshEditManagerSelect()">
-                                    <option value="管理部" th:text="#{user.departments.admin}">管理部</option>
-                                    <option value="开发部" th:text="#{user.departments.development}">開発部</option>
-                                    <option value="営業部" th:text="#{user.departments.sales}">営業部</option>
-                                    <option value="経理部" th:text="#{user.departments.accounting}">経理部</option>
-                                    <option value="総務部" th:text="#{user.departments.generalAffairs}">総務部</option>
+                                    <option th:each="dept : ${allDepartments}" th:value="${dept.name}"
+                                            th:text="${dept.active ? dept.name : dept.name + ' ' + #messages.msg('department.inactiveSuffix')}">開発部</option>
                                 </select>
                                 <select name="department" id="editDepartment" class="form-select" th:if="${isManager}" disabled>
-                                    <option th:value="${user.department}" th:text="${user.department == '管理部' ? #messages.msg('user.departments.admin') : (user.department == '开发部' ? #messages.msg('user.departments.development') : (user.department == '営業部' ? #messages.msg('user.departments.sales') : (user.department == '経理部' ? #messages.msg('user.departments.accounting') : (user.department == '総務部' ? #messages.msg('user.departments.generalAffairs') : user.department))))}" selected></option>
+                                    <option th:value="${user.department}" th:text="${user.department}" selected></option>
                                 </select>
                             </div>
                             <div class="col-md-4">

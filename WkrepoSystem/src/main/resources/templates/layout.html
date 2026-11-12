@@ -425,6 +425,18 @@
                         <span th:text="#{nav.users}">社員管理</span>
                     </a>
                 </th:block>
+                <!-- 代理承認者の設定（部長・管理者） -->
+                <a th:if="${user.role == 'ADMIN' or user.role == 'MANAGER'}" href="/approval-delegate" class="nav-item"
+                   th:classappend="${currentPage == 'approval-delegate' ? 'active' : ''}">
+                    <i class="bi bi-person-check"></i>
+                    <span th:text="#{nav.approvalDelegate}">代理承認者</span>
+                </a>
+                <!-- 部署管理（管理者のみ） -->
+                <a th:if="${user.role == 'ADMIN'}" href="/admin/departments" class="nav-item"
+                   th:classappend="${currentPage == 'admin-departments' ? 'active' : ''}">
+                    <i class="bi bi-diagram-3"></i>
+                    <span th:text="#{nav.departments}">部署管理</span>
+                </a>
                 <!-- 祝日管理（管理者のみ） -->
                 <a th:if="${user.role == 'ADMIN'}" href="/admin/holidays" class="nav-item"
                    th:classappend="${currentPage == 'admin-holidays' ? 'active' : ''}">
