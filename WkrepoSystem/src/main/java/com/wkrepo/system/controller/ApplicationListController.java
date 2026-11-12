@@ -193,6 +193,33 @@ public class ApplicationListController {
         return "redirect:/application/list";
     }
 
+    /** 確定済みの月報の差し戻し（総務・管理者、理由必須）。当月のロックが外れ、本人が修正して再提出できる */
+    @PostMapping("/reopen")
+    public String reopenMonthlyReport(@RequestParam("id") Long id,
+                                      @RequestParam(name = "reason", required = false) String reason,
+                                      HttpSession session, RedirectAttributes redirectAttributes) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return "redirect:/login";
+        }
+        try {
+            ApprovalHistoryService.Transition transition = monthlyReportService.reopenReport(id, user, reason);
+            try {
+                applicationNotificationService.notifyApplicant(transition.applicant(), transition.summary(),
+                        ApplicationStatus.REJECTED, user, reason, true);
+            } catch (RuntimeException e) {
+                log.error("[ApplicationListController] 差し戻しの通知でエラー（差し戻しは完了済み） id={}", id, e);
+            }
+            redirectAttributes.addFlashAttribute("successMessage", "monthly.reopened");
+        } catch (SecurityException e) {
+            log.warn("[ApplicationListController] 権限なしの差し戻し要求 id={}, userId={}", id, user.getId());
+            redirectAttributes.addFlashAttribute("errorMessage", messages.of(e));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", messages.of(e));
+        }
+        return "redirect:/application/list";
+    }
+
     @PostMapping("/withdraw")
     public String withdrawMonthlyReport(@RequestParam("id") Long id, HttpSession session,
                                         RedirectAttributes redirectAttributes) {

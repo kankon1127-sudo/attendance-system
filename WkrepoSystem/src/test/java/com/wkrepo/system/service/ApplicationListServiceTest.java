@@ -44,6 +44,8 @@ class ApplicationListServiceTest {
     private MonthlyReportRepository monthlyReportRepository;
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private com.wkrepo.system.repository.ApprovalHistoryRepository approvalHistoryRepository;
 
     @InjectMocks
     private ApplicationListService applicationListService;
@@ -160,6 +162,39 @@ class ApplicationListServiceTest {
     }
 
     @Test
+    void firstStageApproverCannotAlsoFinalize() {
+        // ADMIN が 1 次承認した月報：同じ ADMIN は最終承認できず、総務（または別の ADMIN）が行う
+        monthlyReport(ApplicationStatus.MANAGER_APPROVED, manager.getId());
+        com.wkrepo.system.entity.ApprovalHistory firstStage = new com.wkrepo.system.entity.ApprovalHistory();
+        firstStage.setActorId(admin.getId());
+        when(approvalHistoryRepository.findFirstByApplicationTypeAndApplicationIdAndNextStatusOrderByActionAtDescIdDesc(
+                "MONTHLY_REPORT", 100L, "MANAGER_APPROVED")).thenReturn(Optional.of(firstStage));
+
+        assertThat(canApprove("MONTHLY_REPORT", admin)).isFalse();
+        assertThat(canApprove("MONTHLY_REPORT", soumu)).isTrue();
+        assertThat(canApprove("MONTHLY_REPORT", TestData.user(8L, "ADMIN", "管理部"))).isTrue();
+    }
+
+    @Test
+    void onlySoumuOrAdminCanReopenFinalizedReportOfOthers() {
+        MonthlyReport report = new MonthlyReport();
+        report.setUser(applicant);
+        report.setStatus(ApplicationStatus.FINALIZED);
+
+        assertThat(ApplicationListService.canReopen(soumu, report)).isTrue();
+        assertThat(ApplicationListService.canReopen(admin, report)).isTrue();
+        assertThat(ApplicationListService.canReopen(manager, report)).isFalse();
+        assertThat(ApplicationListService.canReopen(applicant, report)).isFalse();
+
+        report.setUser(soumu);
+        assertThat(ApplicationListService.canReopen(soumu, report)).isFalse(); // 自分の月報は不可
+
+        report.setUser(applicant);
+        report.setStatus(ApplicationStatus.MANAGER_APPROVED); // 未確定は通常の拒否で戻す
+        assertThat(ApplicationListService.canReopen(soumu, report)).isFalse();
+    }
+
+    @Test
     void draftMonthlyReportCannotBeApproved() {
         monthlyReport(ApplicationStatus.DRAFT, manager.getId());
 
@@ -187,6 +222,7 @@ class ApplicationListServiceTest {
 
     private void monthlyReport(ApplicationStatus status, Long approverId) {
         MonthlyReport report = new MonthlyReport();
+        report.setId(100L);
         report.setUser(applicant);
         report.setStatus(status);
         report.setApproverId(approverId);

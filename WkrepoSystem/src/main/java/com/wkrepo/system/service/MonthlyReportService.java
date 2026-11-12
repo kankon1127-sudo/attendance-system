@@ -168,6 +168,24 @@ public class MonthlyReportService {
                 .orElseThrow(() -> new IllegalArgumentException("monthly.error.notFound"));
     }
 
+    /**
+     * 確定済みの月報を差し戻す（総務・管理者のみ、理由は必須）。状態は「拒否」に戻り、当月のロックが外れるので、
+     * 本人が勤怠・経費を直して再提出できる。理由は承認履歴に残る。
+     */
+    @Transactional
+    public ApprovalHistoryService.Transition reopenReport(Long id, User actor, String reason) {
+        MonthlyReport report = monthlyReportRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("monthly.error.notFound"));
+        if (!ApplicationListService.canReopen(actor, report)) {
+            throw new SecurityException("monthly.error.reopenNotAllowed");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("monthly.error.reopenReasonRequired");
+        }
+        log.info("[MonthlyReportService] 確定済み月報の差し戻し reportId={}, actorId={}", id, actor.getId());
+        return approvalHistoryService.transition("MONTHLY_REPORT", id, ApplicationStatus.REJECTED, actor, reason);
+    }
+
     @Transactional
     public void updateStatus(Long id, ApplicationStatus status) {
         log.info("[MonthlyReportService] updateStatus reportId={}, newStatus={}", id, status);

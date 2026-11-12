@@ -17,6 +17,15 @@ public class ApplicationDetailDTO {
     private LocalDateTime applicationDate;
     private boolean canApprove;
     private boolean canWithdraw;
+    private boolean canReopen; // 確定済みの月報を差し戻せるか（総務・管理者）
+
+    public boolean isCanReopen() {
+        return canReopen;
+    }
+
+    public void setCanReopen(boolean canReopen) {
+        this.canReopen = canReopen;
+    }
     private String approveButtonLabel;
 
     private LocalDate expenseDate;

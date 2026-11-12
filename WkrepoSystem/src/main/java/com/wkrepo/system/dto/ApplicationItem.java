@@ -19,6 +19,15 @@ public class ApplicationItem {
     private ApplicationStatus status;
     private boolean canApprove;
     private boolean canWithdraw;
+    private boolean canReopen; // 確定済みの月報を差し戻せるか（総務・管理者）
+
+    public boolean isCanReopen() {
+        return canReopen;
+    }
+
+    public void setCanReopen(boolean canReopen) {
+        this.canReopen = canReopen;
+    }
     private String rejectReason; // 拒否された申請の最新の拒否理由（なければ null）
 
     public String getRejectReason() {

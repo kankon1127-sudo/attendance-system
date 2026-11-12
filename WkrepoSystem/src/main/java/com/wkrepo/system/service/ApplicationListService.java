@@ -81,6 +81,9 @@ public class ApplicationListService {
     @Autowired
     private ApprovalRouteService approvalRouteService;
 
+    @Autowired
+    private com.wkrepo.system.repository.ApprovalHistoryRepository approvalHistoryRepository;
+
     public List<ApplicationItem> getApplicationsForUser(User currentUser) {
         return getApplicationsForUser(currentUser, null, null);
     }
@@ -273,9 +276,7 @@ public class ApplicationListService {
                         .orElse(false);
             case "MONTHLY_REPORT":
                 return monthlyReportRepository.findById(id)
-                        .map(application -> canApprove(scope, application.getUser(),
-                                application.getStatus() != null ? application.getStatus() : ApplicationStatus.DRAFT,
-                                application.getApproverId(), applicationType))
+                        .map(application -> canApproveMonthly(scope, application))
                         .orElse(false);
             default:
                 return false;
@@ -373,11 +374,40 @@ public class ApplicationListService {
         ApplicationStatus status = mr.getStatus() != null ? mr.getStatus() : ApplicationStatus.DRAFT;
         item.setStatus(status);
         // 月報の承認権限判定：approverId を渡す必要がある
-        item.setCanApprove(canApprove(scope, mr.getUser(), status, mr.getApproverId(), "MONTHLY_REPORT"));
+        item.setCanApprove(canApproveMonthly(scope, mr));
         item.setCanWithdraw(currentUser != null && currentUser.getId() != null
                 && mr.getUser() != null && currentUser.getId().equals(mr.getUser().getId())
                 && status == ApplicationStatus.SUBMITTED);
+        item.setCanReopen(canReopen(currentUser, mr));
         return item;
+    }
+
+    /**
+     * 月報の承認可否。canApprove に加え、最終承認（上長承認済 → 確定）は 1 次承認をした本人にはさせない
+     * （同じ人が 2 段階とも承認しないようにする。ADMIN が 1 人で両方行うのも不可）。
+     */
+    private boolean canApproveMonthly(ApprovalScope scope, MonthlyReport report) {
+        ApplicationStatus status = report.getStatus() != null ? report.getStatus() : ApplicationStatus.DRAFT;
+        if (!canApprove(scope, report.getUser(), status, report.getApproverId(), "MONTHLY_REPORT")) {
+            return false;
+        }
+        if (status == ApplicationStatus.MANAGER_APPROVED && report.getId() != null) {
+            Long firstStageApprover = approvalHistoryRepository
+                    .findFirstByApplicationTypeAndApplicationIdAndNextStatusOrderByActionAtDescIdDesc(
+                            "MONTHLY_REPORT", report.getId(), ApplicationStatus.MANAGER_APPROVED.name())
+                    .map(com.wkrepo.system.entity.ApprovalHistory::getActorId)
+                    .orElse(null);
+            return !scope.actor().getId().equals(firstStageApprover);
+        }
+        return true;
+    }
+
+    /** 確定済みの月報を差し戻せるか：総務・管理者（本人の月報は不可） */
+    public static boolean canReopen(User currentUser, MonthlyReport report) {
+        return currentUser != null && report != null
+                && report.getStatus() == ApplicationStatus.FINALIZED
+                && ("SOUMU".equals(currentUser.getRole()) || "ADMIN".equals(currentUser.getRole()))
+                && report.getUser() != null && !currentUser.getId().equals(report.getUser().getId());
     }
 
     /**
@@ -577,10 +607,11 @@ public class ApplicationListService {
         LocalDateTime applyDate = mr.getUpdatedAt() != null ? mr.getUpdatedAt() : mr.getCreatedAt();
         if (applyDate == null) applyDate = LocalDateTime.now();
         dto.setApplicationDate(applyDate);
-        dto.setCanApprove(canApprove(currentUser, applicant, status, mr.getApproverId(), "MONTHLY_REPORT"));
+        dto.setCanApprove(currentUser != null && canApproveMonthly(approvalScope(currentUser), mr));
         dto.setCanWithdraw(currentUser != null && currentUser.getId() != null
                 && applicant != null && currentUser.getId().equals(applicant.getId())
                 && status == ApplicationStatus.SUBMITTED);
+        dto.setCanReopen(canReopen(currentUser, mr));
 
         if (ApplicationStatus.MANAGER_APPROVED.equals(status)
                 && ("SOUMU".equals(currentUser.getRole()) || "ADMIN".equals(currentUser.getRole()))) {

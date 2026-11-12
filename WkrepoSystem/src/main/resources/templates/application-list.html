@@ -663,6 +663,13 @@
                                                 onclick="return askRejectReason(this.form)">拒否</button>
                                     </form>
                                 </th:block>
+                                <!-- 確定済み月報の差し戻し（総務・管理者、理由必須） -->
+                                <form th:if="${app.canReopen}" method="POST" action="/application/reopen" style="display: inline;">
+                                    <input type="hidden" name="id" th:value="${app.id}">
+                                    <input type="hidden" name="reason" value="">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm" th:text="#{application.reopen}"
+                                            onclick="return askReopenReason(this.form)">差し戻し</button>
+                                </form>
                                 <form th:if="${app.canWithdraw}" method="POST" action="/application/withdraw" style="display: inline;">
                                     <input type="hidden" name="id" th:value="${app.id}">
                                     <button type="submit" class="btn btn-outline-secondary"
@@ -791,6 +798,8 @@
             approveConfirm: /*[[#{application.approveConfirm}]]*/ '承認してもよろしいですか？',
             rejectReasonPrompt: /*[[#{application.rejectReasonPrompt}]]*/ '拒否理由を入力してください',
             rejectReason: /*[[#{application.rejectReason}]]*/ '拒否理由',
+            reopen: /*[[#{application.reopen}]]*/ '差し戻し',
+            reopenPrompt: /*[[#{application.reopenPrompt}]]*/ '差し戻しの理由を入力してください',
             approveFailed: /*[[#{application.approveFailed}]]*/ '承認に失敗しました',
             rejectFailed: /*[[#{application.rejectFailed}]]*/ '拒否に失敗しました',
             approveRequestFailed: /*[[#{application.approveRequestFailed}]]*/ '承認リクエストに失敗しました：',
@@ -1245,6 +1254,26 @@
                     '<button type="submit" class="btn btn-outline-secondary btn-withdraw-modal">' +
                     '<i class="bi bi-arrow-counterclockwise"></i> ' + applicationMessages.withdraw + '</button></form>');
             }
+            if (d.canReopen) {
+                footer.insertAdjacentHTML('beforeend',
+                    '<form method="POST" action="/application/reopen" class="d-inline" onsubmit="return askReopenReason(this)">' +
+                    '<input type="hidden" name="id" value="' + escapeHtml(d.id) + '">' +
+                    '<input type="hidden" name="reason" value="">' +
+                    '<button type="submit" class="btn btn-outline-danger">' +
+                    '<i class="bi bi-arrow-return-left"></i> ' + escapeHtml(applicationMessages.reopen) + '</button></form>');
+            }
+        }
+
+        /** 確定済み月報の差し戻し：理由は必須（キャンセルで中止） */
+        function askReopenReason(form) {
+            var reason = '';
+            while (!reason) {
+                var input = prompt(applicationMessages.reopenPrompt, '');
+                if (input === null) return false;
+                reason = input.trim().slice(0, 500);
+            }
+            form.elements['reason'].value = reason;
+            return true;
         }
 
         function renderDetailError(msg) {

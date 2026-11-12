@@ -95,6 +95,14 @@ public class ApplicationNotificationService {
      */
     public Result notifyApplicant(User applicant, String summary, ApplicationStatus nextStatus, User actor,
                                   String comment) {
+        return notifyApplicant(applicant, summary, nextStatus, actor, comment, false);
+    }
+
+    /**
+     * @param reopened 確定済みの月報の差し戻し（結果の表記を「確定取消（差し戻し）」にする）
+     */
+    public Result notifyApplicant(User applicant, String summary, ApplicationStatus nextStatus, User actor,
+                                  String comment, boolean reopened) {
         if (applicant == null || applicant.getId() == null
                 || (actor != null && Objects.equals(applicant.getId(), actor.getId()))) {
             return Result.NOT_APPLICABLE;
@@ -111,7 +119,7 @@ public class ApplicationNotificationService {
         }
 
         boolean rejected = nextStatus == ApplicationStatus.REJECTED;
-        String resultLabel = switch (nextStatus) {
+        String resultLabel = reopened ? "確定取消（差し戻し）" : switch (nextStatus) {
             case REJECTED -> "拒否";
             case MANAGER_APPROVED -> "上司承認（総務の最終承認待ち）";
             case FINALIZED -> "最終承認";
@@ -125,7 +133,8 @@ public class ApplicationNotificationService {
                 .append("結果：").append(resultLabel).append('\n')
                 .append("承認者：").append(actorName).append('\n');
         if (comment != null && !comment.isBlank()) {
-            text.append(rejected ? "拒否理由：" : "コメント：").append(comment.strip()).append('\n');
+            text.append(reopened ? "差し戻しの理由：" : (rejected ? "拒否理由：" : "コメント："))
+                    .append(comment.strip()).append('\n');
         }
         text.append(rejected
                 ? "\n内容を確認し、必要に応じて修正して再申請してください。"
