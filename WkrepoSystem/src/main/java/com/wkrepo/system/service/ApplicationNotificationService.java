@@ -149,6 +149,14 @@ public class ApplicationNotificationService {
         return result;
     }
 
+    /** テキストメールを 1 通送る（宛先が空なら送らない）。システム内通知（NotificationService）からも使う */
+    public Result sendMail(String to, String subject, String text) {
+        if (to == null || to.isBlank()) {
+            return Result.NO_APPLICANT_EMAIL;
+        }
+        return send(to, subject, text);
+    }
+
     private Result send(String to, String subject, String text) {
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
         if (mailSender == null) {

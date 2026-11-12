@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'closing', '締め状況')}">
+<head th:fragment="head">
+    <title th:text="${#messages.msg('page.closing') + ' - ' + #messages.msg('brand.name')}">締め状況</title>
+    <style>
+        .closing-card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 20px;
+                        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); }
+        .closing-counts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+        .closing-count { border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; min-width: 96px; }
+        .closing-count .label { font-size: 12px; color: #64748b; }
+        .closing-count .value { font-size: 20px; font-weight: 700; }
+        .closing-count.action .value { color: #dc2626; }
+        .closing-table td, .closing-table th { vertical-align: middle; white-space: nowrap; }
+        .closing-table tr.needs-action td:first-child { box-shadow: inset 4px 0 0 #dc2626; }
+    </style>
+</head>
+<body>
+<th:block th:fragment="main-content">
+    <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+
+    <div class="closing-card">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <a class="btn btn-outline-secondary btn-sm" th:href="@{/closing(year=${prevYear},month=${prevMonth})}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+                <h5 class="mb-0 fw-bold" th:text="#{team.monthTitle(${'' + year}, ${month})}">2026年10月</h5>
+                <a class="btn btn-outline-secondary btn-sm" th:if="${hasNext}" th:href="@{/closing(year=${nextYear},month=${nextMonth})}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+            <form method="post" th:action="@{/closing/remind}" th:if="${unsubmitted > 0}"
+                  th:data-confirm="#{closing.remindConfirm(${unsubmitted})}" onsubmit="return confirm(this.dataset.confirm);">
+                <input type="hidden" name="year" th:value="${year}">
+                <input type="hidden" name="month" th:value="${month}">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-bell"></i> <span th:text="#{closing.remind(${unsubmitted})}">未提出の 3 名にリマインド</span>
+                </button>
+            </form>
+        </div>
+        <p class="small text-muted" th:text="#{closing.hint}">月報を提出する社員の提出状況です。</p>
+
+        <div class="closing-counts">
+            <div class="closing-count" th:each="entry : ${counts}"
+                 th:classappend="${(entry.key == 'NONE' or entry.key == 'DRAFT' or entry.key == 'REJECTED') and entry.value > 0} ? 'action'">
+                <div class="label" th:text="${entry.key == 'NONE'} ? #{team.reportNone} : ${#messages.msg('application.status.' + entry.key)}">未作成</div>
+                <div class="value" th:text="${entry.value}">0</div>
+            </div>
+            <div class="closing-count">
+                <div class="label" th:text="#{closing.total}">対象者</div>
+                <div class="value" th:text="${total}">0</div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm closing-table js-mobile-card-table">
+                <thead>
+                <tr>
+                    <th th:text="#{user.employeeId}">社員番号</th>
+                    <th th:text="#{team.member}">氏名</th>
+                    <th th:text="#{user.department}">部署</th>
+                    <th th:text="#{team.reportStatus}">月報</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${rows}" th:classappend="${row.needsAction()} ? 'needs-action'">
+                    <td th:text="${row.member().employeeId}">EMP003</td>
+                    <td th:text="${row.member().name}">山田太郎</td>
+                    <td th:text="${row.member().department}">開発部</td>
+                    <td>
+                        <span class="badge" th:classappend="${row.needsAction()} ? 'text-bg-danger' : (${row.status() == 'FINALIZED'} ? 'text-bg-success' : 'text-bg-primary')"
+                              th:text="${row.status() == 'NONE'} ? #{team.reportNone} : ${#messages.msg('application.status.' + row.status())}">未作成</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="small text-muted" th:text="#{closing.legend}">最終承認は申請一覧の一括承認でまとめて行えます。</div>
+    </div>
+</th:block>
+</body>
+</html>

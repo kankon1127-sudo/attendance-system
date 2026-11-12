@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'notifications', 'お知らせ')}">
+<head th:fragment="head">
+    <title th:text="${#messages.msg('page.notifications') + ' - ' + #messages.msg('brand.name')}">お知らせ</title>
+    <style>
+        .notification-card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 20px;
+                             box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); max-width: 860px; }
+        .notification-item { display: flex; gap: 12px; align-items: flex-start; padding: 12px 8px;
+                             border-bottom: 1px solid #f1f5f9; color: inherit; text-decoration: none; }
+        .notification-item:hover { background: #f8fafc; }
+        .notification-item.unread { background: #eff6ff; }
+        .notification-item.unread .notification-message { font-weight: 600; }
+        .notification-icon { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center;
+                             justify-content: center; flex: 0 0 32px; background: #e2e8f0; color: #475569; }
+        .notification-icon.type-AGREEMENT36 { background: #fee2e2; color: #dc2626; }
+        .notification-icon.type-APPROVAL_OVERDUE { background: #fef3c7; color: #b45309; }
+        .notification-icon.type-MONTHLY_UNSUBMITTED { background: #dbeafe; color: #1d4ed8; }
+        .notification-message { white-space: pre-wrap; word-break: break-word; }
+        .notification-time { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+    </style>
+</head>
+<body>
+<th:block th:fragment="main-content">
+    <div class="notification-card">
+        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+            <h5 class="mb-0">
+                <span th:text="#{notification.title}">お知らせ</span>
+                <span class="badge text-bg-primary ms-1" th:if="${unreadNotificationCount > 0}"
+                      th:text="#{notification.unread(${unreadNotificationCount})}">未読 2</span>
+            </h5>
+            <form method="post" th:action="@{/notifications/read-all}" th:if="${unreadNotificationCount > 0}">
+                <button type="submit" class="btn btn-outline-secondary btn-sm" th:text="#{notification.markAllRead}">すべて既読にする</button>
+            </form>
+        </div>
+        <p class="small text-muted" th:text="#{notification.hint}">月報の提出、承認待ち、36協定に関するお知らせです。</p>
+
+        <div class="alert alert-light border" th:if="${notifications.isEmpty()}" th:text="#{notification.none}">お知らせはありません。</div>
+
+        <a th:each="view : ${notifications}" class="notification-item"
+           th:classappend="${view.notification().read} ? '' : 'unread'"
+           th:href="@{/notifications/{id}/open(id=${view.notification().id})}">
+            <span class="notification-icon" th:classappend="${'type-' + view.notification().type}">
+                <i class="bi" th:classappend="${view.notification().type == 'AGREEMENT36'} ? 'bi-exclamation-octagon'
+                        : (${view.notification().type == 'APPROVAL_OVERDUE'} ? 'bi-hourglass-split' : 'bi-calendar-check')"></i>
+            </span>
+            <span>
+                <span class="notification-message d-block" th:text="${view.message()}">前月の月報が未提出です。</span>
+                <span class="notification-time d-block"
+                      th:text="${#temporals.format(view.notification().createdAt, 'yyyy/MM/dd HH:mm')}">2026/11/12 08:00</span>
+            </span>
+        </a>
+    </div>
+</th:block>
+</body>
+</html>
