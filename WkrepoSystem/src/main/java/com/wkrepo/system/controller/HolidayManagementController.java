@@ -13,8 +13,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.io.IOException;
 import java.time.LocalDate;
 
 /**
@@ -81,14 +83,22 @@ public class HolidayManagementController {
     }
 
     @PostMapping("/import")
-    public String importHolidays(@RequestParam("year") int year, HttpSession session,
-                                 RedirectAttributes redirectAttributes) {
+    public String importHolidays(@RequestParam("year") int year,
+                                 @RequestParam(name = "file", required = false) MultipartFile file,
+                                 HttpSession session, RedirectAttributes redirectAttributes) {
         User user = (User) session.getAttribute("user");
         if (!isAdmin(user)) {
             return "redirect:/home?error=permission";
         }
-        int imported = holidayCsvImporter.importMissing();
-        redirectAttributes.addFlashAttribute("successMessage", messages.get("holiday.imported", imported));
+        try {
+            // ファイルが選ばれていればそれを、なければ同梱の CSV を読む
+            int imported = file == null || file.isEmpty()
+                    ? holidayCsvImporter.importMissing()
+                    : holidayCsvImporter.importMissing(file.getBytes());
+            redirectAttributes.addFlashAttribute("successMessage", messages.get("holiday.imported", imported));
+        } catch (IOException | RuntimeException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", messages.of(e));
+        }
         return "redirect:/admin/holidays?year=" + year;
     }
 

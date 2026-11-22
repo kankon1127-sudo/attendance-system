@@ -33,13 +33,17 @@
                 <span th:text="#{holiday.national}">国民の祝日・休日</span>
                 <span class="badge text-bg-secondary ms-1" th:text="${holidays.size()}">0</span>
             </h5>
-            <form method="post" th:action="@{/admin/holidays/import}" class="d-inline">
+            <form method="post" th:action="@{/admin/holidays/import}" enctype="multipart/form-data"
+                  class="d-flex flex-wrap align-items-center gap-2">
                 <input type="hidden" name="year" th:value="${year}">
-                <button type="submit" class="btn btn-outline-primary btn-sm" th:title="#{holiday.importHint}">
-                    <i class="bi bi-cloud-download"></i> <span th:text="#{holiday.import}">CSV から不足分を取り込む</span>
+                <input type="file" name="file" accept=".csv,text/csv" class="form-control form-control-sm"
+                       style="max-width: 260px;">
+                <button type="submit" class="btn btn-outline-primary btn-sm text-nowrap">
+                    <i class="bi bi-cloud-upload"></i> <span th:text="#{holiday.import}">CSV から不足分を取り込む</span>
                 </button>
             </form>
         </div>
+        <p class="small text-muted" th:text="#{holiday.importHint}">内閣府の祝日 CSV のうち、登録されていない日付だけを追加します。</p>
 
         <div class="alert alert-warning py-2" th:if="${holidays.isEmpty()}" th:text="#{holiday.none}">
             この年の祝日は登録されていません。
