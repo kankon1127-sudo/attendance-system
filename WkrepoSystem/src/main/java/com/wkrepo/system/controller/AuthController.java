@@ -122,7 +122,7 @@ public class AuthController {
         model.addAttribute("homeOvertimeHours", statistics.overtimeHours());
         model.addAttribute("homeWorkDays", statistics.workDays());
         model.addAttribute("homeRemainingLeave",
-                paidLeaveService.getBalance(user, today.getYear()).remainingDays());
+                paidLeaveService.getBalance(user, today).remainingDays());
         model.addAttribute("homeMonthlyTrend", monthlyTrend);
         model.addAttribute("homeAgreement36Overtime", monthlyOvertime);
         model.addAttribute("homeAgreement36", agreement36);

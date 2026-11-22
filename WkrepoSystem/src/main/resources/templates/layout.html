@@ -457,6 +457,12 @@
                         <span th:text="#{nav.users}">社員管理</span>
                     </a>
                 </th:block>
+                <!-- 年休管理（総務・管理者） -->
+                <a th:if="${user.role == 'ADMIN' or user.role == 'SOUMU'}" href="/leave-management" class="nav-item"
+                   th:classappend="${currentPage == 'leave-management' ? 'active' : ''}">
+                    <i class="bi bi-calendar2-week"></i>
+                    <span th:text="#{nav.leaveManagement}">年休管理</span>
+                </a>
                 <!-- 締め状況（総務・管理者） -->
                 <a th:if="${user.role == 'ADMIN' or user.role == 'SOUMU'}" href="/closing" class="nav-item"
                    th:classappend="${currentPage == 'closing' ? 'active' : ''}">

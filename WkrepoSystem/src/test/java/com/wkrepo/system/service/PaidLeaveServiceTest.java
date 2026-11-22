@@ -2,13 +2,12 @@ package com.wkrepo.system.service;
 
 import com.wkrepo.system.TestData;
 import com.wkrepo.system.entity.PaidLeave;
-import com.wkrepo.system.entity.PaidLeaveEntitlement;
+import com.wkrepo.system.entity.PaidLeaveGrant;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.enums.ApplicationStatus;
 import com.wkrepo.system.exception.BusinessException;
-import com.wkrepo.system.repository.PaidLeaveEntitlementRepository;
+import com.wkrepo.system.repository.PaidLeaveGrantRepository;
 import com.wkrepo.system.repository.PaidLeaveRepository;
-import com.wkrepo.system.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,19 +20,19 @@ import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** 年休申請：日数（勤務日のみ）・重複・残日数のチェック、削除は本人かつ 申請中 / 拒否 に限る */
+/** 年休申請：日数（勤務日のみ）・重複・残日数（付与台帳）のチェック、削除は本人かつ 申請中 / 拒否 に限る */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class PaidLeaveServiceTest {
@@ -41,9 +40,7 @@ class PaidLeaveServiceTest {
     @Mock
     private PaidLeaveRepository paidLeaveRepository;
     @Mock
-    private PaidLeaveEntitlementRepository entitlementRepository;
-    @Mock
-    private UserRepository userRepository;
+    private PaidLeaveGrantRepository grantRepository;
     @Spy
     private HolidayService holidayService = TestData.holidayService(); // 祝日テーブルなし（計算式で判定）
 
@@ -52,12 +49,13 @@ class PaidLeaveServiceTest {
 
     private final User owner = TestData.user(1L, "GENERAL", "开发部");
     private final User other = TestData.user(2L, "GENERAL", "开发部");
+    private final List<PaidLeaveGrant> grants = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
         when(paidLeaveRepository.save(any(PaidLeave.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        grant(2026, "10");
-        grant(2027, "10");
+        when(grantRepository.findByUserIdOrderByGrantDateAscIdAsc(owner.getId())).thenReturn(grants);
+        grant("2025-10-01", "20");
     }
 
     // ---------- 申請：日数は勤務日だけ ----------
@@ -157,26 +155,27 @@ class PaidLeaveServiceTest {
                 .hasMessage("leave.application.overlap");
     }
 
-    // ---------- 申請：残日数 ----------
+    // ---------- 申請：残日数（付与台帳） ----------
 
     @Test
     void exceedingBalanceIsRejected() {
-        grant(2026, "1");
+        onlyGrant("2025-10-01", "1");
 
         assertThatThrownBy(() -> paidLeaveService.savePaidLeave(apply("2026-11-09", "2026-11-10", "全日")))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("leave.application.insufficient");
+                .hasMessage("leave.application.insufficient")
+                .satisfies(e -> assertThat(((BusinessException) e).getArgs()).containsExactly("1.0", "2.0"));
         verify(paidLeaveRepository, never()).save(any());
     }
 
     @Test
     void pendingLeaveIsDeductedFromAvailableDays() {
-        grant(2026, "3");
+        onlyGrant("2025-10-01", "3");
         // 取得済み 1 日、申請中 1.5 日 → 申請できるのは残り 0.5 日
-        usedAndPending(2026,
-                List.of(existing("2026-06-01", "2026-06-01", "全日", ApplicationStatus.APPROVED)),
-                List.of(existing("2026-07-01", "2026-07-01", "全日", ApplicationStatus.PENDING),
-                        existing("2026-07-02", "2026-07-02", "午前", ApplicationStatus.PENDING)));
+        existingLeaves(
+                existing("2026-06-01", "2026-06-01", "全日", ApplicationStatus.APPROVED),
+                existing("2026-07-01", "2026-07-01", "全日", ApplicationStatus.PENDING),
+                existing("2026-07-02", "2026-07-02", "午前", ApplicationStatus.PENDING));
 
         assertThat(paidLeaveService.savePaidLeave(apply("2026-11-10", null, "午後"))).isNotNull();
         assertThatThrownBy(() -> paidLeaveService.savePaidLeave(apply("2026-11-11", null, "全日")))
@@ -184,25 +183,70 @@ class PaidLeaveServiceTest {
     }
 
     @Test
-    void noEntitlementMeansNoLeave() {
-        when(entitlementRepository.findByUserIdAndYear(owner.getId(), 2026)).thenReturn(Optional.empty());
+    void earlierLeaveCannotTakeDaysAlreadyReservedByLaterPendingLeave() {
+        onlyGrant("2025-10-01", "1");
+        existingLeaves(existing("2026-11-20", "2026-11-20", "全日", ApplicationStatus.PENDING));
 
         assertThatThrownBy(() -> paidLeaveService.savePaidLeave(apply("2026-11-10", null, "全日")))
                 .hasMessage("leave.application.insufficient");
     }
 
     @Test
-    void leaveAcrossYearsIsCheckedPerYear() {
-        // 2026/12/30(水) 〜 2027/1/5(火)：2026 年に 2 日（12/30, 12/31）、2027 年に 2 日（1/4, 1/5）
-        // 2027 年の付与が 1 日しかないので不足（1/1 元日、1/2・1/3 は土日）
-        grant(2027, "1");
+    void noGrantMeansNoLeave() {
+        grants.clear();
 
-        assertThatThrownBy(() -> paidLeaveService.savePaidLeave(apply("2026-12-30", "2027-01-05", "全日")))
+        assertThatThrownBy(() -> paidLeaveService.savePaidLeave(apply("2026-11-10", null, "全日")))
                 .hasMessage("leave.application.insufficient");
+    }
 
-        grant(2027, "2");
-        PaidLeave saved = paidLeaveService.savePaidLeave(apply("2026-12-30", "2027-01-05", "全日"));
-        assertThat(saved.getLeaveDays()).isEqualByComparingTo("4");
+    @Test
+    void expiredGrantCannotBeUsed() {
+        // 2024/4/1 付与は 2026/3/31 で時効
+        onlyGrant("2024-04-01", "10");
+
+        assertThatThrownBy(() -> paidLeaveService.savePaidLeave(apply("2026-11-10", null, "全日")))
+                .hasMessage("leave.application.insufficient");
+        assertThat(paidLeaveService.savePaidLeave(apply("2026-03-31", null, "全日"))).isNotNull();
+    }
+
+    @Test
+    void grantCanBeUsedOnlyFromItsGrantDate() {
+        onlyGrant("2026-12-01", "10");
+
+        assertThatThrownBy(() -> paidLeaveService.savePaidLeave(apply("2026-11-30", null, "全日")))
+                .hasMessage("leave.application.insufficient");
+        assertThat(paidLeaveService.savePaidLeave(apply("2026-12-01", null, "全日"))).isNotNull();
+    }
+
+    @Test
+    void olderGrantIsUsedFirstAndExpiredRemainderIsLost() {
+        onlyGrant("2024-10-01", "5");   // 2026/9/30 で時効
+        grant("2025-10-01", "10");
+        existingLeaves(existing("2026-06-01", "2026-06-03", "全日", ApplicationStatus.APPROVED));
+
+        PaidLeaveLedger.Result ledger = paidLeaveService.ledger(owner);
+        assertThat(ledger.grants().get(0).getUsedDays()).isEqualByComparingTo("3");
+        assertThat(ledger.grants().get(1).getUsedDays()).isEqualByComparingTo("0");
+
+        // 9/30 時点：5 + 10 − 3 = 12 日、10/1 以降は古い付与の残り 2 日が時効で 10 日
+        assertThat(paidLeaveService.getBalance(owner, LocalDate.of(2026, 9, 30)).remainingDays())
+                .isEqualByComparingTo("12");
+        PaidLeaveService.Balance after = paidLeaveService.getBalance(owner, LocalDate.of(2026, 10, 1));
+        assertThat(after.grantedDays()).isEqualByComparingTo("10");
+        assertThat(after.usedDays()).isEqualByComparingTo("0");
+        assertThat(after.remainingDays()).isEqualByComparingTo("10");
+    }
+
+    @Test
+    void takenDaysCountsOnlyApprovedLeavesStartingInPeriod() {
+        existingLeaves(
+                existing("2026-06-01", "2026-06-02", "全日", ApplicationStatus.APPROVED),
+                existing("2026-07-01", "2026-07-01", "午前", ApplicationStatus.FINALIZED),
+                existing("2026-08-01", "2026-08-01", "全日", ApplicationStatus.PENDING),
+                existing("2025-09-30", "2025-09-30", "全日", ApplicationStatus.APPROVED));
+
+        assertThat(paidLeaveService.takenDaysBetween(owner, LocalDate.of(2025, 10, 1), LocalDate.of(2026, 9, 30)))
+                .isEqualByComparingTo("2.5");
     }
 
     @Test
@@ -271,27 +315,33 @@ class PaidLeaveServiceTest {
         return leave;
     }
 
+    /** 既存の申請：重複チェック（期間で検索）と残日数の計算（全件）の両方に返す */
     private void existingLeaves(PaidLeave... leaves) {
         when(paidLeaveRepository.findByUserAndStartDateLessThanEqualAndEndDateGreaterThanEqual(eq(owner), any(), any()))
-                .thenReturn(List.of(leaves));
-    }
-
-    private void usedAndPending(int year, List<PaidLeave> used, List<PaidLeave> pending) {
-        LocalDate yearStart = LocalDate.of(year, 1, 1);
-        LocalDate yearEnd = LocalDate.of(year, 12, 31);
-        when(paidLeaveRepository.findByUserAndStatusInAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
-                eq(owner), anyList(), eq(yearEnd), eq(yearStart))).thenAnswer(invocation -> {
-                    List<ApplicationStatus> statuses = invocation.getArgument(1);
-                    return statuses.contains(ApplicationStatus.APPROVED) ? used : pending;
+                .thenAnswer(invocation -> {
+                    LocalDate end = invocation.getArgument(1);
+                    LocalDate start = invocation.getArgument(2);
+                    return List.of(leaves).stream()
+                            .filter(l -> !l.getStartDate().isAfter(end) && !l.getEndDate().isBefore(start))
+                            .toList();
                 });
+        when(paidLeaveRepository.findByUserOrderByStartDateDesc(owner)).thenReturn(List.of(leaves));
     }
 
-    private void grant(int year, String days) {
-        PaidLeaveEntitlement entitlement = new PaidLeaveEntitlement();
-        entitlement.setUser(owner);
-        entitlement.setYear(year);
-        entitlement.setGrantedDays(new BigDecimal(days));
-        when(entitlementRepository.findByUserIdAndYear(owner.getId(), year)).thenReturn(Optional.of(entitlement));
+    private void grant(String grantDate, String days) {
+        PaidLeaveGrant grant = new PaidLeaveGrant();
+        grant.setId((long) grants.size() + 1);
+        grant.setUser(owner);
+        grant.setGrantDate(LocalDate.parse(grantDate));
+        grant.setExpiryDate(LeaveGrantPolicy.expiryOf(LocalDate.parse(grantDate)));
+        grant.setGrantedDays(new BigDecimal(days));
+        grant.setSource(PaidLeaveGrant.SOURCE_AUTO);
+        grants.add(grant);
+    }
+
+    private void onlyGrant(String grantDate, String days) {
+        grants.clear();
+        grant(grantDate, days);
     }
 
     private PaidLeave stored(ApplicationStatus status) {

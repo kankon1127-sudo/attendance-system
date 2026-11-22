@@ -293,6 +293,23 @@
                 <label class="form-label" th:text="#{user.email}">メールアドレス（通知用）</label>
                 <input type="email" name="email" class="form-control" maxlength="254">
             </div>
+            <!-- 年休の自動付与に使う：入社日・週の所定労働日数・時間（週 4 日以下かつ 30 時間未満は比例付与） -->
+            <div class="col-md-3">
+                <label class="form-label" th:text="#{user.hireDate}">入社日</label>
+                <input type="date" name="hireDate" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" th:text="#{user.weeklyWorkDays}">週の所定労働日数</label>
+                <select name="weeklyWorkDays" class="form-select">
+                    <option value="" th:text="#{user.weeklyWorkDays.fullTime}">5日（通常）</option>
+                    <option th:each="d : ${#numbers.sequence(4, 1, -1)}" th:value="${d}" th:text="#{user.weeklyWorkDays.value(${d})}">4日</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" th:text="#{user.weeklyWorkHours}">週の所定労働時間</label>
+                <input type="number" name="weeklyWorkHours" class="form-control" min="1" max="60" step="0.5"
+                       th:placeholder="#{user.weeklyWorkHours.placeholder}">
+            </div>
             <div class="col-md-3">
                 <label class="form-label" th:text="#{user.department}">部署</label>
                 <!-- 部署マスタの有効な部署から選ぶ -->
@@ -456,6 +473,9 @@
                                                  data-name=${u.name},
                                                  data-username=${u.username},
                                                  data-email=${u.email},
+                                                 data-hire-date=${u.hireDate},
+                                                 data-weekly-days=${u.weeklyWorkDays},
+                                                 data-weekly-hours=${u.weeklyWorkHours},
                                                  data-department=${u.department},
                                                  data-role=${u.role},
                                                  data-manager-id=${u.managerId}">
@@ -516,6 +536,22 @@
                             <div class="col-md-4">
                                 <label class="form-label" th:text="#{user.email}">メールアドレス（通知用）</label>
                                 <input type="email" name="email" id="editEmail" class="form-control" maxlength="254">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" th:text="#{user.hireDate}">入社日</label>
+                                <input type="date" name="hireDate" id="editHireDate" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" th:text="#{user.weeklyWorkDays}">週の所定労働日数</label>
+                                <select name="weeklyWorkDays" id="editWeeklyWorkDays" class="form-select">
+                                    <option value="" th:text="#{user.weeklyWorkDays.fullTime}">5日（通常）</option>
+                                    <option th:each="d : ${#numbers.sequence(4, 1, -1)}" th:value="${d}" th:text="#{user.weeklyWorkDays.value(${d})}">4日</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" th:text="#{user.weeklyWorkHours}">週の所定労働時間</label>
+                                <input type="number" name="weeklyWorkHours" id="editWeeklyWorkHours" class="form-control"
+                                       min="1" max="60" step="0.5" th:placeholder="#{user.weeklyWorkHours.placeholder}">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label" th:text="#{user.department}">部署</label>
@@ -716,6 +752,9 @@
             document.getElementById('editName').value = name;
             document.getElementById('editUsername').value = btn.getAttribute('data-username') || '';
             document.getElementById('editEmail').value = btn.getAttribute('data-email') || '';
+            document.getElementById('editHireDate').value = btn.getAttribute('data-hire-date') || '';
+            document.getElementById('editWeeklyWorkDays').value = btn.getAttribute('data-weekly-days') || '';
+            document.getElementById('editWeeklyWorkHours').value = btn.getAttribute('data-weekly-hours') || '';
             document.getElementById('editPassword').value = '';
             try { document.getElementById('editDepartment').value = btn.getAttribute('data-department') || ''; } catch (e) {}
             try { document.getElementById('editRole').value = btn.getAttribute('data-role') || 'GENERAL'; } catch (e) {}

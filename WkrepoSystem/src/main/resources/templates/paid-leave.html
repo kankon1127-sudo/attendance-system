@@ -264,27 +264,25 @@
 </head>
 <body>
 <th:block th:fragment="main-content">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <a class="btn btn-outline-secondary" th:href="@{/paid-leave(year=${year - 1})}">
-            <i class="bi bi-chevron-left"></i>
-            <span th:text="#{common.previousYear}">前年</span>
-        </a>
-        <h4 class="mb-0" th:text="${year} + #{common.year}">2026年</h4>
-        <a class="btn btn-outline-secondary" th:href="@{/paid-leave(year=${year + 1})}">
-            <span th:text="#{common.nextYear}">次年</span>
-            <i class="bi bi-chevron-right"></i>
-        </a>
-    </div>
-    <div class="alert alert-success" th:if="${entitlementSaved}" th:text="#{leave.entitlementSaved}"></div>
-    <div class="alert alert-danger" th:if="${entitlementError}" th:text="${entitlementError}"></div>
     <div class="alert alert-danger" th:if="${leaveError}" th:text="${leaveError}"></div>
     <div class="alert alert-success" th:if="${notificationStatus == 'SENT'}"
          th:text="${#messages.msg('notification.' + #strings.toLowerCase(notificationStatus))}"></div>
     <div class="alert alert-warning" th:if="${notificationStatus != null and notificationStatus != 'SENT' and notificationStatus != 'NOT_APPLICABLE'}"
          th:text="${#messages.msg('notification.' + #strings.toLowerCase(notificationStatus))}"></div>
+
+    <!-- 今日時点の残日数（時効になっていない付与の合計） -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+        <div class="small text-muted">
+            <span th:text="#{leave.asOf(${#temporals.format(today, 'yyyy/MM/dd')})}">2026/11/22 時点</span>
+            <span class="ms-2" th:if="${hireDate != null}" th:text="#{leave.hireDate(${#temporals.format(hireDate, 'yyyy/MM/dd')})}">入社日 2024/04/01</span>
+        </div>
+        <a class="btn btn-outline-primary btn-sm" th:if="${canManageGrants}" th:href="@{/leave-management}">
+            <i class="bi bi-gear"></i> <span th:text="#{nav.leaveManagement}">年休管理</span>
+        </a>
+    </div>
     <div class="stat-cards">
         <div class="stat-card blue">
-            <div class="stat-label" th:text="#{leave.grantedDays}">付与日数</div>
+            <div class="stat-label" th:text="#{leave.grantedDaysValid}">有効な付与日数</div>
             <div class="stat-value blue" th:text="${grantedDays} + #{common.daysUnit}">20日</div>
         </div>
         <div class="stat-card green">
@@ -301,39 +299,57 @@
         </div>
     </div>
 
-    <div class="history-card mb-4" th:if="${canManageEntitlements}">
-        <div class="history-title" th:text="#{leave.entitlementManagement}">年休付与日数の設定</div>
-        <p class="text-muted" th:text="#{leave.entitlementHelp}">社員ごとに対象年の年休付与日数を設定してください。</p>
-        <div class="table-responsive">
+    <!-- 年 5 日取得義務の進捗（10 日以上付与された人） -->
+    <div class="alert mb-3" th:if="${obligation != null}"
+         th:classappend="${obligation.status().name() == 'DONE'} ? 'alert-success'
+                : (${obligation.status().name() == 'IN_PROGRESS'} ? 'alert-light border' : 'alert-danger')">
+        <div class="fw-bold">
+            <i class="bi bi-calendar2-check me-1"></i>
+            <span th:text="#{leave.obligation.title}">年 5 日の取得義務</span>
+        </div>
+        <div th:text="#{leave.obligation.progress(${#temporals.format(obligation.grant().grantDate, 'yyyy/MM/dd')}, ${#temporals.format(obligation.deadline(), 'yyyy/MM/dd')}, ${obligation.taken()}, ${obligation.remaining()})}">
+            2025/10/01〜2026/09/30 の間に 5 日以上取得する必要があります（取得済み 2.0 日、あと 3.0 日）。
+        </div>
+    </div>
+
+    <!-- 付与の履歴（古い付与から順に使われ、付与日から 2 年で時効） -->
+    <div class="history-card mb-4">
+        <div class="history-title" th:text="#{leave.grantHistory}">付与の履歴</div>
+        <p class="text-muted small mb-2" th:text="#{leave.grantHistoryHint}">年休は古い付与から順に使われ、付与日から 2 年で時効になります。</p>
+        <div class="alert alert-light border py-2" th:if="${hireDate == null}" th:text="#{leave.noHireDate}">入社日が登録されていないため、年休は自動付与されません。</div>
+        <div class="table-responsive" th:unless="${grantHistory.isEmpty()}">
             <table class="history-table js-mobile-card-table">
                 <thead>
                     <tr>
-                        <th th:text="#{user.employeeId}">社員番号</th>
-                        <th th:text="#{user.name}">氏名</th>
-                        <th th:text="#{user.department}">部署</th>
-                        <th th:text="#{leave.grantedDays}">付与日数</th>
-                        <th th:text="#{common.operation}">操作</th>
+                        <th th:text="#{leave.grant.date}">付与日</th>
+                        <th th:text="#{leave.grant.days}">付与日数</th>
+                        <th th:text="#{leave.grant.expiry}">有効期限</th>
+                        <th th:text="#{leave.usedDays}">取得済み</th>
+                        <th th:text="#{leave.pendingDays}">承認待ち</th>
+                        <th th:text="#{leave.grant.remaining}">残り</th>
+                        <th th:text="#{leave.grant.source}">区分</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="entitlement : ${entitlements}">
-                        <td th:text="${entitlement.employeeId}">EMP001</td>
-                        <td th:text="${entitlement.name}">社員名</td>
-                        <td th:text="${entitlement.department}">部署</td>
-                        <td colspan="2">
-                            <form method="post" th:action="@{/paid-leave/entitlement}"
-                                  class="d-flex align-items-center gap-2">
-                                <input type="hidden" name="userId" th:value="${entitlement.userId}">
-                                <input type="hidden" name="year" th:value="${year}">
-                                <input type="number" name="grantedDays" class="form-control"
-                                       min="0" max="365" step="0.1" required
-                                       th:value="${entitlement.grantedDays}" style="max-width:120px;">
-                                <button type="submit" class="btn btn-outline-primary" th:text="#{common.save}">保存</button>
-                            </form>
+                    <tr th:each="usage : ${grantHistory}" th:classappend="${usage.isValidOn(today)} ? '' : 'text-muted'">
+                        <td th:text="${#temporals.format(usage.grant.grantDate, 'yyyy/MM/dd')}">2025/10/01</td>
+                        <td th:text="${usage.grant.grantedDays} + #{common.daysUnit}">11日</td>
+                        <td>
+                            <span th:text="${#temporals.format(usage.grant.expiryDate, 'yyyy/MM/dd')}">2027/09/30</span>
+                            <span class="badge text-bg-secondary ms-1" th:if="${usage.grant.expiryDate.isBefore(today)}" th:text="#{leave.grant.expired}">時効</span>
+                            <span class="badge text-bg-light text-dark ms-1" th:if="${usage.grant.grantDate.isAfter(today)}" th:text="#{leave.grant.future}">付与前</span>
                         </td>
+                        <td th:text="${usage.usedDays} + #{common.daysUnit}">0日</td>
+                        <td th:text="${usage.pendingDays} + #{common.daysUnit}">0日</td>
+                        <td class="fw-bold" th:text="${usage.isValidOn(today) ? usage.remainingDays + #messages.msg('common.daysUnit') : '-'}">11日</td>
+                        <td th:text="${#messages.msg('leave.grant.source.' + usage.grant.source)}">自動</td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+        <div class="small text-muted mt-2" th:if="${nextGrant != null}"
+             th:text="#{leave.nextGrant(${#temporals.format(nextGrant.grantDate(), 'yyyy/MM/dd')}, ${nextGrant.days()})}">
+            次回の付与予定：2026/10/01 に 12 日（出勤率 8 割以上の場合）
         </div>
     </div>
 

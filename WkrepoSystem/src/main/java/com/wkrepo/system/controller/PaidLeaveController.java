@@ -5,10 +5,10 @@ import com.wkrepo.system.entity.PaidLeave;
 import com.wkrepo.system.exception.BusinessException;
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.service.ApplicationNotificationService;
+import com.wkrepo.system.service.LeaveGrantPolicy;
+import com.wkrepo.system.service.LeaveGrantService;
 import com.wkrepo.system.service.PaidLeaveService;
 import jakarta.servlet.http.HttpSession;
-import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +20,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Controller
@@ -36,10 +35,10 @@ public class PaidLeaveController {
     private ApplicationNotificationService applicationNotificationService;
 
     @Autowired
-    private MessageSource messageSource;
+    private Messages messages;
 
     @Autowired
-    private Messages messages;
+    private LeaveGrantService leaveGrantService;
 
     /**
      * 申請フォームから受け取る項目だけをバインドする。
@@ -50,71 +49,35 @@ public class PaidLeaveController {
         binder.setAllowedFields("startDate", "endDate", "leaveType", "remarks");
     }
 
+    /**
+     * 年休画面：今日時点の残日数、付与の履歴（有効期限・使用状況）、次回の付与予定、年 5 日取得義務の進捗、申請履歴。
+     * 付与の管理（手動付与など）は総務・管理者の「年休管理」画面（LeaveManagementController）で行う。
+     */
     @GetMapping
-    public String showPaidLeave(
-            @RequestParam(name = "year", required = false) Integer requestedYear,
-            HttpSession session,
-            Model model) {
-        
-        logger.info("Entering showPaidLeave");
-        
+    public String showPaidLeave(HttpSession session, Model model) {
         User user = (User) session.getAttribute("user");
         if (user == null) {
-            logger.warn("User not authenticated, redirecting to login");
             return "redirect:/login";
         }
-        
-        logger.debug("Processing for user: {}", user.getId());
-        int year = requestedYear == null ? LocalDate.now().getYear() : requestedYear;
-        List<PaidLeave> leaves = paidLeaveService.getPaidLeavesByUser(user);
-        logger.debug("Retrieved {} leaves for user", leaves.size());
 
-        PaidLeaveService.Balance balance = paidLeaveService.getBalance(user, year);
+        LocalDate today = LocalDate.now();
+        List<PaidLeave> leaves = paidLeaveService.getPaidLeavesByUser(user);
+        PaidLeaveService.Balance balance = paidLeaveService.getBalance(user, today);
 
         model.addAttribute("leaves", leaves);
-        model.addAttribute("year", year);
         model.addAttribute("grantedDays", balance.grantedDays());
         model.addAttribute("usedDays", balance.usedDays());
         model.addAttribute("remainingDays", balance.remainingDays());
         model.addAttribute("pendingDays", balance.pendingDays());
+        model.addAttribute("today", today);
+        model.addAttribute("grantHistory", leaveGrantService.grantHistory(user));
+        model.addAttribute("nextGrant", LeaveGrantPolicy.nextSchedule(user, today));
+        model.addAttribute("obligation", leaveGrantService.currentObligation(user));
+        model.addAttribute("hireDate", user.getHireDate());
+        model.addAttribute("canManageGrants", "ADMIN".equals(user.getRole()) || "SOUMU".equals(user.getRole()));
         model.addAttribute("user", user);
-        boolean canManageEntitlements = "ADMIN".equals(user.getRole());
-        model.addAttribute("canManageEntitlements", canManageEntitlements);
-        if (canManageEntitlements) {
-            model.addAttribute("entitlements", paidLeaveService.getEntitlementsForYear(year));
-        }
-        
         model.addAttribute("newLeave", new PaidLeave());
-        
-        logger.info("Successfully prepared model attributes for paid leave view");
-        
         return "paid-leave";
-    }
-
-    @PostMapping("/entitlement")
-    public String saveEntitlement(
-            @RequestParam("userId") Long userId,
-            @RequestParam("year") int year,
-            @RequestParam("grantedDays") BigDecimal grantedDays,
-            HttpSession session,
-            RedirectAttributes redirectAttributes) {
-        User user = (User) session.getAttribute("user");
-        if (user == null) {
-            return "redirect:/login";
-        }
-        if (!"ADMIN".equals(user.getRole())) {
-            return "redirect:/home?error=permission";
-        }
-        try {
-            paidLeaveService.setAnnualEntitlement(userId, year, grantedDays);
-            redirectAttributes.addFlashAttribute("entitlementSaved", true);
-        } catch (IllegalArgumentException exception) {
-            logger.warn("Invalid annual leave entitlement userId={}, year={}", userId, year, exception);
-            redirectAttributes.addFlashAttribute("entitlementError",
-                    messageSource.getMessage(exception.getMessage(), null, exception.getMessage(),
-                            LocaleContextHolder.getLocale()));
-        }
-        return "redirect:/paid-leave?year=" + year;
     }
     
     /** 「取得予定日数」の表示用。勤務日（土日・祝日・会社休日を除く）だけを数えた日数を返す */

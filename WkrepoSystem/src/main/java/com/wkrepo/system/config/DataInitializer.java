@@ -2,9 +2,7 @@ package com.wkrepo.system.config;
 
 import com.wkrepo.system.entity.User;
 import com.wkrepo.system.entity.DefaultAttendanceSetting;
-import com.wkrepo.system.repository.PaidLeaveEntitlementRepository;
 import com.wkrepo.system.repository.UserRepository;
-import com.wkrepo.system.service.PaidLeaveService;
 import com.wkrepo.system.service.DefaultAttendanceSettingService;
 import com.wkrepo.system.service.UserService;
 import jakarta.annotation.PostConstruct;
@@ -15,6 +13,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -45,15 +44,7 @@ public class DataInitializer {
     private UserService userService;
 
     @Autowired
-    private PaidLeaveService paidLeaveService;
-
-    @Autowired
-    private PaidLeaveEntitlementRepository entitlementRepository;
-
-    @Autowired
     private com.wkrepo.system.service.DepartmentService departmentService;
-
-    private static final java.math.BigDecimal DEMO_ANNUAL_LEAVE_DAYS = new java.math.BigDecimal("10");
 
     @PostConstruct
     public void init() {
@@ -86,7 +77,7 @@ public class DataInitializer {
         // 2. テストアカウントは dev モードでのみ作成
         if (devMode) {
             createTestAccounts();
-            grantDemoEntitlements();
+            setDemoHireDates();
         }
 
         // 3. 部署マスタ：ユーザーが使っている部署名でマスタにないものを登録する（マスタ導入前のデータ用）
@@ -97,19 +88,25 @@ public class DataInitializer {
     }
 
     /**
-     * dev モード：テストアカウントに今年の年休を 10 日付与する（未設定の場合のみ）。
-     * 年休申請は残日数を超えるとできないため、付与がないとデモで申請できない。
+     * dev モード：テストアカウントに入社日を設定する（未設定の場合のみ）。
+     * 起動後に LeaveGrantRunner が入社日から年休を自動付与するので、デモでもすぐに年休を申請できる。
+     * 勤続年数がばらけるよう、今日からさかのぼった日付にする。
      */
-    private void grantDemoEntitlements() {
-        int year = java.time.Year.now().getValue();
-        for (String username : new String[] {"admin", "manager", "employee1", "employee2", "soumu"}) {
-            userRepository.findByUsername(username).ifPresent(user -> {
-                if (entitlementRepository.findByUserIdAndYear(user.getId(), year).isEmpty()) {
-                    paidLeaveService.setAnnualEntitlement(user.getId(), year, DEMO_ANNUAL_LEAVE_DAYS);
-                    logger.info("【付与】テストアカウント {} に {} 年の年休 {} 日", username, year, DEMO_ANNUAL_LEAVE_DAYS);
-                }
-            });
-        }
+    private void setDemoHireDates() {
+        java.time.LocalDate today = java.time.LocalDate.now();
+        Map<String, java.time.LocalDate> hireDates = new java.util.LinkedHashMap<>();
+        hireDates.put("admin", today.minusYears(8).minusMonths(2));
+        hireDates.put("manager", today.minusYears(5).minusMonths(1));
+        hireDates.put("soumu", today.minusYears(3).minusMonths(4));
+        hireDates.put("employee1", today.minusYears(2).minusMonths(3));
+        hireDates.put("employee2", today.minusMonths(7)); // 先月、初回の 10 日が付与される
+        hireDates.forEach((username, hireDate) -> userRepository.findByUsername(username).ifPresent(user -> {
+            if (user.getHireDate() == null) {
+                user.setHireDate(hireDate);
+                userRepository.save(user);
+                logger.info("【入社日】テストアカウント {} の入社日を {} に設定しました", username, hireDate);
+            }
+        }));
     }
 
     private void createInitialAdmin(boolean devMode) {

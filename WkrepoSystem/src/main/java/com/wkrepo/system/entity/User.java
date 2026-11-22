@@ -40,6 +40,42 @@ public class User {
     @Column(name = "status", length = 20)
     private String status;
 
+    /** 入社日（年休の自動付与の基準日。未設定なら自動付与しない） */
+    @Column(name = "hire_date")
+    private java.time.LocalDate hireDate;
+
+    /** 週の所定労働日数（1〜5。未設定は 5 日＝通常の付与） */
+    @Column(name = "weekly_work_days")
+    private Integer weeklyWorkDays;
+
+    /** 週の所定労働時間（未設定は 30 時間以上とみなす）。週 4 日以下かつ 30 時間未満なら比例付与 */
+    @Column(name = "weekly_work_hours", precision = 4, scale = 1)
+    private java.math.BigDecimal weeklyWorkHours;
+
+    public java.time.LocalDate getHireDate() {
+        return hireDate;
+    }
+
+    public void setHireDate(java.time.LocalDate hireDate) {
+        this.hireDate = hireDate;
+    }
+
+    public Integer getWeeklyWorkDays() {
+        return weeklyWorkDays;
+    }
+
+    public void setWeeklyWorkDays(Integer weeklyWorkDays) {
+        this.weeklyWorkDays = weeklyWorkDays;
+    }
+
+    public java.math.BigDecimal getWeeklyWorkHours() {
+        return weeklyWorkHours;
+    }
+
+    public void setWeeklyWorkHours(java.math.BigDecimal weeklyWorkHours) {
+        this.weeklyWorkHours = weeklyWorkHours;
+    }
+
     /** 代理承認者（不在時にこの人の代わりに承認する部長・管理者）。期間外は無効 */
     @Column(name = "approval_delegate_id")
     private Long approvalDelegateId;

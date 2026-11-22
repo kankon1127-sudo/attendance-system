@@ -147,6 +147,9 @@ public class UserManagementController {
             @RequestParam("department") String department,
             @RequestParam("role") String role,
             @RequestParam(value = "managerId", required = false) Long managerId,
+            @RequestParam(value = "hireDate", required = false) String hireDate,
+            @RequestParam(value = "weeklyWorkDays", required = false) String weeklyWorkDays,
+            @RequestParam(value = "weeklyWorkHours", required = false) String weeklyWorkHours,
             HttpSession session,
             RedirectAttributes redirectAttributes) {
 
@@ -186,6 +189,7 @@ public class UserManagementController {
             newUser.setDepartment(department);
             newUser.setRole(role);
             newUser.setManagerId(managerId != null && managerId > 0 ? managerId : null);
+            applyWorkPattern(newUser, hireDate, weeklyWorkDays, weeklyWorkHours);
             newUser.setStatus("ACTIVE");
             User saved = userService.createUser(newUser);
             defaultAttendanceSettingService.save(new DefaultAttendanceSetting(saved));
@@ -207,6 +211,9 @@ public class UserManagementController {
             @RequestParam(value = "department", required = false) String department,
             @RequestParam(value = "role", required = false) String role,
             @RequestParam(value = "managerId", required = false) Long managerId,
+            @RequestParam(value = "hireDate", required = false) String hireDate,
+            @RequestParam(value = "weeklyWorkDays", required = false) String weeklyWorkDays,
+            @RequestParam(value = "weeklyWorkHours", required = false) String weeklyWorkHours,
             @RequestParam(name = "searchName", required = false) String searchName,
             @RequestParam(name = "searchDepartment", required = false) String searchDepartment,
             HttpSession session,
@@ -318,6 +325,12 @@ public class UserManagementController {
             }
         }
 
+        try {
+            applyWorkPattern(targetUser, hireDate, weeklyWorkDays, weeklyWorkHours);
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", messages.of(e));
+            return buildListRedirect(searchName, searchDepartment);
+        }
         targetUser.setDepartment(finalDept);
         targetUser.setRole(finalRole);
         try {
@@ -397,6 +410,49 @@ public class UserManagementController {
             redirectUrl.append(hasParam ? "&" : "?").append("searchDepartment=").append(searchDepartment);
         }
         return redirectUrl.toString();
+    }
+
+    /**
+     * 年休の自動付与に使う項目（入社日・週の所定労働日数・時間）を設定する。
+     * パラメータが送られていない（null）項目は変更せず、空文字は未設定に戻す。
+     */
+    static void applyWorkPattern(User user, String hireDate, String weeklyWorkDays, String weeklyWorkHours) {
+        if (hireDate != null) {
+            try {
+                user.setHireDate(hireDate.isBlank() ? null : java.time.LocalDate.parse(hireDate.trim()));
+            } catch (java.time.format.DateTimeParseException e) {
+                throw new IllegalArgumentException("user.error.invalidHireDate");
+            }
+        }
+        if (weeklyWorkDays != null) {
+            Integer days = null;
+            if (!weeklyWorkDays.isBlank()) {
+                try {
+                    days = Integer.valueOf(weeklyWorkDays.trim());
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("user.error.invalidWorkPattern");
+                }
+                if (days < 1 || days > 7) {
+                    throw new IllegalArgumentException("user.error.invalidWorkPattern");
+                }
+            }
+            // 5 日以上は通常の付与なので未設定と同じ扱いにする
+            user.setWeeklyWorkDays(days == null || days >= 5 ? null : days);
+        }
+        if (weeklyWorkHours != null) {
+            java.math.BigDecimal hours = null;
+            if (!weeklyWorkHours.isBlank()) {
+                try {
+                    hours = new java.math.BigDecimal(weeklyWorkHours.trim());
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("user.error.invalidWorkPattern");
+                }
+                if (hours.signum() <= 0 || hours.compareTo(new java.math.BigDecimal("80")) > 0) {
+                    throw new IllegalArgumentException("user.error.invalidWorkPattern");
+                }
+            }
+            user.setWeeklyWorkHours(hours);
+        }
     }
 
     private String normalizeEmail(String email) {

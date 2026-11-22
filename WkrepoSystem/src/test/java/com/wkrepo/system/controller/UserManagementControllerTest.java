@@ -132,7 +132,7 @@ class UserManagementControllerTest {
         RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
 
         controller.updateUser(employee.getId(), null, "user2", null, null, null, null, null, null,
-                null, null, sessionOf(admin), redirect);
+                null, null, null, null, null, sessionOf(admin), redirect);
 
         assertThat((String) redirect.getFlashAttributes().get("errorMessage")).contains("user2");
         assertThat(employee.getUsername()).isEqualTo("user4");
@@ -145,7 +145,7 @@ class UserManagementControllerTest {
         RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
 
         controller.updateUser(employee.getId(), null, null, "EMP2", null, null, null, null, null,
-                null, null, sessionOf(admin), redirect);
+                null, null, null, null, null, sessionOf(admin), redirect);
 
         assertThat(redirect.getFlashAttributes()).containsKey("errorMessage");
         verify(userRepository, never()).save(any());
@@ -158,7 +158,7 @@ class UserManagementControllerTest {
         RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
 
         controller.updateUser(employee.getId(), "NewName", "user4", "EMP4", null, null, null, null, null,
-                null, null, sessionOf(admin), redirect);
+                null, null, null, null, null, sessionOf(admin), redirect);
 
         assertThat(redirect.getFlashAttributes()).containsKey("successMessage");
         verify(userRepository).save(employee);
@@ -173,7 +173,7 @@ class UserManagementControllerTest {
         RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
 
         controller.updateUser(employee.getId(), null, null, null, null, null, "存在しない部", null, null,
-                null, null, sessionOf(admin), redirect);
+                null, null, null, null, null, sessionOf(admin), redirect);
 
         assertThat(redirect.getFlashAttributes()).containsKey("errorMessage");
         assertThat(employee.getDepartment()).isEqualTo("开发部");
@@ -186,7 +186,7 @@ class UserManagementControllerTest {
         RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
 
         controller.updateUser(employee.getId(), null, null, null, null, null, " 営業部 ", null, null,
-                null, null, sessionOf(admin), redirect);
+                null, null, null, null, null, sessionOf(admin), redirect);
 
         assertThat(redirect.getFlashAttributes()).containsKey("successMessage");
         assertThat(employee.getDepartment()).isEqualTo("営業部");
@@ -198,7 +198,7 @@ class UserManagementControllerTest {
         RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
 
         controller.updateUser(employee.getId(), null, "newname", null, null, null, null, null, null,
-                null, null, sessionOf(admin), redirect);
+                null, null, null, null, null, sessionOf(admin), redirect);
 
         assertThat(redirect.getFlashAttributes()).containsKey("errorMessage");
     }
@@ -212,7 +212,7 @@ class UserManagementControllerTest {
     private RedirectAttributesModelMap update(User actor, User target, String password, String role) {
         RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
         controller.updateUser(target.getId(), null, null, null, null, password, null, role, null,
-                null, null, sessionOf(actor), redirect);
+                null, null, null, null, null, sessionOf(actor), redirect);
         return redirect;
     }
 

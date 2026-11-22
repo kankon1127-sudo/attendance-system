@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout :: layout(~{::head}, ~{::main-content}, 'leave-management', '年休管理')}">
+<head th:fragment="head">
+    <title th:text="${#messages.msg('page.leave-management') + ' - ' + #messages.msg('brand.name')}">年休管理</title>
+    <style>
+        .lm-card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 20px;
+                   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); }
+        .lm-table td, .lm-table th { vertical-align: middle; white-space: nowrap; }
+        .lm-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+        .lm-stats { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+        .lm-stats span.value { font-weight: 700; margin-left: 4px; }
+    </style>
+</head>
+<body>
+<th:block th:fragment="main-content">
+    <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+    <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+    <div class="lm-card">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <a class="btn btn-outline-secondary btn-sm" th:href="@{/leave-management}">
+                <i class="bi bi-arrow-left"></i> <span th:text="#{leave.management.title}">年休管理</span>
+            </a>
+            <h5 class="mb-0 fw-bold">
+                <span th:text="${target.name}">山田太郎</span>
+                <small class="text-muted fw-normal" th:text="${target.employeeId + ' / ' + target.department}">EMP003 / 開発部</small>
+            </h5>
+        </div>
+        <div class="lm-stats small mb-2">
+            <div><span th:text="#{user.hireDate}">入社日</span>
+                <span class="value" th:text="${target.hireDate != null} ? ${#temporals.format(target.hireDate, 'yyyy/MM/dd')} : #{leave.management.noHireDate}">2024/04/01</span></div>
+            <div><span th:text="#{leave.management.workPattern}">所定</span>
+                <span class="value" th:text="${proportional} ? #{leave.management.proportional(${target.weeklyWorkDays})} : #{leave.management.fullTime}">通常</span></div>
+            <div><span th:text="#{leave.remainingDays}">残日数</span>
+                <span class="value" th:text="${balance.remainingDays()} + #{common.daysUnit}">11日</span></div>
+            <div><span th:text="#{leave.pendingDays}">承認待ち</span>
+                <span class="value" th:text="${balance.pendingDays()} + #{common.daysUnit}">0日</span></div>
+            <div th:if="${nextGrant != null}"><span th:text="#{leave.management.nextGrant}">次回付与</span>
+                <span class="value" th:text="${#temporals.format(nextGrant.grantDate(), 'yyyy/MM/dd') + ' ' + nextGrant.days() + #messages.msg('common.daysUnit')}">2026/10/01 12日</span></div>
+        </div>
+        <div class="small text-muted mb-2" th:if="${target.hireDate == null}" th:text="#{leave.management.hireDateHint}">入社日は社員管理で登録してください。</div>
+
+        <div class="alert py-2" th:if="${obligation != null}"
+             th:classappend="${obligation.status().name() == 'DONE'} ? 'alert-success'
+                    : (${obligation.status().name() == 'IN_PROGRESS'} ? 'alert-light border' : 'alert-danger')"
+             th:text="#{leave.obligation.progress(${#temporals.format(obligation.grant().grantDate, 'yyyy/MM/dd')}, ${#temporals.format(obligation.deadline(), 'yyyy/MM/dd')}, ${obligation.taken()}, ${obligation.remaining()})}">
+            年 5 日の取得義務
+        </div>
+    </div>
+
+    <div class="lm-card">
+        <h6 class="mb-2" th:text="#{leave.grantHistory}">付与の履歴</h6>
+        <div class="table-responsive">
+            <table class="table table-sm lm-table js-mobile-card-table">
+                <thead>
+                <tr>
+                    <th th:text="#{leave.grant.date}">付与日</th>
+                    <th class="text-end" th:text="#{leave.grant.days}">付与日数</th>
+                    <th th:text="#{leave.grant.expiry}">有効期限</th>
+                    <th class="text-end" th:text="#{leave.usedDays}">取得済み</th>
+                    <th class="text-end" th:text="#{leave.pendingDays}">承認待ち</th>
+                    <th class="text-end" th:text="#{leave.grant.remaining}">残り</th>
+                    <th th:text="#{leave.grant.attendanceRate}">出勤率</th>
+                    <th th:text="#{leave.grant.source}">区分</th>
+                    <th class="text-end" th:text="#{common.operation}">操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="usage : ${grantHistory}" th:classappend="${usage.isValidOn(today)} ? '' : 'text-muted'">
+                    <td th:text="${#temporals.format(usage.grant.grantDate, 'yyyy/MM/dd')}">2025/10/01</td>
+                    <td class="num" th:text="${usage.grant.grantedDays}">11.0</td>
+                    <td>
+                        <span th:text="${#temporals.format(usage.grant.expiryDate, 'yyyy/MM/dd')}">2027/09/30</span>
+                        <span class="badge text-bg-secondary ms-1" th:if="${usage.grant.expiryDate.isBefore(today)}" th:text="#{leave.grant.expired}">時効</span>
+                    </td>
+                    <td class="num" th:text="${usage.usedDays}">0.0</td>
+                    <td class="num" th:text="${usage.pendingDays}">0.0</td>
+                    <td class="num fw-bold" th:text="${usage.isValidOn(today)} ? ${usage.remainingDays} : '-'">11.0</td>
+                    <td th:text="${usage.grant.attendanceRate != null} ? ${usage.grant.attendanceRate + '%'} : (${usage.grant.source == 'AUTO'} ? #{leave.grant.noData} : '-')">95.0%</td>
+                    <td>
+                        <span th:text="${#messages.msg('leave.grant.source.' + usage.grant.source)}">自動</span>
+                        <div class="small text-muted" th:if="${usage.grant.note != null}" th:text="${usage.grant.note}"></div>
+                    </td>
+                    <td class="text-end">
+                        <form method="post" th:if="${usage.grant.source != 'AUTO' and usage.usedDays == 0 and usage.pendingDays == 0}"
+                              th:action="@{/leave-management/grant/{id}/delete(id=${usage.grant.id})}"
+                              th:data-confirm="#{common.deleteConfirm}" onsubmit="return confirm(this.dataset.confirm);">
+                            <input type="hidden" name="userId" th:value="${target.id}">
+                            <button type="submit" class="btn btn-outline-danger btn-sm" th:text="#{common.delete}">削除</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${grantHistory.isEmpty()}">
+                    <td colspan="9" class="text-muted" th:text="#{leave.management.noGrants}">付与はまだありません。</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 手動付与（特別付与・調整） -->
+        <h6 class="mt-3 mb-2" th:text="#{leave.grant.manualTitle}">手動付与（特別付与・調整）</h6>
+        <form method="post" th:action="@{/leave-management/grant}" class="row g-2 align-items-end">
+            <input type="hidden" name="userId" th:value="${target.id}">
+            <div class="col-12 col-md-3">
+                <label class="form-label small" th:text="#{leave.grant.date}">付与日</label>
+                <input type="date" name="grantDate" class="form-control form-control-sm" required th:value="${today}">
+            </div>
+            <div class="col-12 col-md-2">
+                <label class="form-label small" th:text="#{leave.grant.days}">付与日数</label>
+                <input type="number" name="days" class="form-control form-control-sm" min="0.5" max="40" step="0.5" required>
+            </div>
+            <div class="col-12 col-md-5">
+                <label class="form-label small" th:text="#{leave.grant.note}">理由・メモ</label>
+                <input type="text" name="note" class="form-control form-control-sm" maxlength="200">
+            </div>
+            <div class="col-12 col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100" th:text="#{leave.grant.add}">付与</button>
+            </div>
+        </form>
+        <div class="small text-muted mt-2" th:text="#{leave.grant.manualHint}">手動付与も付与日から 2 年で時効になります。</div>
+    </div>
+</th:block>
+</body>
+</html>
